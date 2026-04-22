@@ -722,7 +722,7 @@ func NewIsOutnumberedNode(name string, range_, ratio float64) *IsOutnumberedNode
 
 // Tick counts nearby allies and enemies to check ratio.
 func (n *IsOutnumberedNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	faction, pos, nearbyEntities, ok := resolveFactionAndNearby(entity, blackboard)
+	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(entity, blackboard)
 	if !ok {
 		return NodeFailure
 	}
@@ -1022,7 +1022,7 @@ func NewProtectAllyNode(name string, range_, threshold, speed float64) *ProtectA
 
 // Tick finds and protects low-health allies.
 func (n *ProtectAllyNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	faction, pos, nearbyEntities, ok := resolveFactionAndNearby(entity, blackboard)
+	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(entity, blackboard)
 	if !ok {
 		return NodeFailure
 	}

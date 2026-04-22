@@ -37,10 +37,10 @@ type btAllyCtx struct {
 	Nearby  []*Entity
 }
 
-// resolveFactionAndNearby extracts the faction component, position, and nearby
+// getFactionAndNearbyEntities extracts the faction component, position, and nearby
 // entity list that movement-oriented behavior-tree Tick methods all acquire at
 // their start. Returns ok=false if any required component is absent.
-func resolveFactionAndNearby(entity *Entity, bb *Blackboard) (*FactionComponent, *PositionComponent, []*Entity, bool) {
+func getFactionAndNearbyEntities(entity *Entity, bb *Blackboard) (*FactionComponent, *PositionComponent, []*Entity, bool) {
 	factionComp, hasFaction := entity.GetComponent("faction")
 	if !hasFaction {
 		return nil, nil, nil, false
@@ -85,7 +85,7 @@ func runMovementTick(
 	timeMoving *float64,
 	decide func(ctx btAllyCtx, entity *Entity, bb *Blackboard) (targetX, targetY float64, ok bool),
 ) NodeStatus {
-	faction, pos, nearby, resolved := resolveFactionAndNearby(entity, bb)
+	faction, pos, nearby, resolved := getFactionAndNearbyEntities(entity, bb)
 	if !resolved {
 		return NodeFailure
 	}

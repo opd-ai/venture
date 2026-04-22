@@ -9,6 +9,11 @@ import "github.com/opd-ai/venture/pkg/engine"
 
 // genreSystem is a local interface satisfied by every system that exposes a
 // SetGenre method. It is intentionally unexported and scoped to this package.
+//
+// Note: pkg/engine defines an identical unexported interface (genreConfigurer) for
+// the same purpose inside regGenre. Both remain separate because cmd/client is a
+// main package that cannot be imported by engine. If a third usage site appears
+// outside these two packages, extract a shared interface into a standalone library.
 type genreSystem interface {
 	engine.System
 	SetGenre(genre string)

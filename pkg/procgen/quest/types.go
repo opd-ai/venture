@@ -283,7 +283,7 @@ type QuestTemplate struct {
 }
 
 // GetFantasyKillTemplates returns kill quest templates for fantasy genre.
-// Data is sourced from genreQuestTemplates in templates.go (TODO REM-144 resolved).
+// Data is sourced from genreQuestTemplates in templates.go.
 func GetFantasyKillTemplates() []QuestTemplate { return getTemplatesByType("fantasy", TypeKill) }
 
 // GetFantasyCollectTemplates returns collect quest templates for fantasy genre.

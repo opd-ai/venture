@@ -3569,11 +3569,21 @@ func initializeVirtualControls(inputSystem *engine.InputSystem, clientLogger *lo
 // configureDeathCallback sets up the death callback for combat system.
 func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logger *logrus.Logger) {
 	var playerEntity *engine.Entity
-	sys.combatSystem.SetDeathCallback(createDeathCallback(
-		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
-		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem,
-		&sys.progressionSystem, *seed, *genreID, logger, sys.timeProvider,
-	))
+	sys.combatSystem.SetDeathCallback(createDeathCallback(DeathCallbackDeps{
+		Game:                game,
+		PlayerEntity:        &playerEntity,
+		ObjectiveTracker:    sys.objectiveTracker,
+		AudioManager:        &sys.audioManager,
+		RecipeGen:           sys.recipeGen,
+		MagicGen:            sys.magicGenerator,
+		SkillGen:            sys.skillGenerator,
+		DeathParticleSystem: sys.deathParticleSystem,
+		ProgressionSystem:   &sys.progressionSystem,
+		Seed:                *seed,
+		GenreID:             *genreID,
+		Logger:              logger,
+		TP:                  sys.timeProvider,
+	}))
 }
 
 // createGenerationParams creates standard generation parameters for world content.

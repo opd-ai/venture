@@ -11,7 +11,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
-// genreThemes is the authoritative table of story themes per genre (TODO REM-096 resolved).
+// genreThemes is the authoritative table of story themes per genre.
 // Adding a new genre requires only a new entry here; no function bodies need editing.
 var genreThemes = map[string][]string{
 	"fantasy":        {"ancient_curse", "fallen_kingdom", "lost_artifact", "dragon_slayer", "wizard_betrayal"},
@@ -21,7 +21,7 @@ var genreThemes = map[string][]string{
 	"postapoc": {"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"},
 }
 
-// genreTitleSuffixes is the authoritative table of title suffixes per genre (TODO REM-096 resolved).
+// genreTitleSuffixes is the authoritative table of title suffixes per genre.
 var genreTitleSuffixes = map[string][]string{
 	"fantasy":        {"Lost Kingdom", "Fallen Hero", "Ancient Curse", "Hidden Temple", "Dark Forest"},
 	"scifi":          {"Colony Alpha", "Last Signal", "Derelict Station", "Failed Experiment", "AI Core"},
@@ -325,7 +325,7 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 }
 
 // selectTheme returns a genre-specific story theme for a fragment sequence.
-// Theme data is sourced from genreThemes table (TODO REM-096 resolved).
+// Theme data is sourced from genreThemes table.
 func (g *FragmentGenerator) selectTheme(rng *rand.Rand, genreID string) string {
 	themes := g.getThemesForGenre(genreID)
 	return themes[rng.Intn(len(themes))]

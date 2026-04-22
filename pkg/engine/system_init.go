@@ -443,17 +443,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17b1. GuildCombatBonusSystem - proximity-based combat bonuses for guild members
 	// Connects GuildComponent membership with combat stats when guild members fight together
-	guildCombatBonusSystem := NewGuildCombatBonusSystem(game.World, config.Seed+5152)
-	guildCombatBonusSystem.SetGenre(config.GenreID)
-	result.GuildCombatBonusSystem = guildCombatBonusSystem
-	game.World.AddSystem(guildCombatBonusSystem)
+	result.GuildCombatBonusSystem = regGenre(game.World,
+		NewGuildCombatBonusSystem(game.World, config.Seed+5152), config.GenreID)
 
 	// 17b2. WeatherFactionResistanceSystem - weather affects faction combat stats
 	// Connects WeatherComponent with FactionComponent for elemental affinity bonuses/penalties
-	weatherFactionResistanceSystem := NewWeatherFactionResistanceSystem(game.World, config.Seed+5155)
-	weatherFactionResistanceSystem.SetGenre(config.GenreID)
-	result.WeatherFactionResistanceSystem = weatherFactionResistanceSystem
-	game.World.AddSystem(weatherFactionResistanceSystem)
+	result.WeatherFactionResistanceSystem = regGenre(game.World,
+		NewWeatherFactionResistanceSystem(game.World, config.Seed+5155), config.GenreID)
 
 	// 17c. ReputationDefenseBonusSystem - defense bonus against enemies of allied factions
 	// Connects FactionComponent reputation with StatsComponent.Defense for damage reduction
@@ -592,76 +588,54 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17s. StatusEffectVisualOverlaySystem - color tints on sprites from status effects
 	// Connects StatusEffectComponent data with VisualFeedbackComponent tint fields
-	statusEffectVisualOverlaySystem := NewStatusEffectVisualOverlaySystem(game.World)
-	statusEffectVisualOverlaySystem.SetGenre(config.GenreID)
-	result.StatusEffectVisualOverlaySystem = statusEffectVisualOverlaySystem
-	game.World.AddSystem(statusEffectVisualOverlaySystem)
+	result.StatusEffectVisualOverlaySystem = regGenre(game.World,
+		NewStatusEffectVisualOverlaySystem(game.World), config.GenreID)
 
 	// 17t. WeatherSpriteTintSystem - weather-driven sprite color tints
 	// Reads active weather and applies subtle multiplicative tints to entity sprites
-	weatherSpriteTintSystem := NewWeatherSpriteTintSystem(game.World, config.Seed+8800)
-	weatherSpriteTintSystem.SetGenre(config.GenreID)
-	result.WeatherSpriteTintSystem = weatherSpriteTintSystem
-	game.World.AddSystem(weatherSpriteTintSystem)
+	result.WeatherSpriteTintSystem = regGenre(game.World,
+		NewWeatherSpriteTintSystem(game.World, config.Seed+8800), config.GenreID)
 
 	// 17u. EntityDropShadowSystem - soft elliptical drop shadows beneath entities
 	// Reads entity collider/sprite size and genre to compute genre-aware shadow parameters
-	entityDropShadowSystem := NewEntityDropShadowSystem(game.World, config.Seed+8900)
-	entityDropShadowSystem.SetGenre(config.GenreID)
-	result.EntityDropShadowSystem = entityDropShadowSystem
-	game.World.AddSystem(entityDropShadowSystem)
+	result.EntityDropShadowSystem = regGenre(game.World,
+		NewEntityDropShadowSystem(game.World, config.Seed+8900), config.GenreID)
 
 	// 17u2. TimeOfDayShadowDirectionSystem - directional shadow offset from sun position
 	// Connects TimeOfDayLightingSystem with DropShadowComponent for sun-arc shadow direction
-	timeOfDayShadowDirectionSystem := NewTimeOfDayShadowDirectionSystem(game.World, config.Seed+8925)
-	timeOfDayShadowDirectionSystem.SetGenre(config.GenreID)
-	result.TimeOfDayShadowDirectionSystem = timeOfDayShadowDirectionSystem
-	game.World.AddSystem(timeOfDayShadowDirectionSystem)
+	result.TimeOfDayShadowDirectionSystem = regGenre(game.World,
+		NewTimeOfDayShadowDirectionSystem(game.World, config.Seed+8925), config.GenreID)
 
 	// 17v. EquipmentMaterialSheenSystem - specular highlights from material properties
 	// Bridges sprites.GetMaterialVisualProperties (Sheen/Reflectivity/Roughness) with per-entity visual state
-	equipmentMaterialSheenSystem := NewEquipmentMaterialSheenSystem(game.World, config.Seed+8950)
-	equipmentMaterialSheenSystem.SetGenre(config.GenreID)
-	result.EquipmentMaterialSheenSystem = equipmentMaterialSheenSystem
-	game.World.AddSystem(equipmentMaterialSheenSystem)
+	result.EquipmentMaterialSheenSystem = regGenre(game.World,
+		NewEquipmentMaterialSheenSystem(game.World, config.Seed+8950), config.GenreID)
 
 	// 17w. EquipmentDamageStateTintSystem - aggregate equipment wear visual tinting
 	// Bridges sprites.GetDamageVisualEffects with per-entity render state for darkening/opacity
-	equipmentDamageStateTintSystem := NewEquipmentDamageStateTintSystem(game.World, config.Seed+8975)
-	equipmentDamageStateTintSystem.SetGenre(config.GenreID)
-	result.EquipmentDamageStateTintSystem = equipmentDamageStateTintSystem
-	game.World.AddSystem(equipmentDamageStateTintSystem)
+	result.EquipmentDamageStateTintSystem = regGenre(game.World,
+		NewEquipmentDamageStateTintSystem(game.World, config.Seed+8975), config.GenreID)
 
 	// 17x. CreatureGenreTintSystem - genre-aware creature/NPC sprite color tinting
 	// Applies genre-specific tint presets to creature sprites for atmospheric cohesion
-	creatureGenreTintSystem := NewCreatureGenreTintSystem(game.World, config.Seed+9000)
-	creatureGenreTintSystem.SetGenre(config.GenreID)
-	result.CreatureGenreTintSystem = creatureGenreTintSystem
-	game.World.AddSystem(creatureGenreTintSystem)
+	result.CreatureGenreTintSystem = regGenre(game.World,
+		NewCreatureGenreTintSystem(game.World, config.Seed+9000), config.GenreID)
 
 	// 17y. CreatureSizeProportionSystem - size-based anatomy proportions for creatures
-	creatureSizeProportionSystem := NewCreatureSizeProportionSystem(game.World, config.Seed+9001)
-	creatureSizeProportionSystem.SetGenre(config.GenreID)
-	result.CreatureSizeProportionSystem = creatureSizeProportionSystem
-	game.World.AddSystem(creatureSizeProportionSystem)
+	result.CreatureSizeProportionSystem = regGenre(game.World,
+		NewCreatureSizeProportionSystem(game.World, config.Seed+9001), config.GenreID)
 
 	// 17y1. CreatureAnatomySystem - assigns anatomy types (quadruped, arachnid, etc.) to creatures
-	creatureAnatomySystem := NewCreatureAnatomySystem(game.World, config.Seed+9010)
-	creatureAnatomySystem.SetGenre(config.GenreID)
-	result.CreatureAnatomySystem = creatureAnatomySystem
-	game.World.AddSystem(creatureAnatomySystem)
+	result.CreatureAnatomySystem = regGenre(game.World,
+		NewCreatureAnatomySystem(game.World, config.Seed+9010), config.GenreID)
 
 	// 17z. EquipmentRarityDetailSystem - rarity-based visual detail scaling
-	equipmentRarityDetailSystem := NewEquipmentRarityDetailSystem(game.World, config.Seed+9025)
-	equipmentRarityDetailSystem.SetGenre(config.GenreID)
-	result.EquipmentRarityDetailSystem = equipmentRarityDetailSystem
-	game.World.AddSystem(equipmentRarityDetailSystem)
+	result.EquipmentRarityDetailSystem = regGenre(game.World,
+		NewEquipmentRarityDetailSystem(game.World, config.Seed+9025), config.GenreID)
 
 	// 17aa. NpcFacialDetailSystem - genre-aware NPC facial features
-	npcFacialDetailSystem := NewNpcFacialDetailSystem(game.World, config.Seed+9050)
-	npcFacialDetailSystem.SetGenre(config.GenreID)
-	result.NpcFacialDetailSystem = npcFacialDetailSystem
-	game.World.AddSystem(npcFacialDetailSystem)
+	result.NpcFacialDetailSystem = regGenre(game.World,
+		NewNpcFacialDetailSystem(game.World, config.Seed+9050), config.GenreID)
 
 	// 17ab. ProjectileTrailParticleSystem - genre-aware projectile trail particles
 	// Connects ProjectileComponent with ParticleSystem for visual trails behind projectiles
@@ -690,10 +664,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17ae. DamageFlashTintSystem - genre-aware damage flash tints on health decrease
 	// Monitors HealthComponent changes and triggers VisualFeedbackComponent flashes
-	damageFlashTintSystem := NewDamageFlashTintSystem(game.World)
-	damageFlashTintSystem.SetGenre(config.GenreID)
-	result.DamageFlashTintSystem = damageFlashTintSystem
-	game.World.AddSystem(damageFlashTintSystem)
+	result.DamageFlashTintSystem = regGenre(game.World, NewDamageFlashTintSystem(game.World), config.GenreID)
 
 	// 17af. SprintTrailParticleSystem - genre-aware speed trail particles for sprinting entities
 	// Monitors VelocityComponent and spawns trail particles behind fast-moving entities
@@ -705,59 +676,41 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17ag. NearbyLightEntityTintSystem - tints entity sprites based on nearby light sources
 	// Uses light color, intensity, and distance-based falloff with genre-aware ambient base
-	nearbyLightEntityTintSystem := NewNearbyLightEntityTintSystem(game.World, config.Seed+9300)
-	nearbyLightEntityTintSystem.SetGenre(config.GenreID)
-	result.NearbyLightEntityTintSystem = nearbyLightEntityTintSystem
-	game.World.AddSystem(nearbyLightEntityTintSystem)
+	result.NearbyLightEntityTintSystem = regGenre(game.World,
+		NewNearbyLightEntityTintSystem(game.World, config.Seed+9300), config.GenreID)
 
 	// 17ah. WeatherEquipmentSheenSystem - weather-driven equipment sheen modifications
 	// Bridges WeatherComponent with MaterialSheenComponent for wet/frost/dust effects
-	weatherEquipmentSheenSystem := NewWeatherEquipmentSheenSystem(game.World, config.Seed+9400)
-	weatherEquipmentSheenSystem.SetGenre(config.GenreID)
-	result.WeatherEquipmentSheenSystem = weatherEquipmentSheenSystem
-	game.World.AddSystem(weatherEquipmentSheenSystem)
+	result.WeatherEquipmentSheenSystem = regGenre(game.World,
+		NewWeatherEquipmentSheenSystem(game.World, config.Seed+9400), config.GenreID)
 
 	// 17ai. CreatureEyeGlowSystem - genre-aware glowing eyes for hostile creatures
 	// Uses threat level (health, faction, detection range) to scale glow intensity and pulse
-	creatureEyeGlowSystem := NewCreatureEyeGlowSystem(game.World, config.Seed+9450)
-	creatureEyeGlowSystem.SetGenre(config.GenreID)
-	result.CreatureEyeGlowSystem = creatureEyeGlowSystem
-	game.World.AddSystem(creatureEyeGlowSystem)
+	result.CreatureEyeGlowSystem = regGenre(game.World,
+		NewCreatureEyeGlowSystem(game.World, config.Seed+9450), config.GenreID)
 
 	// 17ai1. CreatureEyePatternSystem - creature-type-specific eye patterns for nonhumanoids
 	// Assigns 8-eye spider patterns, slit-pupil serpent eyes, compound insect eyes, etc.
-	creatureEyePatternSystem := NewCreatureEyePatternSystem(game.World, config.Seed+9460)
-	creatureEyePatternSystem.SetGenre(config.GenreID)
-	result.CreatureEyePatternSystem = creatureEyePatternSystem
-	game.World.AddSystem(creatureEyePatternSystem)
+	result.CreatureEyePatternSystem = regGenre(game.World,
+		NewCreatureEyePatternSystem(game.World, config.Seed+9460), config.GenreID)
 
 	// 17ai2. CreatureElementalAuraSystem - persistent elemental aura visuals for creatures
 	// Infers elemental affinity from name/tags/attack and assigns colored aura overlays
-	creatureElementalAuraSystem := NewCreatureElementalAuraSystem(game.World, config.Seed+9475)
-	creatureElementalAuraSystem.SetGenre(config.GenreID)
-	result.CreatureElementalAuraSystem = creatureElementalAuraSystem
-	game.World.AddSystem(creatureElementalAuraSystem)
+	result.CreatureElementalAuraSystem = regGenre(game.World,
+		NewCreatureElementalAuraSystem(game.World, config.Seed+9475), config.GenreID)
 
 	// 17aj. MeleeSwingArcSystem - genre-aware visual arc overlays during melee attacks
 	// Watches AnimationComponent attack transitions and writes MeleeSwingArcComponent
-	meleeSwingArcSystem := NewMeleeSwingArcSystem(game.World, config.Seed+9500)
-	meleeSwingArcSystem.SetGenre(config.GenreID)
-	result.MeleeSwingArcSystem = meleeSwingArcSystem
-	game.World.AddSystem(meleeSwingArcSystem)
+	result.MeleeSwingArcSystem = regGenre(game.World, NewMeleeSwingArcSystem(game.World, config.Seed+9500), config.GenreID)
 
 	// 17ak. CombatReadyAuraSystem - genre-aware aura when AI entities enter hostile states
 	// Connects AIComponent state with visual aura overlay for combat readiness feedback
-	combatReadyAuraSystem := NewCombatReadyAuraSystem(game.World, config.Seed+9550)
-	combatReadyAuraSystem.SetGenre(config.GenreID)
-	result.CombatReadyAuraSystem = combatReadyAuraSystem
-	game.World.AddSystem(combatReadyAuraSystem)
+	result.CombatReadyAuraSystem = regGenre(game.World,
+		NewCombatReadyAuraSystem(game.World, config.Seed+9550), config.GenreID)
 
 	// 17al. AIStateBubbleSystem - genre-aware floating state indicator bubbles above NPCs
 	// Connects AIComponent state with floating symbol overlay for AI behavior feedback
-	aiStateBubbleSystem := NewAIStateBubbleSystem(game.World, config.Seed+9600)
-	aiStateBubbleSystem.SetGenre(config.GenreID)
-	result.AIStateBubbleSystem = aiStateBubbleSystem
-	game.World.AddSystem(aiStateBubbleSystem)
+	result.AIStateBubbleSystem = regGenre(game.World, NewAIStateBubbleSystem(game.World, config.Seed+9600), config.GenreID)
 
 	// 17am. TerrainReflectionTintSystem - terrain-driven sprite color tinting
 	// Reads entity position, looks up terrain tile type, and writes genre-aware tint
@@ -773,26 +726,17 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 17an. MovementBobSystem - genre-aware walk-cycle vertical sprite bobbing
 	// Reads VelocityComponent and writes sinusoidal Y offset to MovementBobComponent
 	// so the render system displaces moving entities for visual movement weight.
-	movementBobSystem := NewMovementBobSystem(game.World, config.Seed+9700)
-	movementBobSystem.SetGenre(config.GenreID)
-	result.MovementBobSystem = movementBobSystem
-	game.World.AddSystem(movementBobSystem)
+	result.MovementBobSystem = regGenre(game.World, NewMovementBobSystem(game.World, config.Seed+9700), config.GenreID)
 
 	// 17an2. MovementLeanSystem - genre-aware horizontal lean in movement direction
 	// Reads VelocityComponent and writes smoothed X offset to MovementLeanComponent
 	// so the render system displaces entities horizontally for momentum lean.
-	movementLeanSystem := NewMovementLeanSystem(game.World, config.Seed+9710)
-	movementLeanSystem.SetGenre(config.GenreID)
-	result.MovementLeanSystem = movementLeanSystem
-	game.World.AddSystem(movementLeanSystem)
+	result.MovementLeanSystem = regGenre(game.World, NewMovementLeanSystem(game.World, config.Seed+9710), config.GenreID)
 
 	// 17ao. SpellCastGlowSystem - genre-aware visual glow during spell casting
 	// Reads SpellSlotComponent casting state and writes SpellCastGlowComponent
 	// with element-derived color, intensity that ramps with CastingBar, and pulse.
-	spellCastGlowSystem := NewSpellCastGlowSystem(game.World, config.Seed+9750)
-	spellCastGlowSystem.SetGenre(config.GenreID)
-	result.SpellCastGlowSystem = spellCastGlowSystem
-	game.World.AddSystem(spellCastGlowSystem)
+	result.SpellCastGlowSystem = regGenre(game.World, NewSpellCastGlowSystem(game.World, config.Seed+9750), config.GenreID)
 
 	// 17ap. EquipmentChangeFlashSystem - genre-aware flash particles on equipment change
 	// Reads EquipmentComponent slot state, detects equip/unequip transitions, and
@@ -806,39 +750,29 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 17aq. DodgeAfterimageSystem - genre-aware translucent ghost copies on fast movement
 	// Reads VelocityComponent speed, spawns fading ghost positions in AfterimageComponent
 	// for a motion trail effect distinct from particle-based sprint trails.
-	dodgeAfterimageSystem := NewDodgeAfterimageSystem(game.World, config.Seed+9850)
-	dodgeAfterimageSystem.SetGenre(config.GenreID)
-	result.DodgeAfterimageSystem = dodgeAfterimageSystem
-	game.World.AddSystem(dodgeAfterimageSystem)
+	result.DodgeAfterimageSystem = regGenre(game.World,
+		NewDodgeAfterimageSystem(game.World, config.Seed+9850), config.GenreID)
 
 	// 17ar. EntityIdleBreathingSystem - genre-aware subtle idle breathing animation
 	// Reads VelocityComponent to detect stationary entities, writes sinusoidal Y
 	// offset to IdleBreathingComponent for a lifelike idle visual effect.
-	entityIdleBreathingSystem := NewEntityIdleBreathingSystem(game.World, config.Seed+9900)
-	entityIdleBreathingSystem.SetGenre(config.GenreID)
-	result.EntityIdleBreathingSystem = entityIdleBreathingSystem
-	game.World.AddSystem(entityIdleBreathingSystem)
+	result.EntityIdleBreathingSystem = regGenre(game.World,
+		NewEntityIdleBreathingSystem(game.World, config.Seed+9900), config.GenreID)
 
 	// 17as. CombatHitStaggerSystem - genre-aware positional stagger on damage
 	// Monitors HealthComponent changes and writes decaying X/Y offsets to HitStaggerComponent
-	combatHitStaggerSystem := NewCombatHitStaggerSystem(game.World, config.Seed+9950)
-	combatHitStaggerSystem.SetGenre(config.GenreID)
-	result.CombatHitStaggerSystem = combatHitStaggerSystem
-	game.World.AddSystem(combatHitStaggerSystem)
+	result.CombatHitStaggerSystem = regGenre(game.World,
+		NewCombatHitStaggerSystem(game.World, config.Seed+9950), config.GenreID)
 
 	// 17at. FloatingDamageNumberSystem - genre-aware floating damage/heal numbers
 	// Monitors HealthComponent changes and writes rising/fading numbers to FloatingDamageNumberComponent
-	floatingDamageNumberSystem := NewFloatingDamageNumberSystem(game.World, config.Seed+10000)
-	floatingDamageNumberSystem.SetGenre(config.GenreID)
-	result.FloatingDamageNumberSystem = floatingDamageNumberSystem
-	game.World.AddSystem(floatingDamageNumberSystem)
+	result.FloatingDamageNumberSystem = regGenre(game.World,
+		NewFloatingDamageNumberSystem(game.World, config.Seed+10000), config.GenreID)
 
 	// 17au. EntityThreatIndicatorSystem - genre-aware threat level rings under AI entities
 	// Compares entity level to player level and assigns colored ring indicators
-	entityThreatIndicatorSystem := NewEntityThreatIndicatorSystem(game.World, config.Seed+10050)
-	entityThreatIndicatorSystem.SetGenre(config.GenreID)
-	result.EntityThreatIndicatorSystem = entityThreatIndicatorSystem
-	game.World.AddSystem(entityThreatIndicatorSystem)
+	result.EntityThreatIndicatorSystem = regGenre(game.World,
+		NewEntityThreatIndicatorSystem(game.World, config.Seed+10050), config.GenreID)
 
 	// 17av. WeaponMaterialParticleSystem - genre-aware idle particles from weapon material
 	// Reads main-hand weapon material type and spawns material-appropriate ambient particles
@@ -867,10 +801,8 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 17ay. CompanionBondTetherSystem - genre-aware visual tether between companion and owner
 	// Reads CompanionComponent.OwnerID and PositionComponent to write tether geometry/color
 	// into CompanionBondTetherComponent for the renderer.
-	companionBondTetherSystem := NewCompanionBondTetherSystem(game.World, config.Seed+10300)
-	companionBondTetherSystem.SetGenre(config.GenreID)
-	result.CompanionBondTetherSystem = companionBondTetherSystem
-	game.World.AddSystem(companionBondTetherSystem)
+	result.CompanionBondTetherSystem = regGenre(game.World,
+		NewCompanionBondTetherSystem(game.World, config.Seed+10300), config.GenreID)
 
 	// 17az. CriticalHitScreenShakeSystem - genre-aware camera shake on critical hits
 	// Connects CombatSystem critical hit callback with CameraSystem.ShakeAdvanced
@@ -884,47 +816,34 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17ba. EntitySpawnMaterializeSystem - genre-aware fade-in and particle burst
 	// when entities first appear in the world, providing visual spawn feedback.
-	entitySpawnMaterializeSystem := NewEntitySpawnMaterializeSystem(game.World, config.Seed+10400)
-	entitySpawnMaterializeSystem.SetGenre(config.GenreID)
-	result.EntitySpawnMaterializeSystem = entitySpawnMaterializeSystem
-	game.World.AddSystem(entitySpawnMaterializeSystem)
+	result.EntitySpawnMaterializeSystem = regGenre(game.World,
+		NewEntitySpawnMaterializeSystem(game.World, config.Seed+10400), config.GenreID)
 
 	// 17bb. NPCInteractionProximityGlowSystem - genre-aware glow tint on interactable
 	// NPCs (dialog/merchant) when a player entity is within proximity range.
-	npcInteractionProximityGlowSystem := NewNPCInteractionProximityGlowSystem(game.World, config.Seed+10450)
-	npcInteractionProximityGlowSystem.SetGenre(config.GenreID)
-	result.NPCInteractionProximityGlowSystem = npcInteractionProximityGlowSystem
-	game.World.AddSystem(npcInteractionProximityGlowSystem)
+	result.NPCInteractionProximityGlowSystem = regGenre(game.World,
+		NewNPCInteractionProximityGlowSystem(game.World, config.Seed+10450), config.GenreID)
 
 	// 17bc. EntityFactionOutlineSystem - genre-aware colored outlines around entities
 	// based on TeamComponent allegiance and FactionComponent reputation.
 	// Allies show green, hostiles pulsing red, neutrals amber.
-	entityFactionOutlineSystem := NewEntityFactionOutlineSystem(game.World, config.Seed+10500)
-	entityFactionOutlineSystem.SetGenre(config.GenreID)
-	result.EntityFactionOutlineSystem = entityFactionOutlineSystem
-	game.World.AddSystem(entityFactionOutlineSystem)
+	result.EntityFactionOutlineSystem = regGenre(game.World,
+		NewEntityFactionOutlineSystem(game.World, config.Seed+10500), config.GenreID)
 
 	// 17bd. ShieldBubbleOverlaySystem - genre-aware translucent bubble around
 	// entities with active ShieldComponent. Opacity scales with shield amount,
 	// flickers at low shield, fades out on expiry.
-	shieldBubbleOverlaySystem := NewShieldBubbleOverlaySystem(game.World, config.Seed+10550)
-	shieldBubbleOverlaySystem.SetGenre(config.GenreID)
-	result.ShieldBubbleOverlaySystem = shieldBubbleOverlaySystem
-	game.World.AddSystem(shieldBubbleOverlaySystem)
+	result.ShieldBubbleOverlaySystem = regGenre(game.World,
+		NewShieldBubbleOverlaySystem(game.World, config.Seed+10550), config.GenreID)
 
 	// 17be. EnvironmentalBreathVaporSystem - cold weather breath vapor puffs
 	// Spawns genre-aware vapor particles near entity faces during cold weather (snow, fog, ash)
-	environmentalBreathVaporSystem := NewEnvironmentalBreathVaporSystem(game.World, config.Seed+10600)
-	environmentalBreathVaporSystem.SetGenre(config.GenreID)
-	result.EnvironmentalBreathVaporSystem = environmentalBreathVaporSystem
-	game.World.AddSystem(environmentalBreathVaporSystem)
+	result.EnvironmentalBreathVaporSystem = regGenre(game.World,
+		NewEnvironmentalBreathVaporSystem(game.World, config.Seed+10600), config.GenreID)
 
 	// 17bf. MovementDustSystem - speed-proportional terrain dust behind fast movers
 	// Genre-aware particles: fantasy=dust, horror=ash wisps, scifi=energy sparks
-	movementDustSystem := NewMovementDustSystem(game.World, config.Seed+10650)
-	movementDustSystem.SetGenre(config.GenreID)
-	result.MovementDustSystem = movementDustSystem
-	game.World.AddSystem(movementDustSystem)
+	result.MovementDustSystem = regGenre(game.World, NewMovementDustSystem(game.World, config.Seed+10650), config.GenreID)
 
 	// 17bg. DynamicExpressionSystem - reactive facial expression updates
 	// Reads HealthComponent, StatusEffectComponent, and AIComponent to update
@@ -1104,80 +1023,58 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 25a. SpecializationManaBoostSystem - passive mana regen bonuses from class specializations
 	// Connects ClassProgressionComponent with ManaComponent for genre-aware caster bonuses
-	specializationManaBoostSystem := NewSpecializationManaBoostSystem(game.World, config.Seed+6600)
-	specializationManaBoostSystem.SetGenre(config.GenreID)
-	result.SpecializationManaBoostSystem = specializationManaBoostSystem
-	game.World.AddSystem(specializationManaBoostSystem)
+	result.SpecializationManaBoostSystem = regGenre(game.World,
+		NewSpecializationManaBoostSystem(game.World, config.Seed+6600), config.GenreID)
 
 	// 25b. SpecializationHealthRegenSystem - passive health regen bonuses from class specializations
 	// Connects ClassProgressionComponent with HealthComponent for genre-aware tank/healer bonuses
-	specializationHealthRegenSystem := NewSpecializationHealthRegenSystem(game.World, config.Seed+6650)
-	specializationHealthRegenSystem.SetGenre(config.GenreID)
-	result.SpecializationHealthRegenSystem = specializationHealthRegenSystem
-	game.World.AddSystem(specializationHealthRegenSystem)
+	result.SpecializationHealthRegenSystem = regGenre(game.World,
+		NewSpecializationHealthRegenSystem(game.World, config.Seed+6650), config.GenreID)
 
 	// 25c. SpecializationSpellDamageSystem - passive spell damage bonuses from class specializations
 	// Connects ClassProgressionComponent with spell damage for genre-aware caster bonuses
-	specializationSpellDamageSystem := NewSpecializationSpellDamageSystem(game.World, config.Seed+6660)
-	specializationSpellDamageSystem.SetGenre(config.GenreID)
-	result.SpecializationSpellDamageSystem = specializationSpellDamageSystem
-	game.World.AddSystem(specializationSpellDamageSystem)
+	result.SpecializationSpellDamageSystem = regGenre(game.World,
+		NewSpecializationSpellDamageSystem(game.World, config.Seed+6660), config.GenreID)
 
 	// 25d. SpecializationAttackSpeedSystem - passive attack speed bonuses from class specializations
 	// Connects ClassProgressionComponent with AttackComponent cooldowns for genre-aware melee bonuses
-	specializationAttackSpeedSystem := NewSpecializationAttackSpeedSystem(game.World, config.Seed+6670)
-	specializationAttackSpeedSystem.SetGenre(config.GenreID)
-	result.SpecializationAttackSpeedSystem = specializationAttackSpeedSystem
-	game.World.AddSystem(specializationAttackSpeedSystem)
+	result.SpecializationAttackSpeedSystem = regGenre(game.World,
+		NewSpecializationAttackSpeedSystem(game.World, config.Seed+6670), config.GenreID)
 
 	// 25e. SpecializationDefenseSystem - passive defense bonuses from class specializations
 	// Connects ClassProgressionComponent with StatsComponent.Defense for genre-aware tank bonuses
-	specializationDefenseSystem := NewSpecializationDefenseSystem(game.World, config.Seed+6680)
-	specializationDefenseSystem.SetGenre(config.GenreID)
-	result.SpecializationDefenseSystem = specializationDefenseSystem
-	game.World.AddSystem(specializationDefenseSystem)
+	result.SpecializationDefenseSystem = regGenre(game.World,
+		NewSpecializationDefenseSystem(game.World, config.Seed+6680), config.GenreID)
 
 	// 25.2a. DualClassSynergySystem - passive bonuses for dual-classed characters
 	// Connects ClassProgressionComponent.SecondaryClass with stat bonuses based on class combination
-	dualClassSynergySystem := NewDualClassSynergySystem(game.World, config.Seed+6685)
-	dualClassSynergySystem.SetGenre(config.GenreID)
-	result.DualClassSynergySystem = dualClassSynergySystem
-	game.World.AddSystem(dualClassSynergySystem)
+	result.DualClassSynergySystem = regGenre(game.World,
+		NewDualClassSynergySystem(game.World, config.Seed+6685), config.GenreID)
 
 	// 25f. SpecializationStatusResistSystem - status effect duration modifiers from class specializations
 	// Connects ClassProgressionComponent with StatusEffectComponent for genre-aware debuff resistance
-	specializationStatusResistSystem := NewSpecializationStatusResistSystem(game.World, config.Seed+6690)
-	specializationStatusResistSystem.SetGenre(config.GenreID)
-	result.SpecializationStatusResistSystem = specializationStatusResistSystem
-	game.World.AddSystem(specializationStatusResistSystem)
+	result.SpecializationStatusResistSystem = regGenre(game.World,
+		NewSpecializationStatusResistSystem(game.World, config.Seed+6690), config.GenreID)
 
 	// 25h. SpecializationCritDamageSystem - critical hit damage bonuses from class specializations
 	// Connects ClassProgressionComponent with StatsComponent.CritDamage for rogue/assassin bonuses
-	specializationCritDamageSystem := NewSpecializationCritDamageSystem(game.World, config.Seed+6700)
-	specializationCritDamageSystem.SetGenre(config.GenreID)
-	result.SpecializationCritDamageSystem = specializationCritDamageSystem
-	game.World.AddSystem(specializationCritDamageSystem)
+	result.SpecializationCritDamageSystem = regGenre(game.World,
+		NewSpecializationCritDamageSystem(game.World, config.Seed+6700), config.GenreID)
 
 	// 25i. SpecializationEvasionSystem - evasion bonuses from class specializations
 	// Connects ClassProgressionComponent with StatsComponent.Evasion for rogue/monk bonuses
-	specializationEvasionSystem := NewSpecializationEvasionSystem(game.World, config.Seed+6710)
-	specializationEvasionSystem.SetGenre(config.GenreID)
-	result.SpecializationEvasionSystem = specializationEvasionSystem
-	game.World.AddSystem(specializationEvasionSystem)
+	result.SpecializationEvasionSystem = regGenre(game.World,
+		NewSpecializationEvasionSystem(game.World, config.Seed+6710), config.GenreID)
 
 	// 25j. SpecializationLifestealSystem - lifesteal bonuses from class specializations
 	// Connects ClassProgressionComponent with StatsComponent.Lifesteal for blood magic/survival bonuses
-	specializationLifestealSystem := NewSpecializationLifestealSystem(game.World, config.Seed+6720)
-	specializationLifestealSystem.SetGenre(config.GenreID)
-	result.SpecializationLifestealSystem = specializationLifestealSystem
-	game.World.AddSystem(specializationLifestealSystem)
+	result.SpecializationLifestealSystem = regGenre(game.World,
+		NewSpecializationLifestealSystem(game.World, config.Seed+6720), config.GenreID)
 
 	// 25g. StatusEffectHealthRegenSystem - health regeneration modifiers from status effects
 	// Connects StatusEffectSystem with HealthComponent for genre-aware regen bonuses/penalties
-	statusEffectHealthRegenSystem := NewStatusEffectHealthRegenSystem(game.World, config.Seed+6695)
-	statusEffectHealthRegenSystem.SetGenre(config.GenreID)
-	result.StatusEffectHealthRegenSystem = statusEffectHealthRegenSystem
-	game.World.AddSystem(statusEffectHealthRegenSystem)
+	result.StatusEffectHealthRegenSystem = regGenre(game.World,
+		NewStatusEffectHealthRegenSystem(game.World, config.Seed+6695), config.GenreID)
 
 	// 26. InventorySystem - item management
 	game.World.AddSystem(inventorySystem)
@@ -1301,24 +1198,18 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36b2b. StatusEffectEvasionSystem - applies evasion modifiers from status effects
 	// Connects StatusEffectSystem with CombatSystem for genre-aware evasion bonuses/penalties
-	statusEffectEvasionSystem := NewStatusEffectEvasionSystem(game.World, config.Seed+2120)
-	statusEffectEvasionSystem.SetGenre(config.GenreID)
-	result.StatusEffectEvasionSystem = statusEffectEvasionSystem
-	game.World.AddSystem(statusEffectEvasionSystem)
+	result.StatusEffectEvasionSystem = regGenre(game.World,
+		NewStatusEffectEvasionSystem(game.World, config.Seed+2120), config.GenreID)
 
 	// 36b2c. StatusEffectCriticalChanceSystem - applies crit chance modifiers from status effects
 	// Connects StatusEffectSystem with CombatSystem for genre-aware critical hit bonuses/penalties
-	statusEffectCriticalChanceSystem := NewStatusEffectCriticalChanceSystem(game.World, config.Seed+2130)
-	statusEffectCriticalChanceSystem.SetGenre(config.GenreID)
-	result.StatusEffectCriticalChanceSystem = statusEffectCriticalChanceSystem
-	game.World.AddSystem(statusEffectCriticalChanceSystem)
+	result.StatusEffectCriticalChanceSystem = regGenre(game.World,
+		NewStatusEffectCriticalChanceSystem(game.World, config.Seed+2130), config.GenreID)
 
 	// 36b2d. StatusEffectDamageBoostSystem - applies damage modifiers from status effects
 	// Connects StatusEffectSystem with CombatSystem for genre-aware damage bonuses/penalties
-	statusEffectDamageBoostSystem := NewStatusEffectDamageBoostSystem(game.World, config.Seed+2140)
-	statusEffectDamageBoostSystem.SetGenre(config.GenreID)
-	result.StatusEffectDamageBoostSystem = statusEffectDamageBoostSystem
-	game.World.AddSystem(statusEffectDamageBoostSystem)
+	result.StatusEffectDamageBoostSystem = regGenre(game.World,
+		NewStatusEffectDamageBoostSystem(game.World, config.Seed+2140), config.GenreID)
 
 	// 36b3. TerrainMovementSpeedSystem - applies movement speed modifiers from terrain type
 	// Connects terrain generation with MovementSystem for genre-aware terrain effects
@@ -1422,10 +1313,8 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36b7d. WeatherEquipmentDurabilitySystem - degrades equipment from weather conditions
 	// Connects WeatherComponent (rain, snow, sandstorm) with EquipmentComponent durability for environmental wear
-	weatherEquipmentDurabilitySystem := NewWeatherEquipmentDurabilitySystem(game.World, config.Seed+2196)
-	weatherEquipmentDurabilitySystem.SetGenre(config.GenreID)
-	result.WeatherEquipmentDurabilitySystem = weatherEquipmentDurabilitySystem
-	game.World.AddSystem(weatherEquipmentDurabilitySystem)
+	result.WeatherEquipmentDurabilitySystem = regGenre(game.World,
+		NewWeatherEquipmentDurabilitySystem(game.World, config.Seed+2196), config.GenreID)
 
 	// 36b8. TerrainCompanionBonusSystem - modifies companion stats based on terrain type
 	// Connects terrain tiles with CompanionStatsComponent for tactical companion positioning
@@ -1446,23 +1335,19 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36b9. FactionCompanionBehaviorSystem - modifies companion targeting based on faction reputation
 	// Connects FactionSystem reputation with companion AI targeting for faction-aware companions
-	factionCompanionBehaviorSystem := NewFactionCompanionBehaviorSystem(game.World, config.Seed+2198)
-	factionCompanionBehaviorSystem.SetGenre(config.GenreID)
-	result.FactionCompanionBehaviorSystem = factionCompanionBehaviorSystem
-	game.World.AddSystem(factionCompanionBehaviorSystem)
+	result.FactionCompanionBehaviorSystem = regGenre(game.World,
+		NewFactionCompanionBehaviorSystem(game.World, config.Seed+2198), config.GenreID)
 
 	// 36b10. WeatherCompanionBonusSystem - modifies companion stats based on weather conditions
 	// Connects WeatherSystem with CompanionStatsComponent for tactical companion positioning
-	weatherCompanionBonusSystem := NewWeatherCompanionBonusSystem(game.World, config.Seed+2200)
-	weatherCompanionBonusSystem.SetGenre(config.GenreID)
-	result.WeatherCompanionBonusSystem = weatherCompanionBonusSystem
-	game.World.AddSystem(weatherCompanionBonusSystem)
+	result.WeatherCompanionBonusSystem = regGenre(game.World,
+		NewWeatherCompanionBonusSystem(game.World, config.Seed+2200), config.GenreID)
 
 	// 36b10b. WeatherCompanionBonusParticleSystem - visual feedback for weather companion bonuses
 	// Connects WeatherCompanionBonusSystem with ParticleSystem for genre-aware companion particles
 	weatherCompanionBonusParticleSystem := NewWeatherCompanionBonusParticleSystem(game.World, config.Seed+2205)
 	weatherCompanionBonusParticleSystem.SetParticleSystem(result.ParticleSystem)
-	weatherCompanionBonusParticleSystem.SetWeatherCompanionBonusSystem(weatherCompanionBonusSystem)
+	weatherCompanionBonusParticleSystem.SetWeatherCompanionBonusSystem(result.WeatherCompanionBonusSystem)
 	weatherCompanionBonusParticleSystem.SetGenre(config.GenreID)
 	result.WeatherCompanionBonusParticleSystem = weatherCompanionBonusParticleSystem
 	game.World.AddSystem(weatherCompanionBonusParticleSystem)
@@ -1470,16 +1355,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 36b11. WeatherMovementSpeedSystem - modifies entity movement speed based on weather
 	// Connects WeatherComponent with VelocityComponent for environmental movement effects
 	// Rain makes surfaces slick (+5% speed), snow creates resistance (-18%), sandstorm drags (-20%)
-	weatherMovementSpeedSystem := NewWeatherMovementSpeedSystem(game.World, config.Seed+2210)
-	weatherMovementSpeedSystem.SetGenre(config.GenreID)
-	result.WeatherMovementSpeedSystem = weatherMovementSpeedSystem
-	game.World.AddSystem(weatherMovementSpeedSystem)
+	result.WeatherMovementSpeedSystem = regGenre(game.World,
+		NewWeatherMovementSpeedSystem(game.World, config.Seed+2210), config.GenreID)
 
 	// 36b11b. WeatherMovementSpeedParticleSystem - visual feedback for weather movement modifiers
 	// Connects WeatherMovementSpeedSystem with ParticleSystem for genre-aware speed effect particles
 	weatherMovementSpeedParticleSystem := NewWeatherMovementSpeedParticleSystem(game.World, config.Seed+2215)
 	weatherMovementSpeedParticleSystem.SetParticleSystem(result.ParticleSystem)
-	weatherMovementSpeedParticleSystem.SetWeatherMovementSpeedSystem(weatherMovementSpeedSystem)
+	weatherMovementSpeedParticleSystem.SetWeatherMovementSpeedSystem(result.WeatherMovementSpeedSystem)
 	weatherMovementSpeedParticleSystem.SetGenre(config.GenreID)
 	result.WeatherMovementSpeedParticleSystem = weatherMovementSpeedParticleSystem
 	game.World.AddSystem(weatherMovementSpeedParticleSystem)
@@ -1598,17 +1481,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36j. WeatherManaRegenSystem - modifies mana regeneration based on weather
 	// Connects WeatherSystem with ManaComponent for magical gameplay synergy
-	weatherManaRegenSystem := NewWeatherManaRegenSystem(game.World, config.Seed+6300)
-	weatherManaRegenSystem.SetGenre(config.GenreID)
-	result.WeatherManaRegenSystem = weatherManaRegenSystem
-	game.World.AddSystem(weatherManaRegenSystem)
+	result.WeatherManaRegenSystem = regGenre(game.World,
+		NewWeatherManaRegenSystem(game.World, config.Seed+6300), config.GenreID)
 
 	// 36j2. WeatherCooldownSystem - modifies spell cooldown rates based on weather
 	// Connects WeatherSystem with SpellCastingSystem for magical gameplay synergy
-	weatherCooldownSystem := NewWeatherCooldownSystem(game.World, config.Seed+6350)
-	weatherCooldownSystem.SetGenre(config.GenreID)
-	result.WeatherCooldownSystem = weatherCooldownSystem
-	game.World.AddSystem(weatherCooldownSystem)
+	result.WeatherCooldownSystem = regGenre(game.World,
+		NewWeatherCooldownSystem(game.World, config.Seed+6350), config.GenreID)
 
 	// 36j2b. WeatherSpellDamageSystem - modifies spell damage based on weather-element synergies
 	// Connects WeatherSystem with SpellCastingSystem for elemental combat bonuses
@@ -1621,10 +1500,8 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36j3. FishingWeatherBonusSystem - modifies fishing bonuses based on weather
 	// Connects WeatherSystem with FishingSystem for immersive fishing gameplay
-	fishingWeatherBonusSystem := NewFishingWeatherBonusSystem(game.World, config.Seed+6375)
-	fishingWeatherBonusSystem.SetGenre(config.GenreID)
-	result.FishingWeatherBonusSystem = fishingWeatherBonusSystem
-	game.World.AddSystem(fishingWeatherBonusSystem)
+	result.FishingWeatherBonusSystem = regGenre(game.World,
+		NewFishingWeatherBonusSystem(game.World, config.Seed+6375), config.GenreID)
 
 	// 36j4. TerrainFishingBonusSystem - modifies fishing bonuses based on terrain
 	// Connects terrain tiles (deep water, kelp, ruins) with FishingSystem for strategic spot placement
@@ -1664,16 +1541,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	game.World.AddSystem(waterSurfaceRippleSystem)
 
 	// 36k1e. EntityTargetLockIndicatorSystem - genre-aware targeting reticle on closest hostile
-	entityTargetLockIndicatorSystem := NewEntityTargetLockIndicatorSystem(game.World, config.Seed+6445)
-	entityTargetLockIndicatorSystem.SetGenre(config.GenreID)
-	result.EntityTargetLockIndicatorSystem = entityTargetLockIndicatorSystem
-	game.World.AddSystem(entityTargetLockIndicatorSystem)
+	result.EntityTargetLockIndicatorSystem = regGenre(game.World,
+		NewEntityTargetLockIndicatorSystem(game.World, config.Seed+6445), config.GenreID)
 
 	// 36k1f. EntityDeathDissolveSystem - genre-aware visual dissolve on entity death
-	entityDeathDissolveSystem := NewEntityDeathDissolveSystem(game.World, config.Seed+6448)
-	entityDeathDissolveSystem.SetGenre(config.GenreID)
-	result.EntityDeathDissolveSystem = entityDeathDissolveSystem
-	game.World.AddSystem(entityDeathDissolveSystem)
+	result.EntityDeathDissolveSystem = regGenre(game.World,
+		NewEntityDeathDissolveSystem(game.World, config.Seed+6448), config.GenreID)
 
 	// 36k1g. ArmorHitSparkSystem - material-aware armor deflection particles on damage
 	// Connects HealthComponent damage detection with EquipmentComponent armor material
@@ -1693,31 +1566,23 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36k1i. BattleWoundOverlaySystem - genre-aware wound marks based on health percentage
 	// Bridges HealthComponent damage events with per-entity wound visual overlays
-	battleWoundOverlaySystem := NewBattleWoundOverlaySystem(game.World, config.Seed+6458)
-	battleWoundOverlaySystem.SetGenre(config.GenreID)
-	result.BattleWoundOverlaySystem = battleWoundOverlaySystem
-	game.World.AddSystem(battleWoundOverlaySystem)
+	result.BattleWoundOverlaySystem = regGenre(game.World,
+		NewBattleWoundOverlaySystem(game.World, config.Seed+6458), config.GenreID)
 
 	// 36k1j. EquipmentDamageCrackOverlaySystem - procedural crack patterns from equipment wear
 	// Reads EquipmentWearTintComponent crack density and generates genre-aware crack segments
-	equipmentDamageCrackOverlaySystem := NewEquipmentDamageCrackOverlaySystem(game.World, config.Seed+6460)
-	equipmentDamageCrackOverlaySystem.SetGenre(config.GenreID)
-	result.EquipmentDamageCrackOverlaySystem = equipmentDamageCrackOverlaySystem
-	game.World.AddSystem(equipmentDamageCrackOverlaySystem)
+	result.EquipmentDamageCrackOverlaySystem = regGenre(game.World,
+		NewEquipmentDamageCrackOverlaySystem(game.World, config.Seed+6460), config.GenreID)
 
 	// 36k1k. WeatherEntityWetnessSystem - rain-driven entity sprite wetness darkening + sheen
 	// Reads WeatherComponent rain state and writes WetnessComponent with darken/tint values
-	weatherEntityWetnessSystem := NewWeatherEntityWetnessSystem(game.World, config.Seed+6465)
-	weatherEntityWetnessSystem.SetGenre(config.GenreID)
-	result.WeatherEntityWetnessSystem = weatherEntityWetnessSystem
-	game.World.AddSystem(weatherEntityWetnessSystem)
+	result.WeatherEntityWetnessSystem = regGenre(game.World,
+		NewWeatherEntityWetnessSystem(game.World, config.Seed+6465), config.GenreID)
 
 	// 36k1l. AttackTelegraphGlowSystem - genre-aware attack wind-up warning glow
 	// Reads AIComponent state and AttackComponent cooldown to ramp a visual telegraph
-	attackTelegraphGlowSystem := NewAttackTelegraphGlowSystem(game.World, config.Seed+6470)
-	attackTelegraphGlowSystem.SetGenre(config.GenreID)
-	result.AttackTelegraphGlowSystem = attackTelegraphGlowSystem
-	game.World.AddSystem(attackTelegraphGlowSystem)
+	result.AttackTelegraphGlowSystem = regGenre(game.World,
+		NewAttackTelegraphGlowSystem(game.World, config.Seed+6470), config.GenreID)
 
 	// 36k1m. XPGainBurstSystem - genre-aware XP gain particle bursts
 	// Detects ExperienceComponent.TotalXP changes and spawns upward-rising particles
@@ -1729,62 +1594,44 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36k1n. EquipmentGleamSweepSystem - animated specular gleam sweep across equipment
 	// Reads MaterialSheenComponent and animates a moving highlight band per material/rarity
-	equipmentGleamSweepSystem := NewEquipmentGleamSweepSystem(game.World, config.Seed+6480)
-	equipmentGleamSweepSystem.SetGenre(config.GenreID)
-	result.EquipmentGleamSweepSystem = equipmentGleamSweepSystem
-	game.World.AddSystem(equipmentGleamSweepSystem)
+	result.EquipmentGleamSweepSystem = regGenre(game.World,
+		NewEquipmentGleamSweepSystem(game.World, config.Seed+6480), config.GenreID)
 
 	// 36k1o. SpriteDepthShadingSystem - per-body-part depth shading for entity sprites
 	// Attaches genre-aware shading parameters (highlight, edge darkening, AO, dithering)
-	spriteDepthShadingSystem := NewSpriteDepthShadingSystem(game.World, config.Seed+6485)
-	spriteDepthShadingSystem.SetGenre(config.GenreID)
-	result.SpriteDepthShadingSystem = spriteDepthShadingSystem
-	game.World.AddSystem(spriteDepthShadingSystem)
+	result.SpriteDepthShadingSystem = regGenre(game.World,
+		NewSpriteDepthShadingSystem(game.World, config.Seed+6485), config.GenreID)
 
 	// 36k1p. ClothingPatternSystem - seed-based clothing patterns for entity sprites
 	// Attaches genre-aware garment patterns (stripes, checks, dots, borders, etc.)
-	clothingPatternSystem := NewClothingPatternSystem(game.World, config.Seed+6490)
-	clothingPatternSystem.SetGenre(config.GenreID)
-	result.ClothingPatternSystem = clothingPatternSystem
-	game.World.AddSystem(clothingPatternSystem)
+	result.ClothingPatternSystem = regGenre(game.World,
+		NewClothingPatternSystem(game.World, config.Seed+6490), config.GenreID)
 
 	// 36k1p2. SurfaceTextureSystem - creature-form-specific procedural surface textures
 	// Assigns fur, scales, chitin, metal, bone, ooze, feather, bark textures to
 	// nonhumanoid entities based on their CreatureVisualComponent form.
-	surfaceTextureSystem := NewSurfaceTextureSystem(game.World, config.Seed+6495)
-	surfaceTextureSystem.SetGenre(config.GenreID)
-	result.SurfaceTextureSystem = surfaceTextureSystem
-	game.World.AddSystem(surfaceTextureSystem)
+	result.SurfaceTextureSystem = regGenre(game.World,
+		NewSurfaceTextureSystem(game.World, config.Seed+6495), config.GenreID)
 
 	// 36k1p3. HumanoidTextureSystem - humanoid-specific surface textures
 	// Assigns skin textures (freckled, scarred, weathered, tattooed), clothing
 	// fabric textures (linen, leather, silk, wool, chainmail, plate), and hair
 	// textures (straight, wavy, curly, braided) to humanoid entities.
-	humanoidTextureSystem := NewHumanoidTextureSystem(game.World, config.Seed+6497)
-	humanoidTextureSystem.SetGenre(config.GenreID)
-	result.HumanoidTextureSystem = humanoidTextureSystem
-	game.World.AddSystem(humanoidTextureSystem)
+	result.HumanoidTextureSystem = regGenre(game.World,
+		NewHumanoidTextureSystem(game.World, config.Seed+6497), config.GenreID)
 
 	// 36k1q. BodyTypeSystem - seed-based body type variety for entity sprites
 	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity
-	bodyTypeSystem := NewBodyTypeSystem(game.World, config.Seed+6500)
-	bodyTypeSystem.SetGenre(config.GenreID)
-	result.BodyTypeSystem = bodyTypeSystem
-	game.World.AddSystem(bodyTypeSystem)
+	result.BodyTypeSystem = regGenre(game.World, NewBodyTypeSystem(game.World, config.Seed+6500), config.GenreID)
 
 	// 36k1r. HeadgearAssignmentSystem - seed-based headgear variety for humanoid entities
 	// Assigns genre- and role-aware headgear types (crowns, hoods, wizard hats, circlets, etc.)
-	headgearSystem := NewHeadgearAssignmentSystem(game.World, config.Seed+6510)
-	headgearSystem.SetGenre(config.GenreID)
-	result.HeadgearAssignmentSystem = headgearSystem
-	game.World.AddSystem(headgearSystem)
+	result.HeadgearAssignmentSystem = regGenre(game.World,
+		NewHeadgearAssignmentSystem(game.World, config.Seed+6510), config.GenreID)
 
 	// 36k1s. BackAccessorySystem - seed-based back accessories for humanoid entities
 	// Assigns genre- and role-aware back accessories (capes, cloaks, quivers, backpacks, etc.)
-	backAccessorySystem := NewBackAccessorySystem(game.World, config.Seed+6520)
-	backAccessorySystem.SetGenre(config.GenreID)
-	result.BackAccessorySystem = backAccessorySystem
-	game.World.AddSystem(backAccessorySystem)
+	result.BackAccessorySystem = regGenre(game.World, NewBackAccessorySystem(game.World, config.Seed+6520), config.GenreID)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana
@@ -1812,25 +1659,19 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36n. WeatherRangedAccuracySystem - modifies ranged attack accuracy based on weather
 	// Connects WeatherSystem with ranged combat for tactical depth in poor visibility
-	weatherRangedAccuracySystem := NewWeatherRangedAccuracySystem(game.World, config.Seed+6750)
-	weatherRangedAccuracySystem.SetGenre(config.GenreID)
-	result.WeatherRangedAccuracySystem = weatherRangedAccuracySystem
-	game.World.AddSystem(weatherRangedAccuracySystem)
+	result.WeatherRangedAccuracySystem = regGenre(game.World,
+		NewWeatherRangedAccuracySystem(game.World, config.Seed+6750), config.GenreID)
 
 	// 36n2. WeatherCritChanceSystem - modifies critical hit chance based on weather conditions
 	// Connects WeatherSystem with StatsComponent.CritChance for tactical crit bonuses/penalties
-	weatherCritChanceSystem := NewWeatherCritChanceSystem(game.World, config.Seed+6775)
-	weatherCritChanceSystem.SetGenre(config.GenreID)
-	result.WeatherCritChanceSystem = weatherCritChanceSystem
-	game.World.AddSystem(weatherCritChanceSystem)
+	result.WeatherCritChanceSystem = regGenre(game.World,
+		NewWeatherCritChanceSystem(game.World, config.Seed+6775), config.GenreID)
 
 	// 36n3. WeatherBlockChanceSystem - modifies block chance based on weather conditions
 	// Connects WeatherSystem with StatsComponent.BlockChance for tactical block penalties
 	// Rain makes shields slippery, snow slows reflexes, storms hamper defense
-	weatherBlockChanceSystem := NewWeatherBlockChanceSystem(game.World, config.Seed+6780)
-	weatherBlockChanceSystem.SetGenre(config.GenreID)
-	result.WeatherBlockChanceSystem = weatherBlockChanceSystem
-	game.World.AddSystem(weatherBlockChanceSystem)
+	result.WeatherBlockChanceSystem = regGenre(game.World,
+		NewWeatherBlockChanceSystem(game.World, config.Seed+6780), config.GenreID)
 
 	// 36o. WeatherXPBonusSystem - modifies XP gains based on weather conditions
 	// Connects WeatherSystem with ProgressionSystem for genre-aware XP bonuses
@@ -1842,46 +1683,36 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36p. ElementalComboDamageSystem - applies bonus damage when elemental status effects combine
 	// Connects StatusEffectSystem with CombatSystem for genre-aware elemental combo damage
-	elementalComboDamageSystem := NewElementalComboDamageSystem(game.World, config.Seed+6850)
-	elementalComboDamageSystem.SetGenre(config.GenreID)
-	result.ElementalComboDamageSystem = elementalComboDamageSystem
-	game.World.AddSystem(elementalComboDamageSystem)
+	result.ElementalComboDamageSystem = regGenre(game.World,
+		NewElementalComboDamageSystem(game.World, config.Seed+6850), config.GenreID)
 
 	// 36p2. WeatherElementalComboBonusSystem - modifies elemental combo damage based on weather
 	// Connects WeatherSystem with ElementalComboDamageSystem for environmental synergies
 	weatherElementalComboBonusSystem := NewWeatherElementalComboBonusSystem(game.World, config.Seed+6855)
-	weatherElementalComboBonusSystem.SetElementalComboDamageSystem(elementalComboDamageSystem)
+	weatherElementalComboBonusSystem.SetElementalComboDamageSystem(result.ElementalComboDamageSystem)
 	weatherElementalComboBonusSystem.SetGenre(config.GenreID)
 	result.WeatherElementalComboBonusSystem = weatherElementalComboBonusSystem
 	game.World.AddSystem(weatherElementalComboBonusSystem)
 
 	// 36q. ElementalCompanionSynergySystem - boosts elemental companions based on owner status effects
 	// Connects CompanionComponent (elemental type) with StatusEffectComponent for tactical synergy
-	elementalCompanionSynergySystem := NewElementalCompanionSynergySystem(game.World, config.Seed+6900)
-	elementalCompanionSynergySystem.SetGenre(config.GenreID)
-	result.ElementalCompanionSynergySystem = elementalCompanionSynergySystem
-	game.World.AddSystem(elementalCompanionSynergySystem)
+	result.ElementalCompanionSynergySystem = regGenre(game.World,
+		NewElementalCompanionSynergySystem(game.World, config.Seed+6900), config.GenreID)
 
 	// 36q2. CompanionSpellAmplificationSystem - boosts owner spell damage/healing based on companion bonding
 	// Connects CompanionComponent (loyalty, bonding perks) with owner spell effectiveness
-	companionSpellAmplificationSystem := NewCompanionSpellAmplificationSystem(game.World, config.Seed+6910)
-	companionSpellAmplificationSystem.SetGenre(config.GenreID)
-	result.CompanionSpellAmplificationSystem = companionSpellAmplificationSystem
-	game.World.AddSystem(companionSpellAmplificationSystem)
+	result.CompanionSpellAmplificationSystem = regGenre(game.World,
+		NewCompanionSpellAmplificationSystem(game.World, config.Seed+6910), config.GenreID)
 
 	// 36q3. CompanionManaRegenSystem - boosts owner mana regeneration based on companion bonding
 	// Connects CompanionComponent (loyalty, type, perks) with ManaComponent for sustained spellcasting
-	companionManaRegenSystem := NewCompanionManaRegenSystem(game.World, config.Seed+6920)
-	companionManaRegenSystem.SetGenre(config.GenreID)
-	result.CompanionManaRegenSystem = companionManaRegenSystem
-	game.World.AddSystem(companionManaRegenSystem)
+	result.CompanionManaRegenSystem = regGenre(game.World,
+		NewCompanionManaRegenSystem(game.World, config.Seed+6920), config.GenreID)
 
 	// 36q4. CompanionFishingBonusSystem - boosts fishing rates based on nearby companions
 	// Connects CompanionComponent (type, loyalty) with FishingComponent for companion-assisted fishing
-	companionFishingBonusSystem := NewCompanionFishingBonusSystem(game.World, config.Seed+6930)
-	companionFishingBonusSystem.SetGenre(config.GenreID)
-	result.CompanionFishingBonusSystem = companionFishingBonusSystem
-	game.World.AddSystem(companionFishingBonusSystem)
+	result.CompanionFishingBonusSystem = regGenre(game.World,
+		NewCompanionFishingBonusSystem(game.World, config.Seed+6930), config.GenreID)
 
 	// 36r. LifestealSystem - heals attackers based on damage dealt
 	// Connects CombatSystem damage events with HealthComponent healing for sustained combat
@@ -1903,10 +1734,8 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36s. StatusEffectManaCostSystem - modifies spell mana costs based on status effects
 	// Connects StatusEffectSystem with SpellCastingSystem for tactical spell management
-	statusEffectManaCostSystem := NewStatusEffectManaCostSystem(game.World, config.Seed+7000)
-	statusEffectManaCostSystem.SetGenre(config.GenreID)
-	result.StatusEffectManaCostSystem = statusEffectManaCostSystem
-	game.World.AddSystem(statusEffectManaCostSystem)
+	result.StatusEffectManaCostSystem = regGenre(game.World,
+		NewStatusEffectManaCostSystem(game.World, config.Seed+7000), config.GenreID)
 
 	// 36t. StatusEffectDamageParticleSystem - visual feedback for status effect damage ticks
 	// Connects StatusEffectSystem tick events (burning, poison, regen) with ParticleSystem
@@ -1996,18 +1825,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 36aa. WeatherMeleeDamageSystem - modifies physical/melee damage based on weather
 	// Connects WeatherSystem with CombatSystem for genre-aware melee damage modifiers
-	weatherMeleeDamageSystem := NewWeatherMeleeDamageSystem(game.World, config.Seed+7400)
-	weatherMeleeDamageSystem.SetGenre(config.GenreID)
-	result.WeatherMeleeDamageSystem = weatherMeleeDamageSystem
-	game.World.AddSystem(weatherMeleeDamageSystem)
+	result.WeatherMeleeDamageSystem = regGenre(game.World,
+		NewWeatherMeleeDamageSystem(game.World, config.Seed+7400), config.GenreID)
 
 	// 36ab. WeatherAttackSpeedSystem - modifies melee attack cooldowns based on weather
 	// Connects WeatherSystem with AttackComponent for genre-aware attack speed modifiers
 	// Cold slows attacks, storms enable quick strikes
-	weatherAttackSpeedSystem := NewWeatherAttackSpeedSystem(game.World, config.Seed+7425)
-	weatherAttackSpeedSystem.SetGenre(config.GenreID)
-	result.WeatherAttackSpeedSystem = weatherAttackSpeedSystem
-	game.World.AddSystem(weatherAttackSpeedSystem)
+	result.WeatherAttackSpeedSystem = regGenre(game.World,
+		NewWeatherAttackSpeedSystem(game.World, config.Seed+7425), config.GenreID)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)
@@ -2062,15 +1887,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 43b. TimeOfDayLightingSystem - day/night ambient light modulation (Phase 17.3)
 	// Connects palette/timeofday.go with AmbientLightComponent for dynamic lighting
-	timeOfDayLightingSystem := NewTimeOfDayLightingSystem(game.World, config.Seed+7500)
-	timeOfDayLightingSystem.SetGenre(config.GenreID)
-	result.TimeOfDayLightingSystem = timeOfDayLightingSystem
-	game.World.AddSystem(timeOfDayLightingSystem)
+	result.TimeOfDayLightingSystem = regGenre(game.World,
+		NewTimeOfDayLightingSystem(game.World, config.Seed+7500), config.GenreID)
 
 	// 43c. TimeOfDayStealthSystem - day/night AI detection modulation
 	// Connects TimeOfDayLightingSystem with AIComponent detection ranges for stealth
 	timeOfDayStealthSystem := NewTimeOfDayStealthSystem(game.World, config.Seed+7550)
-	timeOfDayStealthSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayStealthSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayStealthSystem.SetGenre(config.GenreID)
 	result.TimeOfDayStealthSystem = timeOfDayStealthSystem
 	game.World.AddSystem(timeOfDayStealthSystem)
@@ -2078,7 +1901,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43d. TimeOfDayXPBonusSystem - day/night XP bonus modulation
 	// Connects TimeOfDayLightingSystem with ProgressionSystem for time-based XP bonuses
 	timeOfDayXPBonusSystem := NewTimeOfDayXPBonusSystem(game.World, config.Seed+7575)
-	timeOfDayXPBonusSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayXPBonusSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayXPBonusSystem.SetProgressionSystem(progressionSystem)
 	timeOfDayXPBonusSystem.SetGenre(config.GenreID)
 	result.TimeOfDayXPBonusSystem = timeOfDayXPBonusSystem
@@ -2087,7 +1910,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43e. TimeOfDayManaCostSystem - day/night spell mana cost modulation
 	// Connects TimeOfDayLightingSystem with SpellCastingSystem for element-based mana costs
 	timeOfDayManaCostSystem := NewTimeOfDayManaCostSystem(game.World, config.Seed+7600)
-	timeOfDayManaCostSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayManaCostSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayManaCostSystem.SetGenre(config.GenreID)
 	result.TimeOfDayManaCostSystem = timeOfDayManaCostSystem
 	game.World.AddSystem(timeOfDayManaCostSystem)
@@ -2095,7 +1918,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43f. TimeOfDayCriticalChanceSystem - day/night critical hit chance modulation
 	// Connects TimeOfDayLightingSystem with StatsComponent.CritChance for ambush tactics
 	timeOfDayCriticalChanceSystem := NewTimeOfDayCriticalChanceSystem(game.World, config.Seed+7625)
-	timeOfDayCriticalChanceSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayCriticalChanceSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayCriticalChanceSystem.SetGenre(config.GenreID)
 	result.TimeOfDayCriticalChanceSystem = timeOfDayCriticalChanceSystem
 	game.World.AddSystem(timeOfDayCriticalChanceSystem)
@@ -2103,7 +1926,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43g. TimeOfDayCompanionBonusSystem - day/night companion stat modulation
 	// Connects TimeOfDayLightingSystem with CompanionStatsComponent for companion bonuses
 	timeOfDayCompanionBonusSystem := NewTimeOfDayCompanionBonusSystem(game.World, config.Seed+7650)
-	timeOfDayCompanionBonusSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayCompanionBonusSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayCompanionBonusSystem.SetGenre(config.GenreID)
 	result.TimeOfDayCompanionBonusSystem = timeOfDayCompanionBonusSystem
 	game.World.AddSystem(timeOfDayCompanionBonusSystem)
@@ -2111,7 +1934,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43h. TimeOfDayHealthRegenSystem - day/night health regeneration modulation
 	// Connects TimeOfDayLightingSystem with HealthComponent for genre-aware health regen
 	timeOfDayHealthRegenSystem := NewTimeOfDayHealthRegenSystem(game.World, config.Seed+7675)
-	timeOfDayHealthRegenSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayHealthRegenSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayHealthRegenSystem.SetGenre(config.GenreID)
 	result.TimeOfDayHealthRegenSystem = timeOfDayHealthRegenSystem
 	game.World.AddSystem(timeOfDayHealthRegenSystem)
@@ -2119,7 +1942,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43i. TimeOfDayManaRegenSystem - day/night mana regeneration modulation
 	// Connects TimeOfDayLightingSystem with ManaComponent for genre-aware mana regen
 	timeOfDayManaRegenSystem := NewTimeOfDayManaRegenSystem(game.World, config.Seed+7700)
-	timeOfDayManaRegenSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayManaRegenSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayManaRegenSystem.SetGenre(config.GenreID)
 	result.TimeOfDayManaRegenSystem = timeOfDayManaRegenSystem
 	game.World.AddSystem(timeOfDayManaRegenSystem)
@@ -2127,7 +1950,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43j. TimeOfDayBlockChanceSystem - day/night block chance modulation
 	// Connects TimeOfDayLightingSystem with StatsComponent.BlockChance for defensive timing
 	timeOfDayBlockChanceSystem := NewTimeOfDayBlockChanceSystem(game.World, config.Seed+7725)
-	timeOfDayBlockChanceSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayBlockChanceSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayBlockChanceSystem.SetGenre(config.GenreID)
 	result.TimeOfDayBlockChanceSystem = timeOfDayBlockChanceSystem
 	game.World.AddSystem(timeOfDayBlockChanceSystem)
@@ -2136,7 +1959,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// Connects TimeOfDayLightingSystem with StatsComponent.Evasion for shadow-aided dodging
 	// Night enhances evasion (+5% base, up to +8% fantasy), day impairs it (-2% visibility penalty)
 	timeOfDayEvasionSystem := NewTimeOfDayEvasionSystem(game.World, config.Seed+7730)
-	timeOfDayEvasionSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayEvasionSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayEvasionSystem.SetGenre(config.GenreID)
 	result.TimeOfDayEvasionSystem = timeOfDayEvasionSystem
 	game.World.AddSystem(timeOfDayEvasionSystem)
@@ -2145,7 +1968,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// Connects TimeOfDayLightingSystem with spell damage for element-based bonuses
 	// Fire/Light spells stronger during day, Dark/Arcane stronger at night
 	timeOfDaySpellDamageSystem := NewTimeOfDaySpellDamageSystem(game.World, config.Seed+7750)
-	timeOfDaySpellDamageSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDaySpellDamageSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDaySpellDamageSystem.SetGenre(config.GenreID)
 	result.TimeOfDaySpellDamageSystem = timeOfDaySpellDamageSystem
 	game.World.AddSystem(timeOfDaySpellDamageSystem)
@@ -2154,13 +1977,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// Connects TimeOfDayLightingSystem with AttackComponent.Cooldown for combat pacing
 	// Night enables faster attacks (cover), day slightly slows them (visibility aids defense)
 	timeOfDayAttackSpeedSystem := NewTimeOfDayAttackSpeedSystem(game.World, config.Seed+7775)
-	timeOfDayAttackSpeedSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayAttackSpeedSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 	timeOfDayAttackSpeedSystem.SetGenre(config.GenreID)
 	result.TimeOfDayAttackSpeedSystem = timeOfDayAttackSpeedSystem
 	game.World.AddSystem(timeOfDayAttackSpeedSystem)
 
 	// 43m. Connect TimeOfDayShadowDirectionSystem to TimeOfDayLightingSystem
-	timeOfDayShadowDirectionSystem.SetLightingSystem(timeOfDayLightingSystem)
+	result.TimeOfDayShadowDirectionSystem.SetLightingSystem(result.TimeOfDayLightingSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

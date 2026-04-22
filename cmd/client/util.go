@@ -1333,18 +1333,13 @@ func generateLegendaryItemDrop(world *engine.World, enemy *engine.Entity, x, y f
 }
 
 // spawnProceduralLoot generates and spawns procedural loot drops for non-player entities.
+// deps provides game/generator/seed context shared with the calling death callback.
 func spawnProceduralLoot(
-	game *engine.EbitenGame,
+	deps DeathCallbackDeps,
+	playerEntity *engine.Entity,
 	enemy *engine.Entity,
 	pos *engine.PositionComponent,
 	deadComp *engine.DeadComponent,
-	recipeGen *recipe.RecipeGenerator,
-	seed int64,
-	genreID string,
-	playerEntity *engine.Entity,
-	objectiveTracker *engine.ObjectiveTrackerSystem,
-	magicGen *magic.SpellGenerator,
-	skillGen *skills.SkillTreeGenerator,
 ) {
 	// Only for NPCs/enemies, not players
 	if enemy.HasComponent("input") {
@@ -1352,9 +1347,9 @@ func spawnProceduralLoot(
 	}
 
 	// Create deterministic RNG from enemy ID and seed for physics
-	physicsRNG := rand.New(rand.NewSource(seed + int64(enemy.ID)))
+	physicsRNG := rand.New(rand.NewSource(deps.Seed + int64(enemy.ID)))
 
-	lootEntity := engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, seed, genreID)
+	lootEntity := engine.GenerateLootDrop(deps.Game.World, enemy, pos.X, pos.Y, deps.Seed, deps.GenreID)
 	if lootEntity != nil {
 		// Add physics to procedural loot too
 		lootEntity.AddComponent(&engine.VelocityComponent{
@@ -1368,7 +1363,7 @@ func spawnProceduralLoot(
 	}
 
 	// Generate and spawn recipe drops (rarer than item drops)
-	recipeEntity := engine.GenerateRecipeDrop(recipeGen, game.World, enemy, pos.X, pos.Y, seed, genreID)
+	recipeEntity := engine.GenerateRecipeDrop(deps.RecipeGen, deps.Game.World, enemy, pos.X, pos.Y, deps.Seed, deps.GenreID)
 	if recipeEntity != nil {
 		// Add physics to recipe drops
 		recipeEntity.AddComponent(&engine.VelocityComponent{
@@ -1382,7 +1377,7 @@ func spawnProceduralLoot(
 	}
 
 	// Phase 3.2: Generate and spawn spell scroll drops (10% base, 25% for bosses)
-	spellScrollEntity := engine.GenerateSpellScrollDrop(magicGen, game.World, enemy, pos.X, pos.Y, seed, genreID)
+	spellScrollEntity := engine.GenerateSpellScrollDrop(deps.MagicGen, deps.Game.World, enemy, pos.X, pos.Y, deps.Seed, deps.GenreID)
 	if spellScrollEntity != nil {
 		// Add physics to spell scrolls
 		spellScrollEntity.AddComponent(&engine.VelocityComponent{
@@ -1396,7 +1391,7 @@ func spawnProceduralLoot(
 	}
 
 	// Phase 3.2: Generate and spawn skill book drops (5% base, 15% for bosses)
-	skillBookEntity := engine.GenerateSkillBookDrop(skillGen, game.World, enemy, pos.X, pos.Y, seed, genreID)
+	skillBookEntity := engine.GenerateSkillBookDrop(deps.SkillGen, deps.Game.World, enemy, pos.X, pos.Y, deps.Seed, deps.GenreID)
 	if skillBookEntity != nil {
 		// Add physics to skill books
 		skillBookEntity.AddComponent(&engine.VelocityComponent{
@@ -1410,7 +1405,7 @@ func spawnProceduralLoot(
 	}
 
 	// Phase 3.4: Generate and spawn legendary item drops (1% base, 5% for bosses)
-	legendaryEntity := generateLegendaryItemDrop(game.World, enemy, pos.X, pos.Y, seed, genreID)
+	legendaryEntity := generateLegendaryItemDrop(deps.Game.World, enemy, pos.X, pos.Y, deps.Seed, deps.GenreID)
 	if legendaryEntity != nil {
 		// Add physics to legendary items (dramatic velocity)
 		legendaryEntity.AddComponent(&engine.VelocityComponent{
@@ -1425,7 +1420,7 @@ func spawnProceduralLoot(
 
 	// Track enemy kill for quest objectives
 	if playerEntity != nil {
-		objectiveTracker.OnEnemyKilled(playerEntity, enemy)
+		deps.ObjectiveTracker.OnEnemyKilled(playerEntity, enemy)
 	}
 }
 
@@ -1437,21 +1432,33 @@ func spawnProceduralLoot(
 // - Spawning death particle effects
 // - Tracking quest objectives
 // - Awarding XP to the player (AUDIT.md MEDIUM fix)
-func createDeathCallback(
-	game *engine.EbitenGame,
-	playerEntity **engine.Entity,
-	objectiveTracker *engine.ObjectiveTrackerSystem,
-	audioManager **engine.AudioManager,
-	recipeGen *recipe.RecipeGenerator,
-	magicGen *magic.SpellGenerator,
-	skillGen *skills.SkillTreeGenerator,
-	deathParticleSystem *engine.DeathParticleSystem,
-	progressionSystem **engine.ProgressionSystem,
-	seed int64,
-	genreID string,
-	logger *logrus.Logger,
-	tp TimeProvider,
-) func(*engine.Entity) {
+//
+// DeathCallbackDeps bundles the dependencies to avoid a 13-parameter signature
+// (AUDIT.md MEDIUM #3 — high parameter-count functions).
+type DeathCallbackDeps struct {
+	Game               *engine.EbitenGame
+	PlayerEntity       **engine.Entity
+	ObjectiveTracker   *engine.ObjectiveTrackerSystem
+	AudioManager       **engine.AudioManager
+	RecipeGen          *recipe.RecipeGenerator
+	MagicGen           *magic.SpellGenerator
+	SkillGen           *skills.SkillTreeGenerator
+	DeathParticleSystem *engine.DeathParticleSystem
+	ProgressionSystem  **engine.ProgressionSystem
+	Seed               int64
+	GenreID            string
+	Logger             *logrus.Logger
+	TP                 TimeProvider
+}
+
+func createDeathCallback(deps DeathCallbackDeps) func(*engine.Entity) {
+	game := deps.Game
+	playerEntity := deps.PlayerEntity
+	audioManager := deps.AudioManager
+	deathParticleSystem := deps.DeathParticleSystem
+	progressionSystem := deps.ProgressionSystem
+	logger := deps.Logger
+	tp := deps.TP
 	return func(enemy *engine.Entity) {
 		// Priority 1.4: Only process death once (callback called every frame while entity is dead)
 		if enemy.HasComponent("dead") {
@@ -1497,7 +1504,7 @@ func createDeathCallback(
 		dropEquippedItems(game, enemy, pos, deadComp)
 
 		// Generate and spawn procedural loot drop (in addition to inventory items)
-		spawnProceduralLoot(game, enemy, pos, deadComp, recipeGen, seed, genreID, *playerEntity, objectiveTracker, magicGen, skillGen)
+		spawnProceduralLoot(deps, *playerEntity, enemy, pos, deadComp)
 
 		// GAP-010 REPAIR: Play death sound effect
 		if *audioManager != nil {

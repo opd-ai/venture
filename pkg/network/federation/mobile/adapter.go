@@ -265,6 +265,8 @@ func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler Syn
 	}
 }
 
+// waitForBandwidthRefill waits for the computed bandwidth-delay window while
+// honoring context cancellation and ensuring timer resources are cleaned up.
 func waitForBandwidthRefill(ctx context.Context, waitTime time.Duration) error {
 	timer := time.NewTimer(waitTime)
 	defer stopAndDrainTimer(timer)
@@ -277,6 +279,8 @@ func waitForBandwidthRefill(ctx context.Context, waitTime time.Duration) error {
 	}
 }
 
+// stopAndDrainTimer safely stops a timer and drains a fired tick to avoid
+// retaining stale timer events on cancellation paths.
 func stopAndDrainTimer(timer *time.Timer) {
 	if !timer.Stop() {
 		select {

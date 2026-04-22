@@ -584,11 +584,11 @@ type systemsContainer struct {
 	// Voice Systems (PLAN.md Phase 1)
 	// Gap: Voice systems implemented in pkg/engine but never initialized or registered
 	// Fix: Added voice channel and spatial voice systems for multiplayer voice chat
-	voiceChannelSystem *engine.VoiceChannelSystem // Voice channel lifecycle and participant synchronization
-	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
-	voiceAudioSystem   *engine.VoiceAudioSystem   // Voice audio input/output processing
-	baseAudioManager   *audio.Manager             // Core audio manager with voice initialization support
-	networkClient      interface{}                 // Network client reference for deferred voice transport wiring
+	voiceChannelSystem *engine.VoiceChannelSystem    // Voice channel lifecycle and participant synchronization
+	spatialVoiceSystem *engine.SpatialVoiceSystem    // Distance-based volume and stereo panning for voice
+	voiceAudioSystem   *engine.VoiceAudioSystem      // Voice audio input/output processing
+	baseAudioManager   *audio.Manager                // Core audio manager with voice initialization support
+	networkClient      interface{}                   // Network client reference for deferred voice transport wiring
 	animSyncMgr        *network.AnimationSyncManager // AnimationSyncManager for deferred network wiring
 
 	// VR Systems (AUDIT.md Task 7)
@@ -1935,6 +1935,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.damageTypeColorFlashSystem = engine.NewDamageTypeColorFlashSystem(game.World, *seed+10250)
 	sys.damageTypeColorFlashSystem.SetGenre(*genreID)
 	if sys.combatSystem != nil {
+		sys.combatSystem.AddDamageCallback(sys.weaponMaterialImpactParticleSystem.OnMeleeImpact)
 		sys.combatSystem.AddDamageCallback(sys.damageTypeColorFlashSystem.OnDamageDealt)
 	}
 	game.World.AddSystem(sys.damageTypeColorFlashSystem)

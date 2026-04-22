@@ -62,6 +62,14 @@
 //	    // Handle error (too far apart, already trading, etc.)
 //	}
 //
+//	// Quantity-bearing proposals are also supported
+//	err = ts.ProposeTradeWithQuantities(
+//	    proposer.ID,
+//	    recipient.ID,
+//	    []engine.TradeLineItem{{ItemID: "potion", Quantity: 2}},
+//	    []engine.TradeLineItem{{ItemID: "herb", Quantity: 3}},
+//	)
+//
 //	// Recipient accepts trade
 //	err = ts.AcceptTrade(recipient.ID)
 //	if err != nil {
@@ -85,7 +93,7 @@
 // Trade proposals follow a strict validation sequence for performance and security:
 //
 // 1. **Rate Limiting** (system.go:137): Check if proposer exceeds 10 requests/second - fail fast
-// 2. **Format Validation** (system.go:142): Validate item ID formats via pkg/validation
+// 2. **Format Validation** (system.go): Validate item ID and quantity formats via pkg/validation
 // 3. **Entity Validation**: Verify proposer and recipient exist with required components
 // 4. **Proximity Validation**: Ensure players are within 5 tiles
 // 5. **Trust Validation**: Check trust score allows proposed items

@@ -135,16 +135,33 @@ func (ts *TradeSystem) validateRequestedItems(recipient *Entity, recipientTrade 
 // createTradeProposal creates and assigns a trade proposal to both participants.
 func (ts *TradeSystem) createTradeProposal(proposerID, recipientID uint64, proposerTrade, recipientTrade *TradeComponent, offeredItemIDs, requestedItemIDs []string) {
 	proposal := &TradeProposal{
-		ProposerID:     proposerID,
-		RecipientID:    recipientID,
-		OfferedItems:   offeredItemIDs,
-		RequestedItems: requestedItemIDs,
-		Status:         "pending",
-		ProposalTime:   time.Now().Unix(),
+		ProposerID:         proposerID,
+		RecipientID:        recipientID,
+		OfferedItems:       offeredItemIDs,
+		RequestedItems:     requestedItemIDs,
+		OfferedLineItems:   lineItemsFromIDs(offeredItemIDs),
+		RequestedLineItems: lineItemsFromIDs(requestedItemIDs),
+		Status:             "pending",
+		ProposalTime:       time.Now().Unix(),
 	}
 
 	proposerTrade.ActiveTrade = proposal
 	recipientTrade.ActiveTrade = proposal
+}
+
+func lineItemsFromIDs(itemIDs []string) []TradeLineItem {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+
+	lineItems := make([]TradeLineItem, len(itemIDs))
+	for i, itemID := range itemIDs {
+		lineItems[i] = TradeLineItem{
+			ItemID:   itemID,
+			Quantity: 1,
+		}
+	}
+	return lineItems
 }
 
 // AcceptTrade accepts a pending trade proposal.

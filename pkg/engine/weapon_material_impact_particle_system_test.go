@@ -107,6 +107,38 @@ func TestWeaponMaterialImpactParticleSystem_OnMeleeImpact_ProjectileSkipped(t *t
 	sys.OnMeleeImpact(attacker, target, 15)
 }
 
+func TestWeaponMaterialImpactParticleSystem_OnMeleeImpact_SpawnsParticles(t *testing.T) {
+	world := NewWorld()
+	sys := NewWeaponMaterialImpactParticleSystem(world, 1)
+	ps := NewParticleSystem()
+	sys.SetParticleSystem(ps)
+	sys.SetGenre("fantasy")
+
+	attacker := world.CreateEntity()
+	equip := &EquipmentComponent{Slots: make(map[EquipmentSlot]*item.Item)}
+	equip.Slots[SlotMainHand] = &item.Item{
+		ID:     "impact_sword",
+		Name:   "Impact Sword",
+		Type:   item.TypeWeapon,
+		Rarity: item.RarityRare,
+		Stats:  item.Stats{IsProjectile: false},
+		Tags:   []string{"metal"},
+	}
+	attacker.AddComponent(equip)
+
+	target := world.CreateEntity()
+	target.AddComponent(&PositionComponent{X: 10, Y: 20})
+	world.Update(0)
+
+	before := ps.GetActiveParticleCount()
+	sys.OnMeleeImpact(attacker, target, 25)
+	after := ps.GetActiveParticleCount()
+
+	if after <= before {
+		t.Fatalf("expected melee impact to spawn particles (before=%d after=%d)", before, after)
+	}
+}
+
 func TestWeaponMaterialImpactParticleSystem_GetProfile(t *testing.T) {
 	sys := NewWeaponMaterialImpactParticleSystem(nil, 1)
 

@@ -21,12 +21,10 @@ func TestNewSpecializationDefenseSystem(t *testing.T) {
 		t.Errorf("Expected updateInterval 1.0, got %f", system.updateInterval)
 	}
 
-	if system.originalDefense == nil {
-		t.Error("originalDefense map not initialized")
-	}
-
-	if system.appliedBonuses == nil {
-		t.Error("appliedBonuses map not initialized")
+	// Verify the bonus cache is ready by checking that GetBonusForEntity returns 0
+	// for an entity that hasn't been processed yet.
+	if system.GetBonusForEntity(99999) != 0 {
+		t.Error("defenseMod cache not initialized: expected zero bonus for unknown entity")
 	}
 
 	if system.genreID != "fantasy" {
@@ -76,14 +74,14 @@ func TestSpecializationDefenseSystem_Update_IntervalThrottling(t *testing.T) {
 	// First update with small delta - should not process
 	system.Update(entities, 0.5)
 
-	if _, exists := system.appliedBonuses[entity.ID]; exists {
+	if system.GetBonusForEntity(entity.ID) != 0 {
 		t.Error("Should not apply bonus before interval elapsed")
 	}
 
 	// Second update - now interval should be met
 	system.Update(entities, 0.6)
 
-	if _, exists := system.appliedBonuses[entity.ID]; !exists {
+	if system.GetBonusForEntity(entity.ID) == 0 {
 		t.Error("Should apply bonus after interval elapsed")
 	}
 }
@@ -353,9 +351,12 @@ func TestSpecializationDefenseSystem_OriginalDefensePreserved(t *testing.T) {
 		t.Errorf("Defense should not compound: first=%f, second=%f", firstDefense, secondDefense)
 	}
 
-	// Verify the original was stored correctly
-	if stored, exists := system.originalDefense[entity.ID]; !exists || stored != originalDefense {
-		t.Errorf("Original defense not stored correctly: expected %f, got %f", originalDefense, stored)
+	// Verify the original was preserved: applying the same spec twice should produce
+	// the same result as applying it once (bonus = originalDefense * (1+spec_bonus)).
+	bonus := system.GetBonusForEntity(entity.ID)
+	expectedDefense := originalDefense * (1.0 + bonus)
+	if firstDefense != expectedDefense {
+		t.Errorf("Original defense not preserved correctly: expected %f, got %f", expectedDefense, firstDefense)
 	}
 }
 

@@ -23,6 +23,106 @@ type TargetPositions struct {
 	Dx, Dy    float64
 }
 
+// btMovementParams holds configuration for the runMovementTick scaffold.
+type btMovementParams struct {
+	Speed    float64
+	StopDist float64
+}
+
+// btAllyCtx holds the resolved faction/position/nearby context passed to the
+// decide step in runMovementTick.
+type btAllyCtx struct {
+	Pos     *PositionComponent
+	Faction *FactionComponent
+	Nearby  []*Entity
+}
+
+// resolveFactionAndNearby extracts the faction component, position, and nearby
+// entity list that movement-oriented behavior-tree Tick methods all acquire at
+// their start. Returns ok=false if any required component is absent.
+func resolveFactionAndNearby(entity *Entity, bb *Blackboard) (*FactionComponent, *PositionComponent, []*Entity, bool) {
+	factionComp, hasFaction := entity.GetComponent("faction")
+	if !hasFaction {
+		return nil, nil, nil, false
+	}
+	faction, ok := factionComp.(*FactionComponent)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil, nil, nil, false
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	nearbyVal, hasNearby := bb.Get("nearby_entities")
+	if !hasNearby || nearbyVal == nil {
+		return nil, nil, nil, false
+	}
+	nearby, ok := nearbyVal.([]*Entity)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	return faction, pos, nearby, true
+}
+
+// runMovementTick is the shared scaffold for movement-oriented behavior-tree
+// Tick methods. It handles faction lookup, position acquisition, nearby-entity
+// resolution, movement application, velocity update, and timeMoving
+// bookkeeping. The decide callback receives the resolved context and returns
+// the target (targetX, targetY) to move toward. Return ok=false to signal no
+// valid target, which causes NodeFailure.
+func runMovementTick(
+	entity *Entity,
+	bb *Blackboard,
+	dt float64,
+	params btMovementParams,
+	timeMoving *float64,
+	decide func(ctx btAllyCtx, entity *Entity, bb *Blackboard) (targetX, targetY float64, ok bool),
+) NodeStatus {
+	faction, pos, nearby, resolved := resolveFactionAndNearby(entity, bb)
+	if !resolved {
+		return NodeFailure
+	}
+
+	ctx := btAllyCtx{Pos: pos, Faction: faction, Nearby: nearby}
+	targetX, targetY, found := decide(ctx, entity, bb)
+	if !found {
+		return NodeFailure
+	}
+
+	dx := targetX - pos.X
+	dy := targetY - pos.Y
+	dist := math.Sqrt(dx*dx + dy*dy)
+
+	if dist <= params.StopDist {
+		*timeMoving = 0
+		return NodeSuccess
+	}
+
+	if dist > 0 {
+		nx := dx / dist
+		ny := dy / dist
+		pos.X += nx * params.Speed * dt
+		pos.Y += ny * params.Speed * dt
+
+		if velComp, ok := entity.GetComponent("velocity"); ok {
+			if vel, ok := velComp.(*VelocityComponent); ok {
+				vel.VX = nx * params.Speed
+				vel.VY = ny * params.Speed
+			}
+		}
+	}
+
+	*timeMoving += dt
+	return NodeRunning
+}
+
 // GetTargetPositions extracts target from blackboard and returns both positions.
 // Returns nil if target or positions are unavailable.
 func GetTargetPositions(entity *Entity, blackboard *Blackboard) *TargetPositions {

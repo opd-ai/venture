@@ -23,11 +23,8 @@ type SpecializationDefenseSystem struct {
 	updateInterval float64
 	timeSinceCheck float64
 
-	// Cache original defense values per entity to apply bonus correctly
-	originalDefense map[uint64]float64
-
-	// Track which entities have bonuses applied
-	appliedBonuses map[uint64]float64
+	// defenseMod handles original/applied stat caching for the defense stat.
+	defenseMod statBonusApplier
 
 	// Genre affects bonus amounts (scifi has tech-armor, fantasy is standard)
 	genreID string
@@ -42,13 +39,12 @@ func NewSpecializationDefenseSystem(world *World, seed int64) *SpecializationDef
 	}
 
 	return &SpecializationDefenseSystem{
-		world:           world,
-		logger:          logEntry,
-		rng:             rand.New(rand.NewSource(seed)),
-		updateInterval:  1.0, // Check once per second (specializations rarely change)
-		originalDefense: make(map[uint64]float64),
-		appliedBonuses:  make(map[uint64]float64),
-		genreID:         "fantasy",
+		world:          world,
+		logger:         logEntry,
+		rng:            rand.New(rand.NewSource(seed)),
+		updateInterval: 1.0, // Check once per second (specializations rarely change)
+		defenseMod:     newStatBonusApplier(),
+		genreID:        "fantasy",
 	}
 }
 
@@ -79,13 +75,7 @@ func (s *SpecializationDefenseSystem) processEntity(entity *Entity) {
 	// Need both stats and class_progression components
 	if !entity.HasComponent("stats") || !entity.HasComponent("class_progression") {
 		// If entity lost components, remove any stored bonus
-		s.removeBonus(entity.ID)
-		return
-	}
-
-	statsComp, _ := entity.GetComponent("stats")
-	stats, ok := statsComp.(*StatsComponent)
-	if !ok {
+		s.defenseMod.remove(entity.ID)
 		return
 	}
 
@@ -95,34 +85,21 @@ func (s *SpecializationDefenseSystem) processEntity(entity *Entity) {
 		return
 	}
 
-	// Calculate bonus based on class and specialization
 	bonus := s.calculateBonus(progression)
-
-	// Check if bonus changed
-	currentBonus, hasBonus := s.appliedBonuses[entity.ID]
-	if hasBonus && currentBonus == bonus {
-		return // No change needed
-	}
-
-	// Store original defense if not already stored
-	if _, exists := s.originalDefense[entity.ID]; !exists {
-		s.originalDefense[entity.ID] = stats.Defense
-	}
-
-	// Apply new bonus
-	originalDefense := s.originalDefense[entity.ID]
-	newDefense := originalDefense * (1.0 + bonus)
-	stats.Defense = newDefense
-	s.appliedBonuses[entity.ID] = bonus
-
-	if s.logger != nil && bonus > 0 {
+	changed := s.defenseMod.apply(entity, bonus,
+		func(st *StatsComponent) float64          { return st.Defense },
+		func(st *StatsComponent, v float64)       { st.Defense = v },
+		multiplicativeBonus,
+	)
+	if changed && s.logger != nil && bonus > 0 {
+		statsComp, _ := entity.GetComponent("stats")
+		stats, _ := statsComp.(*StatsComponent)
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":        entity.ID,
-			"class":            progression.Class.String(),
-			"specialization":   progression.Specialization.String(),
-			"bonus_percent":    bonus * 100,
-			"original_defense": originalDefense,
-			"new_defense":      newDefense,
+			"entity_id":      entity.ID,
+			"class":          progression.Class.String(),
+			"specialization": progression.Specialization.String(),
+			"bonus_percent":  bonus * 100,
+			"new_defense":    stats.Defense,
 		}).Debug("Specialization defense bonus applied")
 	}
 }
@@ -290,18 +267,7 @@ func (s *SpecializationDefenseSystem) getGenreMultiplier() float64 {
 	}
 }
 
-// removeBonus removes any stored bonus for an entity.
-func (s *SpecializationDefenseSystem) removeBonus(entityID uint64) {
-	if _, exists := s.appliedBonuses[entityID]; exists {
-		delete(s.appliedBonuses, entityID)
-		delete(s.originalDefense, entityID)
-	}
-}
-
 // GetBonusForEntity returns the current defense bonus for an entity (for UI).
 func (s *SpecializationDefenseSystem) GetBonusForEntity(entityID uint64) float64 {
-	if bonus, exists := s.appliedBonuses[entityID]; exists {
-		return bonus
-	}
-	return 0.0
+	return s.defenseMod.currentBonus(entityID)
 }

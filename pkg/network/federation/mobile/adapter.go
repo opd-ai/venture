@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/network/federation/internal/timerutil"
 )
 
 // Adapter manages mobile federation with battery optimization
@@ -259,12 +261,23 @@ func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler Syn
 		waitTime := time.Duration(float64(tokensNeeded)/float64(a.config.MaxBandwidth)) * time.Second
 
 		// Wait for tokens to refill or context cancellation
-		select {
-		case <-time.After(waitTime):
-			continue // retry with iterative loop
-		case <-ctx.Done():
-			return ctx.Err()
+		if err := waitForBandwidthRefill(ctx, waitTime); err != nil {
+			return err
 		}
+	}
+}
+
+// waitForBandwidthRefill waits for the computed bandwidth-delay window while
+// honoring context cancellation and ensuring timer resources are cleaned up.
+func waitForBandwidthRefill(ctx context.Context, waitTime time.Duration) error {
+	timer := time.NewTimer(waitTime)
+	defer timerutil.StopAndDrain(timer)
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 

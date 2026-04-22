@@ -7,6 +7,7 @@ package webrtc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 
 	"github.com/opd-ai/venture/pkg/recovery"
 )
+
+var errSendTimeout = errors.New("send timeout")
 
 // NewPeer creates a new WebRTC federation peer with the given ID and configuration.
 func NewPeer(id string, config *Config) (*Peer, error) {
@@ -139,6 +142,9 @@ func (p *Peer) simulateConnection(ctx context.Context) {
 
 // processMessages handles sending and receiving messages on the data channel.
 func (p *Peer) processMessages() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-p.closeChan:
@@ -146,7 +152,7 @@ func (p *Peer) processMessages() {
 		case <-p.sendChan:
 			// In production, this would send via WebRTC data channel
 			// Stats are updated in Send() method
-		case <-time.After(100 * time.Millisecond):
+		case <-ticker.C:
 			// Periodic housekeeping
 		}
 	}
@@ -174,14 +180,14 @@ func (p *Peer) Send(data []byte) error {
 	p.stats.LastActivity = p.timeProvider.Now()
 	p.mu.Unlock()
 
-	select {
-	case p.sendChan <- data:
-		return nil
-	case <-p.closeChan:
-		return ErrConnectionClosed
-	case <-time.After(5 * time.Second):
-		return fmt.Errorf("send timeout")
-	}
+	return sendWithTimeoutOrDone(
+		p.sendChan,
+		data,
+		p.closeChan,
+		5*time.Second,
+		ErrConnectionClosed,
+		errSendTimeout,
+	)
 }
 
 // Receive returns a channel for receiving messages from the remote peer.

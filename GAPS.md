@@ -1,6 +1,6 @@
 # Memory Safety Gaps — 2026-04-21
 
-> **Legacy gap ID note**: This dated memory-safety gap list supersedes prior `GAPS.md` numbering. Existing references elsewhere in the repository to historical IDs such as `GAPS.md Gap 1` may refer to older versions. For this memory-focused document, use stable aliases `MS-1`, `MS-2`, and `MS-3`.
+> **Legacy gap ID note**: This memory-safety gap list (dated 2026-04-21) supersedes prior `GAPS.md` numbering. Existing references elsewhere in the repository to historical IDs such as `GAPS.md Gap 1` may refer to older versions. For this memory-focused document, use stable aliases `MS-1`, `MS-2`, and `MS-3`.
 >
 > **Scope note**: This file now tracks memory-specific gaps only. Broader non-memory backlog items remain in existing project trackers/docs (for example `ROADMAP.md` and package-scoped audit docs).
 

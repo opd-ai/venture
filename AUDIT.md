@@ -3,7 +3,7 @@
 ## Legacy Cross-Reference Compatibility (for existing repo comments)
 This file keeps historical `AUDIT.md` identifiers stable for existing references in code comments and docs.
 
-> **Legacy ID note**: Existing references to historical IDs (for example `AUDIT.md Gap 1`, `AUDIT.md Task 7`, `AUDIT.md G5`) refer to prior audit/backlog semantics. New memory findings in this document use `MA-*` identifiers.
+> **Legacy ID note**: Existing references to historical IDs (for example `Gap 1`, `Gap #3`, `Task 7`, `G5`) refer to prior audit/backlog semantics. New memory findings in this document use `MA-*` identifiers.
 
 | Legacy ID | Historical topic (from existing references) |
 |-----------|---------------------------------------------|
@@ -25,7 +25,7 @@ This file keeps historical `AUDIT.md` identifiers stable for existing references
 ## Project Memory Profile
 - **Type**: long-running client + dedicated server game runtime (leak-sensitive), plus short-lived tools/tests.
 - **Stated goals**: 60 FPS target and memory targets of **<500MB client / <1GB server** (`docs/PERFORMANCE_TUNING.md:3,16-19`; `docs/PERFORMANCE.md:13-15`).
-- **Scale indicators**: 123 packages (`go list ./...`), high-throughput subsystems in `pkg/engine`, `pkg/network`, `pkg/rendering`, `pkg/procgen`, `pkg/world`.
+- **Scale indicators**: 123 packages as of 2026-04-21 snapshot (`go list ./...`), high-throughput subsystems in `pkg/engine`, `pkg/network`, `pkg/rendering`, `pkg/procgen`, `pkg/world`.
 - **Memory-sensitive deps from `go.mod`**: Ebiten (image/runtime memory behavior), Logrus (field map allocations), stdlib `sync.Pool` heavily used.
 
 ## Baseline & Tooling Evidence

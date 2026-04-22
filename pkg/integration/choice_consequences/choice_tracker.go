@@ -27,6 +27,12 @@ var createChoiceTrackerFile = func(filename string) (io.WriteCloser, error) {
 	return os.Create(filename)
 }
 
+func setSaveCloseError(retErr *error, closeErr error) {
+	if closeErr != nil && *retErr == nil {
+		*retErr = fmt.Errorf("failed to close file: %w", closeErr)
+	}
+}
+
 // ChoiceTracker manages player choice tracking and consequence application.
 type ChoiceTracker struct {
 	mu                     sync.RWMutex
@@ -633,9 +639,7 @@ func (ct *ChoiceTracker) Save(filename string) (err error) {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			if err == nil {
-				err = fmt.Errorf("failed to close file: %w", closeErr)
-			}
+			setSaveCloseError(&err, closeErr)
 			trackerLogger.WithFields(log.Fields{
 				"filename": filename,
 				"error":    closeErr.Error(),

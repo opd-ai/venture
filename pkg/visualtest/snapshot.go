@@ -43,6 +43,12 @@ var createSnapshotFile = func(path string) (io.WriteCloser, error) {
 	return os.Create(path)
 }
 
+func setSnapshotCloseError(retErr *error, closeErr error) {
+	if closeErr != nil && *retErr == nil {
+		*retErr = fmt.Errorf("failed to close snapshot image file: %w", closeErr)
+	}
+}
+
 type Snapshot struct {
 	// Generation parameters
 	Seed    int64  `json:"seed"`
@@ -224,9 +230,7 @@ func saveImage(img *image.RGBA, path string) (err error) {
 		return err
 	}
 	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close snapshot image file: %w", closeErr)
-		}
+		setSnapshotCloseError(&err, file.Close())
 	}()
 
 	return png.Encode(file, img)

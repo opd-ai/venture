@@ -21,6 +21,12 @@ var createSaveFile = func(filename string) (io.WriteCloser, error) {
 	return os.Create(filename)
 }
 
+func setCloseError(retErr *error, closeErr error, context string) {
+	if closeErr != nil && *retErr == nil {
+		*retErr = fmt.Errorf("%s: %w", context, closeErr)
+	}
+}
+
 // Save writes housing data to a compressed JSON file.
 func (m *Manager) Save(filename string) (err error) {
 	// Create directory if needed
@@ -55,9 +61,7 @@ func (m *Manager) Save(filename string) (err error) {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			if err == nil {
-				err = fmt.Errorf("failed to close file: %w", closeErr)
-			}
+			setCloseError(&err, closeErr, "failed to close file")
 			log.WithFields(log.Fields{
 				"filename": filename,
 				"error":    closeErr.Error(),
@@ -186,9 +190,7 @@ func (m *Manager) SavePlayerData(playerID, filename string) (err error) {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			if err == nil {
-				err = fmt.Errorf("failed to close file: %w", closeErr)
-			}
+			setCloseError(&err, closeErr, "failed to close file")
 			log.WithFields(log.Fields{
 				"playerID": playerID,
 				"filename": filename,

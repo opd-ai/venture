@@ -1,6 +1,10 @@
 package webrtc
 
-import "time"
+import (
+	"time"
+
+	"github.com/opd-ai/venture/pkg/network/federation/internal/timerutil"
+)
 
 // sendWithTimeout first attempts a non-blocking send and only allocates a timer
 // when immediate delivery fails, then safely stops/drains the timer on return.
@@ -13,7 +17,7 @@ func sendWithTimeout[T any](ch chan<- T, msg T, timeout time.Duration) bool {
 	}
 
 	timer := time.NewTimer(timeout)
-	defer stopAndDrainTimer(timer)
+	defer timerutil.StopAndDrain(timer)
 
 	select {
 	case ch <- msg:
@@ -26,6 +30,9 @@ func sendWithTimeout[T any](ch chan<- T, msg T, timeout time.Duration) bool {
 // sendWithTimeoutOrDone sends with an immediate fast-path, then waits for
 // successful send, cancellation via done, or timeout and returns the provided
 // done/timeout errors for callers that need explicit error typing.
+// If send and done are both ready in the blocking select, Go may choose either
+// case; callers that require strict precedence should use distinct error values
+// and handle either result as equivalent terminal state.
 func sendWithTimeoutOrDone[T any](
 	ch chan<- T,
 	msg T,
@@ -43,7 +50,7 @@ func sendWithTimeoutOrDone[T any](
 	}
 
 	timer := time.NewTimer(timeout)
-	defer stopAndDrainTimer(timer)
+	defer timerutil.StopAndDrain(timer)
 
 	select {
 	case ch <- msg:
@@ -52,16 +59,5 @@ func sendWithTimeoutOrDone[T any](
 		return doneErr
 	case <-timer.C:
 		return timeoutErr
-	}
-}
-
-// stopAndDrainTimer safely stops a timer and performs a non-blocking drain when
-// the timer has already fired so reused cleanup paths do not leak timer events.
-func stopAndDrainTimer(timer *time.Timer) {
-	if !timer.Stop() {
-		select {
-		case <-timer.C:
-		default:
-		}
 	}
 }

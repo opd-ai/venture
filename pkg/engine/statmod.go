@@ -1,7 +1,11 @@
 // Package engine statmod.go provides a reusable cache/apply/remove helper for
 // stat-bonus systems. It abstracts the repeated pattern of caching an entity's
 // original stat value, detecting whether the bonus changed, applying the new
-// value via a caller-supplied formula, and restoring the original on removal.
+// value via a caller-supplied formula.
+//
+// NOTE: remove() clears the bonus cache but does NOT touch the entity's
+// StatsComponent. If you need to restore the original stat before removing
+// (e.g. when an entity loses a buff component), call restoreAndRemove instead.
 //
 // Usage:
 //
@@ -19,6 +23,13 @@
 //	        func(st *StatsComponent) float64  { return st.Speed },
 //	        func(st *StatsComponent, v float64) { st.Speed = v },
 //	        multiplicativeBonus,
+//	    )
+//	}
+//
+//	func (s *MySystem) onComponentRemoved(entity *Entity) {
+//	    // Restores the cached original Speed and clears the cache entry.
+//	    s.bonus.restoreAndRemove(entity,
+//	        func(st *StatsComponent, v float64) { st.Speed = v },
 //	    )
 //	}
 package engine
@@ -69,6 +80,8 @@ func (a *statBonusApplier) apply(
 		return false
 	}
 
+	a.init()
+
 	// Skip if nothing changed.
 	if cur, has := a.applied[entity.ID]; has && cur == bonus {
 		return false
@@ -84,10 +97,39 @@ func (a *statBonusApplier) apply(
 	return true
 }
 
+// restoreAndRemove writes the cached original stat value back to the entity's
+// StatsComponent (if a cached original exists) and then clears the cache entry.
+// Use this when an entity loses a buff component and the stat must return to its
+// pre-bonus value.
+func (a *statBonusApplier) restoreAndRemove(
+	entity *Entity,
+	setStat func(*StatsComponent, float64),
+) {
+	if a.original == nil {
+		return
+	}
+	orig, exists := a.original[entity.ID]
+	if !exists {
+		return
+	}
+	statsComp, ok := entity.GetComponent("stats")
+	if ok {
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			setStat(stats, orig)
+		}
+	}
+	delete(a.applied, entity.ID)
+	delete(a.original, entity.ID)
+}
+
 // remove clears any cached state for entityID without touching the
-// StatsComponent.  Call this when an entity loses its components or is
-// despawned.
+// StatsComponent. Call this when an entity is fully despawned and stat
+// restoration is not required. For in-game component removal (e.g. losing a
+// buff), prefer restoreAndRemove.
 func (a *statBonusApplier) remove(entityID uint64) {
+	if a.applied == nil {
+		return
+	}
 	delete(a.applied, entityID)
 	delete(a.original, entityID)
 }
@@ -95,7 +137,21 @@ func (a *statBonusApplier) remove(entityID uint64) {
 // currentBonus returns the most recently applied bonus value for entityID,
 // or 0 if none has been applied.
 func (a *statBonusApplier) currentBonus(entityID uint64) float64 {
+	if a.applied == nil {
+		return 0
+	}
 	return a.applied[entityID]
+}
+
+// init lazily allocates the internal maps so that a zero-value statBonusApplier
+// is safe to use without calling newStatBonusApplier first.
+func (a *statBonusApplier) init() {
+	if a.original == nil {
+		a.original = make(map[uint64]float64)
+	}
+	if a.applied == nil {
+		a.applied = make(map[uint64]float64)
+	}
 }
 
 // multiplicativeBonus computes original*(1+bonus), the standard formula for

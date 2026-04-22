@@ -21,8 +21,17 @@ func TestNewSpecializationDefenseSystem(t *testing.T) {
 		t.Errorf("Expected updateInterval 1.0, got %f", system.updateInterval)
 	}
 
-	// Verify the bonus cache is ready by checking that GetBonusForEntity returns 0
-	// for an entity that hasn't been processed yet.
+	// Verify the bonus cache maps are initialized. A nil map read also returns zero,
+	// so checking GetBonusForEntity alone does not prove initialization.
+	if system.defenseMod.applied == nil {
+		t.Error("defenseMod.applied cache not initialized")
+	}
+
+	if system.defenseMod.original == nil {
+		t.Error("defenseMod.original cache not initialized")
+	}
+
+	// Unknown entities should still report zero bonus.
 	if system.GetBonusForEntity(99999) != 0 {
 		t.Error("defenseMod cache not initialized: expected zero bonus for unknown entity")
 	}
@@ -309,16 +318,24 @@ func TestSpecializationDefenseSystem_BonusRemoval(t *testing.T) {
 	if system.GetBonusForEntity(entity.ID) == 0 {
 		t.Fatal("Bonus should be applied initially")
 	}
+	if stats.Defense <= 100.0 {
+		t.Fatal("Defense should have been boosted above 100")
+	}
 
 	// Remove class_progression component
 	entity.RemoveComponent("class_progression")
 
-	// Update again
+	// Update again — processEntity should call restoreAndRemove
 	system.Update(entities, 2.0)
 
 	// Bonus tracking should be removed
 	if system.GetBonusForEntity(entity.ID) != 0 {
 		t.Error("Bonus tracking should be removed when component is removed")
+	}
+
+	// The original defense value should be restored
+	if stats.Defense != 100.0 {
+		t.Errorf("Defense should be restored to 100 after component removal, got %f", stats.Defense)
 	}
 }
 

@@ -74,8 +74,10 @@ func (s *SpecializationDefenseSystem) Update(entities []*Entity, deltaTime float
 func (s *SpecializationDefenseSystem) processEntity(entity *Entity) {
 	// Need both stats and class_progression components
 	if !entity.HasComponent("stats") || !entity.HasComponent("class_progression") {
-		// If entity lost components, remove any stored bonus
-		s.defenseMod.remove(entity.ID)
+		// Restore the original defense value (if any) and clear the cache.
+		s.defenseMod.restoreAndRemove(entity,
+			func(st *StatsComponent, v float64) { st.Defense = v },
+		)
 		return
 	}
 

@@ -38,7 +38,6 @@ import (
 	"path/filepath"
 )
 
-// Snapshot represents captured visual output at a specific point in time.
 var createSnapshotFile = func(path string) (io.WriteCloser, error) {
 	return os.Create(path)
 }
@@ -49,6 +48,7 @@ func setSnapshotCloseError(retErr *error, closeErr error) {
 	}
 }
 
+// Snapshot represents captured visual output at a specific point in time.
 type Snapshot struct {
 	// Generation parameters
 	Seed    int64  `json:"seed"`

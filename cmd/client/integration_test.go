@@ -109,9 +109,12 @@ func TestHostAndPlayStartup(t *testing.T) {
 			defer wg.Done()
 			stderrBytes, _ = io.ReadAll(stderr)
 		}()
-		_ = cmd.Wait()
+		waitErr := cmd.Wait()
 		wg.Wait()
 		combined := append(stdoutBytes, stderrBytes...)
+		if waitErr != nil {
+			combined = append(combined, []byte("\nprocess wait error: "+waitErr.Error()+"\n")...)
+		}
 		done <- combined
 	}()
 
@@ -198,9 +201,12 @@ func TestDefaultBehaviorAutoEnablesHostAndPlay(t *testing.T) {
 			defer wg.Done()
 			stderrBytes, _ = io.ReadAll(stderr)
 		}()
-		_ = cmd.Wait()
+		waitErr := cmd.Wait()
 		wg.Wait()
 		combined := append(stdoutBytes, stderrBytes...)
+		if waitErr != nil {
+			combined = append(combined, []byte("\nprocess wait error: "+waitErr.Error()+"\n")...)
+		}
 		done <- combined
 	}()
 

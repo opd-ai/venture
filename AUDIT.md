@@ -3,13 +3,13 @@
 ## Project Architecture Overview
 Venture is a seed-deterministic, zero-asset multiplayer action-RPG using ECS (`pkg/engine`), procedural generation (`pkg/procgen`), runtime rendering/audio (`pkg/rendering`, `pkg/audio`), authoritative networking (`pkg/network`), and persistence/world systems (`pkg/world`, `pkg/saveload`).
 
-Phase-0 evidence reviewed: `README.md`, `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/TECHNICAL_SPEC.md`, `go.mod`, package inventory (`go list ./...` = 124 packages), dependency graph (`/tmp/gap-go-deps.txt`), and go-stats metrics (`/tmp/gap-audit-metrics.json`).
+Phase-0 evidence reviewed: `README.md`, `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/TECHNICAL_SPEC.md`, `go.mod`, package inventory (`go list ./...` = 124 packages), dependency graph output, and go-stats metrics output.
 
 Online research (brief): repository currently has no open issues (`list_issues`/`search_issues` returned 0); recent PR stream is audit/backlog-heavy (#472–#483), indicating ongoing gap-closure cycles rather than milestone-tracked open gaps.
 
 Baseline execution:
 - `go-stats-generator analyze . --skip-tests` completed.
-- `go build ./...` and `go vet ./...` both failed in this environment due missing X11 headers (`X11/Xlib.h`), not a Go code compile error in project sources (`/tmp/gap-build-results.txt`, `/tmp/gap-vet-results.txt`).
+- `go build ./...` and `go vet ./...` both failed in this environment due missing X11 headers (`X11/Xlib.h`), not a Go code compile error in project sources.
 
 ## Gap Summary
 | Category | Count | Critical | High | Medium | Low |

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -97,11 +98,23 @@ func TestHostAndPlayStartup(t *testing.T) {
 	// Run with timeout since the command may hang
 	done := make(chan []byte)
 	go func() {
-		// Read output streams
-		stdoutBytes, _ := io.ReadAll(stdout)
-		stderrBytes, _ := io.ReadAll(stderr)
+		var wg sync.WaitGroup
+		var stdoutBytes, stderrBytes []byte
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			stdoutBytes, _ = io.ReadAll(stdout)
+		}()
+		go func() {
+			defer wg.Done()
+			stderrBytes, _ = io.ReadAll(stderr)
+		}()
+		waitErr := cmd.Wait()
+		wg.Wait()
 		combined := append(stdoutBytes, stderrBytes...)
-		cmd.Wait()
+		if waitErr != nil {
+			combined = append(combined, []byte("\nprocess wait error: "+waitErr.Error()+"\n")...)
+		}
 		done <- combined
 	}()
 
@@ -177,11 +190,23 @@ func TestDefaultBehaviorAutoEnablesHostAndPlay(t *testing.T) {
 	// Run with timeout since the command may hang
 	done := make(chan []byte)
 	go func() {
-		// Read output streams
-		stdoutBytes, _ := io.ReadAll(stdout)
-		stderrBytes, _ := io.ReadAll(stderr)
+		var wg sync.WaitGroup
+		var stdoutBytes, stderrBytes []byte
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			stdoutBytes, _ = io.ReadAll(stdout)
+		}()
+		go func() {
+			defer wg.Done()
+			stderrBytes, _ = io.ReadAll(stderr)
+		}()
+		waitErr := cmd.Wait()
+		wg.Wait()
 		combined := append(stdoutBytes, stderrBytes...)
-		cmd.Wait()
+		if waitErr != nil {
+			combined = append(combined, []byte("\nprocess wait error: "+waitErr.Error()+"\n")...)
+		}
 		done <- combined
 	}()
 

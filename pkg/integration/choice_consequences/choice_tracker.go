@@ -23,6 +23,15 @@ import (
 
 // trackerLogger provides structured logging for choice tracker operations.
 var trackerLogger = log.WithField("system", "choice_tracker")
+var createChoiceTrackerFile = func(filename string) (io.WriteCloser, error) {
+	return os.Create(filename)
+}
+
+func setSaveCloseError(retErr *error, closeErr error) {
+	if closeErr != nil && *retErr == nil {
+		*retErr = fmt.Errorf("failed to close file: %w", closeErr)
+	}
+}
 
 // ChoiceTracker manages player choice tracking and consequence application.
 type ChoiceTracker struct {
@@ -615,12 +624,12 @@ func (ct *ChoiceTracker) SaveTo(w io.Writer) error {
 
 // Save saves all player choice data to a file.
 // For WASM builds, use SaveTo with a bytes.Buffer and persist via localStorage.
-func (ct *ChoiceTracker) Save(filename string) error {
+func (ct *ChoiceTracker) Save(filename string) (err error) {
 	trackerLogger.WithFields(log.Fields{
 		"filename": filename,
 	}).Debug("Saving choice tracker data to file")
 
-	file, err := os.Create(filename)
+	file, err := createChoiceTrackerFile(filename)
 	if err != nil {
 		trackerLogger.WithFields(log.Fields{
 			"filename": filename,
@@ -628,7 +637,15 @@ func (ct *ChoiceTracker) Save(filename string) error {
 		}).Error("Failed to create save file")
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			setSaveCloseError(&err, closeErr)
+			trackerLogger.WithFields(log.Fields{
+				"filename": filename,
+				"error":    closeErr.Error(),
+			}).Error("Failed to close choice tracker save file")
+		}
+	}()
 
 	if err := ct.SaveTo(file); err != nil {
 		return err

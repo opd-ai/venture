@@ -1,12 +1,24 @@
 package visualtest
 
 import (
+	"errors"
 	"image"
 	"image/color"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+type snapshotCloseErrorWriteCloser struct {
+	io.Writer
+	closeErr error
+}
+
+func (c *snapshotCloseErrorWriteCloser) Close() error {
+	return c.closeErr
+}
 
 // TestHashImage tests image hashing.
 func TestHashImage(t *testing.T) {
@@ -278,6 +290,25 @@ func TestSaveAndLoadSnapshot(t *testing.T) {
 	}
 	if loaded.PaletteHash != original.PaletteHash {
 		t.Errorf("Loaded palette hash doesn't match original")
+	}
+}
+
+func TestSaveImageCloseError(t *testing.T) {
+	origCreateSnapshotFile := createSnapshotFile
+	createSnapshotFile = func(string) (io.WriteCloser, error) {
+		return &snapshotCloseErrorWriteCloser{
+			Writer:   io.Discard,
+			closeErr: errors.New("injected close error"),
+		}, nil
+	}
+	defer func() { createSnapshotFile = origCreateSnapshotFile }()
+
+	err := saveImage(CreateTestImage(4, 4, color.RGBA{255, 255, 255, 255}), "unused.png")
+	if err == nil {
+		t.Fatal("saveImage() error = nil, want close error")
+	}
+	if !strings.Contains(err.Error(), "failed to close snapshot image file") {
+		t.Fatalf("saveImage() error = %v, want close error context", err)
 	}
 }
 

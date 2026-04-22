@@ -1,10 +1,22 @@
 package housing
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+type closeErrorWriteCloser struct {
+	io.Writer
+	closeErr error
+}
+
+func (c *closeErrorWriteCloser) Close() error {
+	return c.closeErr
+}
 
 func TestSaveAndLoad(t *testing.T) {
 	// Create temporary directory for test
@@ -217,22 +229,21 @@ func TestSaveCloseErrors(t *testing.T) {
 	plot := NewPlot("player1", Vector2{X: 100, Y: 100}, SizeMedium)
 	m.PlacePlot(plot)
 
-	// This test verifies normal save path works (close errors are hard to simulate without mocking)
-	// The defer close error handling is tested indirectly by ensuring save completes successfully
+	origCreateSaveFile := createSaveFile
+	createSaveFile = func(string) (io.WriteCloser, error) {
+		return &closeErrorWriteCloser{
+			Writer:   io.Discard,
+			closeErr: errors.New("injected close error"),
+		}, nil
+	}
+	defer func() { createSaveFile = origCreateSaveFile }()
+
 	err := m.Save(filename)
-	if err != nil {
-		t.Fatalf("Save() error = %v, want nil", err)
+	if err == nil {
+		t.Fatal("Save() error = nil, want close error")
 	}
-
-	// Verify file is valid by loading it
-	m2 := NewManager()
-	err = m2.Load(filename)
-	if err != nil {
-		t.Fatalf("Load() error = %v, want nil", err)
-	}
-
-	if m2.PlotCount() != 1 {
-		t.Errorf("PlotCount() after load = %v, want 1", m2.PlotCount())
+	if !strings.Contains(err.Error(), "failed to close file") {
+		t.Fatalf("Save() error = %v, want close error context", err)
 	}
 }
 
@@ -245,20 +256,20 @@ func TestSavePlayerDataCloseErrors(t *testing.T) {
 	plot := NewPlot("player1", Vector2{X: 100, Y: 100}, SizeMedium)
 	m.PlacePlot(plot)
 
-	// This test verifies normal save path works
+	origCreateSaveFile := createSaveFile
+	createSaveFile = func(string) (io.WriteCloser, error) {
+		return &closeErrorWriteCloser{
+			Writer:   io.Discard,
+			closeErr: errors.New("injected close error"),
+		}, nil
+	}
+	defer func() { createSaveFile = origCreateSaveFile }()
+
 	err := m.SavePlayerData("player1", filename)
-	if err != nil {
-		t.Fatalf("SavePlayerData() error = %v, want nil", err)
+	if err == nil {
+		t.Fatal("SavePlayerData() error = nil, want close error")
 	}
-
-	// Verify file is valid by loading it
-	m2 := NewManager()
-	err = m2.Load(filename)
-	if err != nil {
-		t.Fatalf("Load() error = %v, want nil", err)
-	}
-
-	if m2.PlotCount() != 1 {
-		t.Errorf("PlotCount() after load = %v, want 1", m2.PlotCount())
+	if !strings.Contains(err.Error(), "failed to close file") {
+		t.Fatalf("SavePlayerData() error = %v, want close error context", err)
 	}
 }

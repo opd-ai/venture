@@ -1534,18 +1534,15 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Directional sprites: 4-direction variants for correct facing in top-down view
 	sys.directionalSpriteSystem = engine.NewDirectionalSpriteSystem(sys.spriteGenerator)
-	sys.directionalSpriteSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.directionalSpriteSystem)
+	addGenreSystem(game.World, *genreID, sys.directionalSpriteSystem)
 
 	// Sprite depth enhance: form-aware volumetric shading (spherical heads, cylindrical torsos)
 	sys.spriteDepthEnhanceSystem = engine.NewSpriteDepthEnhanceSystem(game.World, *seed+9050)
-	sys.spriteDepthEnhanceSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.spriteDepthEnhanceSystem)
+	addGenreSystem(game.World, *genreID, sys.spriteDepthEnhanceSystem)
 
 	// Sprite color temperature: warm/cool grading and specular highlights for genre-aware lighting
 	sys.spriteColorTemperatureSystem = engine.NewSpriteColorTemperatureSystem(game.World, *seed+9075)
-	sys.spriteColorTemperatureSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.spriteColorTemperatureSystem)
+	addGenreSystem(game.World, *genreID, sys.spriteColorTemperatureSystem)
 
 	// Sprite finalizer: adaptive outline, rim lighting, edge shadow for all entity sprites
 	sys.spriteFinalizerSystem = engine.NewSpriteFinalizerSystem(game.World, *seed+9100)
@@ -1587,118 +1584,102 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Deals bonus damage when player attacks enemies of factions they have good standing with
 	sys.factionDamageBonusSystem = engine.NewFactionDamageBonusSystem(game.World, *seed+5150)
 	sys.factionDamageBonusSystem.SetFactionSystem(sys.factionSystem)
-	sys.factionDamageBonusSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.factionDamageBonusSystem)
+	addGenreSystem(game.World, *genreID, sys.factionDamageBonusSystem)
 
 	// WeatherFactionResistanceSystem: bridges weather with faction elemental affinities
 	// Fire factions weakened by rain, ice factions buffed by snow, etc.
 	sys.weatherFactionResistanceSystem = engine.NewWeatherFactionResistanceSystem(game.World, *seed+5155)
-	sys.weatherFactionResistanceSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.weatherFactionResistanceSystem)
+	addGenreSystem(game.World, *genreID, sys.weatherFactionResistanceSystem)
 
 	// ReputationDefenseBonusSystem: bridges faction reputation with defense bonuses
 	// Reduces incoming damage when player is attacked by enemies of allied factions
 	sys.reputationDefenseBonusSystem = engine.NewReputationDefenseBonusSystem(game.World, *seed+5175)
 	sys.reputationDefenseBonusSystem.SetFactionSystem(sys.factionSystem)
-	sys.reputationDefenseBonusSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationDefenseBonusSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationDefenseBonusSystem)
 
 	// ReputationDefenseBonusParticleSystem: visual feedback for reputation defense bonuses
 	// Spawns genre-aware particles when faction reputation reduces incoming damage
 	sys.reputationDefenseBonusParticleSystem = engine.NewReputationDefenseBonusParticleSystem(game.World, *seed+5180)
 	sys.reputationDefenseBonusParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.reputationDefenseBonusParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationDefenseBonusParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationDefenseBonusParticleSystem)
 
 	// ReputationHealingBonusSystem: bridges faction reputation with health regeneration
 	// Players with high faction standing passively regenerate health faster
 	sys.reputationHealingBonusSystem = engine.NewReputationHealingBonusSystem(game.World, *seed+5185)
 	sys.reputationHealingBonusSystem.SetFactionSystem(sys.factionSystem)
-	sys.reputationHealingBonusSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationHealingBonusSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationHealingBonusSystem)
 
 	// ReputationHealingBonusParticleSystem: visual feedback for reputation healing
 	// Spawns genre-aware upward healing particles when faction reputation heals the player
 	sys.reputationHealingBonusParticleSystem = engine.NewReputationHealingBonusParticleSystem(game.World, *seed+5190)
 	sys.reputationHealingBonusParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.reputationHealingBonusParticleSystem.SetHealingSystem(sys.reputationHealingBonusSystem)
-	sys.reputationHealingBonusParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationHealingBonusParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationHealingBonusParticleSystem)
 
 	// ReputationSpellDamageBonusSystem: bridges faction reputation with spell damage
 	// Players with high faction standing gain a passive MagicPower bonus
 	sys.reputationSpellDamageBonusSystem = engine.NewReputationSpellDamageBonusSystem(game.World, *seed+5195)
 	sys.reputationSpellDamageBonusSystem.SetFactionSystem(sys.factionSystem)
-	sys.reputationSpellDamageBonusSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationSpellDamageBonusSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationSpellDamageBonusSystem)
 
 	// ReputationSpellDamageBonusParticleSystem: visual feedback for reputation spell damage
 	// Spawns genre-aware arcane particles when faction reputation boosts spell damage
 	sys.reputationSpellDamageBonusParticleSystem = engine.NewReputationSpellDamageBonusParticleSystem(game.World, *seed+5200)
 	sys.reputationSpellDamageBonusParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.reputationSpellDamageBonusParticleSystem.SetSpellDamageSystem(sys.reputationSpellDamageBonusSystem)
-	sys.reputationSpellDamageBonusParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationSpellDamageBonusParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationSpellDamageBonusParticleSystem)
 
 	// ReputationMovementSpeedSystem: bridges faction reputation with movement speed
 	// Players with high faction standing gain a passive movement speed bonus
 	sys.reputationMovementSpeedSystem = engine.NewReputationMovementSpeedSystem(game.World, *seed+5205)
 	sys.reputationMovementSpeedSystem.SetFactionSystem(sys.factionSystem)
-	sys.reputationMovementSpeedSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationMovementSpeedSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationMovementSpeedSystem)
 
 	// ReputationMovementSpeedParticleSystem: visual feedback for reputation speed bonus
 	// Spawns genre-aware wind-trail particles when faction reputation boosts movement speed
 	sys.reputationMovementSpeedParticleSystem = engine.NewReputationMovementSpeedParticleSystem(game.World, *seed+5210)
 	sys.reputationMovementSpeedParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.reputationMovementSpeedParticleSystem.SetSpeedSystem(sys.reputationMovementSpeedSystem)
-	sys.reputationMovementSpeedParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationMovementSpeedParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationMovementSpeedParticleSystem)
 
 	// ReputationCriticalChanceBonusSystem: bridges faction reputation with critical hit chance
 	// Players with high faction standing gain a passive crit chance bonus
 	sys.reputationCriticalChanceBonusSystem = engine.NewReputationCriticalChanceBonusSystem(game.World, *seed+5215)
 	sys.reputationCriticalChanceBonusSystem.SetFactionSystem(sys.factionSystem)
-	sys.reputationCriticalChanceBonusSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationCriticalChanceBonusSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationCriticalChanceBonusSystem)
 
 	// ReputationCriticalChanceParticleSystem: visual feedback for reputation crit bonus
 	// Spawns genre-aware glint particles when faction reputation boosts critical chance
 	sys.reputationCriticalChanceParticleSystem = engine.NewReputationCriticalChanceParticleSystem(game.World, *seed+5220)
 	sys.reputationCriticalChanceParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.reputationCriticalChanceParticleSystem.SetCritSystem(sys.reputationCriticalChanceBonusSystem)
-	sys.reputationCriticalChanceParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationCriticalChanceParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationCriticalChanceParticleSystem)
 
 	// ReputationEquipmentDurabilitySystem: bridges faction reputation with equipment durability
 	// High reputation provides durability protection, hostile reputation accelerates degradation
 	sys.reputationEquipmentDurabilitySystem = engine.NewReputationEquipmentDurabilitySystem(game.World, *seed+5225)
 	sys.reputationEquipmentDurabilitySystem.SetFactionSystem(sys.factionSystem)
-	sys.reputationEquipmentDurabilitySystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationEquipmentDurabilitySystem)
+	addGenreSystem(game.World, *genreID, sys.reputationEquipmentDurabilitySystem)
 
 	// ReputationEquipmentDurabilityParticleSystem: visual feedback for reputation durability
 	// Spawns protective shimmer or corrosion wisps based on reputation modifier
 	sys.reputationEquipmentDurabilityParticleSystem = engine.NewReputationEquipmentDurabilityParticleSystem(game.World, *seed+5230)
 	sys.reputationEquipmentDurabilityParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.reputationEquipmentDurabilityParticleSystem.SetDurabilitySystem(sys.reputationEquipmentDurabilitySystem)
-	sys.reputationEquipmentDurabilityParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationEquipmentDurabilityParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationEquipmentDurabilityParticleSystem)
 
 	// ReputationCompanionBonusSystem: bridges faction reputation with companion stat bonuses
 	// High reputation passively boosts companion attack, defense, and speed
 	sys.reputationCompanionBonusSystem = engine.NewReputationCompanionBonusSystem(game.World, *seed+5235)
 	sys.reputationCompanionBonusSystem.SetFactionSystem(sys.factionSystem)
-	sys.reputationCompanionBonusSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationCompanionBonusSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationCompanionBonusSystem)
 
 	// ReputationCompanionBonusParticleSystem: visual feedback for reputation companion bonus
 	// Spawns genre-aware aura particles around companions buffed by owner reputation
 	sys.reputationCompanionBonusParticleSystem = engine.NewReputationCompanionBonusParticleSystem(game.World, *seed+5240)
 	sys.reputationCompanionBonusParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.reputationCompanionBonusParticleSystem.SetBonusSystem(sys.reputationCompanionBonusSystem)
-	sys.reputationCompanionBonusParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.reputationCompanionBonusParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.reputationCompanionBonusParticleSystem)
 
 	// ReputationQuestGatingSystem: gates quests behind faction reputation requirements
 	// Integrates reputation standings with quest availability for meaningful progression
@@ -1714,80 +1695,67 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Spawns genre-aware ambient effects (fireflies, mist, embers, dust motes) near entities
 	sys.ambientEnvironmentParticleSystem = engine.NewAmbientEnvironmentParticleSystem(game.World, *seed+7350)
 	sys.ambientEnvironmentParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.ambientEnvironmentParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.ambientEnvironmentParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.ambientEnvironmentParticleSystem)
 
 	// EquipmentEnchantmentGlowParticleSystem: ambient glow particles for rare+ equipped items
 	// Reads highest equipped rarity and spawns rarity-colored enchantment aura particles
 	sys.equipmentEnchantmentGlowParticleSystem = engine.NewEquipmentEnchantmentGlowParticleSystem(game.World, *seed+7420)
 	sys.equipmentEnchantmentGlowParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.equipmentEnchantmentGlowParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.equipmentEnchantmentGlowParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.equipmentEnchantmentGlowParticleSystem)
 
 	// StatusEffectVisualOverlaySystem: color tints on entity sprites from active status effects
 	// Reads StatusEffectComponent and writes tint to VisualFeedbackComponent for visual feedback
 	sys.statusEffectVisualOverlaySystem = engine.NewStatusEffectVisualOverlaySystem(game.World)
-	sys.statusEffectVisualOverlaySystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.statusEffectVisualOverlaySystem)
+	addGenreSystem(game.World, *genreID, sys.statusEffectVisualOverlaySystem)
 
 	// WeatherSpriteTintSystem: weather-driven sprite color tints
 	// Reads active weather and applies subtle multiplicative color tints to entity sprites
 	sys.weatherSpriteTintSystem = engine.NewWeatherSpriteTintSystem(game.World, *seed+8800)
-	sys.weatherSpriteTintSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.weatherSpriteTintSystem)
+	addGenreSystem(game.World, *genreID, sys.weatherSpriteTintSystem)
 
 	// EntityDropShadowSystem: genre-aware soft elliptical drop shadows beneath entities
 	// Reads entity collider/sprite size and applies genre-tinted shadow parameters
 	sys.entityDropShadowSystem = engine.NewEntityDropShadowSystem(game.World, *seed+8900)
-	sys.entityDropShadowSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entityDropShadowSystem)
+	addGenreSystem(game.World, *genreID, sys.entityDropShadowSystem)
 
 	// TimeOfDayShadowDirectionSystem: directional shadow offset from simulated sun position
 	// Connects TimeOfDayLightingSystem with DropShadowComponent for sun-arc shadow direction
 	sys.timeOfDayShadowDirectionSystem = engine.NewTimeOfDayShadowDirectionSystem(game.World, *seed+8925)
-	sys.timeOfDayShadowDirectionSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.timeOfDayShadowDirectionSystem)
+	addGenreSystem(game.World, *genreID, sys.timeOfDayShadowDirectionSystem)
 
 	// EquipmentMaterialSheenSystem: material-based specular highlights on equipment
 	// Bridges sprites.GetMaterialVisualProperties with per-entity visual state
 	sys.equipmentMaterialSheenSystem = engine.NewEquipmentMaterialSheenSystem(game.World, *seed+8950)
-	sys.equipmentMaterialSheenSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.equipmentMaterialSheenSystem)
+	addGenreSystem(game.World, *genreID, sys.equipmentMaterialSheenSystem)
 
 	// EquipmentDamageStateTintSystem: aggregate equipment wear visual tinting
 	// Bridges sprites.GetDamageVisualEffects with per-entity render state
 	sys.equipmentDamageStateTintSystem = engine.NewEquipmentDamageStateTintSystem(game.World, *seed+8975)
-	sys.equipmentDamageStateTintSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.equipmentDamageStateTintSystem)
+	addGenreSystem(game.World, *genreID, sys.equipmentDamageStateTintSystem)
 
 	// CreatureGenreTintSystem: genre-aware creature/NPC sprite color tinting
 	// Applies genre-specific tint presets to creature sprites for atmospheric cohesion
 	sys.creatureGenreTintSystem = engine.NewCreatureGenreTintSystem(game.World, *seed+9000)
-	sys.creatureGenreTintSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.creatureGenreTintSystem)
+	addGenreSystem(game.World, *genreID, sys.creatureGenreTintSystem)
 
 	// CreatureSizeProportionSystem: size-based anatomy proportions for creature/NPC sprites
 	// Adjusts head/torso/leg ratios and width scale based on creature size with genre modifiers
 	sys.creatureSizeProportionSystem = engine.NewCreatureSizeProportionSystem(game.World, *seed+9001)
-	sys.creatureSizeProportionSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.creatureSizeProportionSystem)
+	addGenreSystem(game.World, *genreID, sys.creatureSizeProportionSystem)
 
 	// CreatureAnatomySystem: assigns anatomy types (quadruped, arachnid, etc.) to creatures
 	// Maps entity names/tags to appropriate nonhumanoid aerial sprite templates
 	sys.creatureAnatomySystem = engine.NewCreatureAnatomySystem(game.World, *seed+9010)
-	sys.creatureAnatomySystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.creatureAnatomySystem)
+	addGenreSystem(game.World, *genreID, sys.creatureAnatomySystem)
 
 	// EquipmentRarityDetailSystem: rarity-based visual detail scaling for equipment
 	// Scales shape complexity, color vibrancy, border sharpness, and material fidelity by rarity
 	sys.equipmentRarityDetailSystem = engine.NewEquipmentRarityDetailSystem(game.World, *seed+9025)
-	sys.equipmentRarityDetailSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.equipmentRarityDetailSystem)
+	addGenreSystem(game.World, *genreID, sys.equipmentRarityDetailSystem)
 
 	// NpcFacialDetailSystem: genre-aware NPC facial features (eyes, mouth, expression, head shape)
 	sys.npcFacialDetailSystem = engine.NewNpcFacialDetailSystem(game.World, *seed+9050)
-	sys.npcFacialDetailSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.npcFacialDetailSystem)
+	addGenreSystem(game.World, *genreID, sys.npcFacialDetailSystem)
 
 	// DynamicExpressionSystem: reactive facial expression updates from health, status effects, AI state
 	sys.dynamicExpressionSystem = engine.NewDynamicExpressionSystem(game.World, *seed+10700)
@@ -1796,139 +1764,114 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// ProjectileTrailParticleSystem: genre-aware projectile trail particles
 	sys.projectileTrailParticleSystem = engine.NewProjectileTrailParticleSystem(game.World, *seed+9075)
 	sys.projectileTrailParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.projectileTrailParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.projectileTrailParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.projectileTrailParticleSystem)
 
 	// EntityIdleAmbientParticleSystem: genre-aware idle entity ambient particles
 	sys.entityIdleAmbientParticleSystem = engine.NewEntityIdleAmbientParticleSystem(game.World, *seed+9100)
 	sys.entityIdleAmbientParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.entityIdleAmbientParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entityIdleAmbientParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.entityIdleAmbientParticleSystem)
 
 	// WeaponMaterialImpactParticleSystem: material-aware melee impact particles
 	sys.weaponMaterialImpactParticleSystem = engine.NewWeaponMaterialImpactParticleSystem(game.World, *seed+9150)
 	sys.weaponMaterialImpactParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.weaponMaterialImpactParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.weaponMaterialImpactParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.weaponMaterialImpactParticleSystem)
 
 	// DamageFlashTintSystem: triggers genre-aware flash tints when entities take damage
 	// Monitors HealthComponent changes and writes to VisualFeedbackComponent
 	sys.damageFlashTintSystem = engine.NewDamageFlashTintSystem(game.World)
-	sys.damageFlashTintSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.damageFlashTintSystem)
+	addGenreSystem(game.World, *genreID, sys.damageFlashTintSystem)
 
 	// SprintTrailParticleSystem: spawns genre-aware trail particles behind sprinting entities
 	sys.sprintTrailParticleSystem = engine.NewSprintTrailParticleSystem(game.World, *seed+9200)
 	sys.sprintTrailParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.sprintTrailParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.sprintTrailParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.sprintTrailParticleSystem)
 
 	// NearbyLightEntityTintSystem: tints entity sprites based on nearby light sources
 	// Uses light color, intensity, and distance-based falloff with genre-aware ambient base
 	sys.nearbyLightEntityTintSystem = engine.NewNearbyLightEntityTintSystem(game.World, *seed+9300)
-	sys.nearbyLightEntityTintSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.nearbyLightEntityTintSystem)
+	addGenreSystem(game.World, *genreID, sys.nearbyLightEntityTintSystem)
 
 	// WeatherEquipmentSheenSystem: modifies equipment sheen based on weather conditions
 	sys.weatherEquipmentSheenSystem = engine.NewWeatherEquipmentSheenSystem(game.World, *seed+9400)
-	sys.weatherEquipmentSheenSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.weatherEquipmentSheenSystem)
+	addGenreSystem(game.World, *genreID, sys.weatherEquipmentSheenSystem)
 
 	// CreatureEyeGlowSystem: genre-aware glowing eyes for hostile creatures and bosses
 	sys.creatureEyeGlowSystem = engine.NewCreatureEyeGlowSystem(game.World, *seed+9450)
-	sys.creatureEyeGlowSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.creatureEyeGlowSystem)
+	addGenreSystem(game.World, *genreID, sys.creatureEyeGlowSystem)
 
 	// CreatureEyePatternSystem: creature-type-specific eye patterns for nonhumanoids
 	// Assigns 8-eye spider patterns, slit-pupil serpent eyes, compound insect eyes, etc.
 	sys.creatureEyePatternSystem = engine.NewCreatureEyePatternSystem(game.World, *seed+9460)
-	sys.creatureEyePatternSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.creatureEyePatternSystem)
+	addGenreSystem(game.World, *genreID, sys.creatureEyePatternSystem)
 
 	// CreatureElementalAuraSystem: persistent elemental aura visuals for creatures
 	sys.creatureElementalAuraSystem = engine.NewCreatureElementalAuraSystem(game.World, *seed+9475)
-	sys.creatureElementalAuraSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.creatureElementalAuraSystem)
+	addGenreSystem(game.World, *genreID, sys.creatureElementalAuraSystem)
 
 	// MeleeSwingArcSystem: genre-aware visual arc overlays during melee attacks
 	sys.meleeSwingArcSystem = engine.NewMeleeSwingArcSystem(game.World, *seed+9500)
-	sys.meleeSwingArcSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.meleeSwingArcSystem)
+	addGenreSystem(game.World, *genreID, sys.meleeSwingArcSystem)
 
 	// CombatReadyAuraSystem: genre-aware aura when AI entities enter hostile states
 	sys.combatReadyAuraSystem = engine.NewCombatReadyAuraSystem(game.World, *seed+9550)
-	sys.combatReadyAuraSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.combatReadyAuraSystem)
+	addGenreSystem(game.World, *genreID, sys.combatReadyAuraSystem)
 
 	// AIStateBubbleSystem: genre-aware floating state indicator bubbles above NPCs
 	sys.aiStateBubbleSystem = engine.NewAIStateBubbleSystem(game.World, *seed+9600)
-	sys.aiStateBubbleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.aiStateBubbleSystem)
+	addGenreSystem(game.World, *genreID, sys.aiStateBubbleSystem)
 
 	// TerrainReflectionTintSystem: terrain-driven entity sprite color tinting
 	sys.terrainReflectionTintSystem = engine.NewTerrainReflectionTintSystem(game.World, *seed+9650)
-	sys.terrainReflectionTintSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.terrainReflectionTintSystem)
+	addGenreSystem(game.World, *genreID, sys.terrainReflectionTintSystem)
 
 	// MovementBobSystem: genre-aware walk-cycle vertical sprite bobbing
 	sys.movementBobSystem = engine.NewMovementBobSystem(game.World, *seed+9700)
-	sys.movementBobSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.movementBobSystem)
+	addGenreSystem(game.World, *genreID, sys.movementBobSystem)
 
 	// MovementLeanSystem: genre-aware horizontal lean in movement direction
 	sys.movementLeanSystem = engine.NewMovementLeanSystem(game.World, *seed+9710)
-	sys.movementLeanSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.movementLeanSystem)
+	addGenreSystem(game.World, *genreID, sys.movementLeanSystem)
 
 	// SpellCastGlowSystem: genre-aware visual glow during spell casting
 	sys.spellCastGlowSystem = engine.NewSpellCastGlowSystem(game.World, *seed+9750)
-	sys.spellCastGlowSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.spellCastGlowSystem)
+	addGenreSystem(game.World, *genreID, sys.spellCastGlowSystem)
 
 	// EquipmentChangeFlashSystem: genre-aware flash particles on equipment change
 	sys.equipmentChangeFlashSystem = engine.NewEquipmentChangeFlashSystem(game.World, *seed+9800)
 	sys.equipmentChangeFlashSystem.SetParticleSystem(sys.particleSystem)
-	sys.equipmentChangeFlashSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.equipmentChangeFlashSystem)
+	addGenreSystem(game.World, *genreID, sys.equipmentChangeFlashSystem)
 
 	// DodgeAfterimageSystem: genre-aware translucent ghost copies on dodge/dash
 	sys.dodgeAfterimageSystem = engine.NewDodgeAfterimageSystem(game.World, *seed+9850)
-	sys.dodgeAfterimageSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.dodgeAfterimageSystem)
+	addGenreSystem(game.World, *genreID, sys.dodgeAfterimageSystem)
 
 	// EntityIdleBreathingSystem: genre-aware subtle idle breathing animation
 	sys.entityIdleBreathingSystem = engine.NewEntityIdleBreathingSystem(game.World, *seed+9900)
-	sys.entityIdleBreathingSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entityIdleBreathingSystem)
+	addGenreSystem(game.World, *genreID, sys.entityIdleBreathingSystem)
 
 	// CombatHitStaggerSystem: genre-aware positional stagger on damage
 	sys.combatHitStaggerSystem = engine.NewCombatHitStaggerSystem(game.World, *seed+9950)
-	sys.combatHitStaggerSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.combatHitStaggerSystem)
+	addGenreSystem(game.World, *genreID, sys.combatHitStaggerSystem)
 
 	// FloatingDamageNumberSystem: genre-aware floating damage/heal numbers on health change
 	sys.floatingDamageNumberSystem = engine.NewFloatingDamageNumberSystem(game.World, *seed+10000)
-	sys.floatingDamageNumberSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.floatingDamageNumberSystem)
+	addGenreSystem(game.World, *genreID, sys.floatingDamageNumberSystem)
 
 	// EntityThreatIndicatorSystem: genre-aware threat level rings under AI entities
 	sys.entityThreatIndicatorSystem = engine.NewEntityThreatIndicatorSystem(game.World, *seed+10050)
-	sys.entityThreatIndicatorSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entityThreatIndicatorSystem)
+	addGenreSystem(game.World, *genreID, sys.entityThreatIndicatorSystem)
 
 	// WeaponMaterialParticleSystem: genre-aware idle particles from equipped weapon material
 	// Reads main-hand weapon material type and spawns material-appropriate ambient particles
 	sys.weaponMaterialParticleSystem = engine.NewWeaponMaterialParticleSystem(game.World, *seed+10100)
 	sys.weaponMaterialParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.weaponMaterialParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.weaponMaterialParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.weaponMaterialParticleSystem)
 
 	// LootRarityBeamSystem: genre-aware beam particles on ground items by rarity
 	// Items with Uncommon+ rarity emit colored upward-flowing beam particles for loot visibility
 	sys.lootRarityBeamSystem = engine.NewLootRarityBeamSystem(game.World, *seed+10200)
 	sys.lootRarityBeamSystem.SetParticleSystem(sys.particleSystem)
-	sys.lootRarityBeamSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.lootRarityBeamSystem)
+	addGenreSystem(game.World, *genreID, sys.lootRarityBeamSystem)
 
 	// DamageTypeColorFlashSystem: genre-aware elemental damage color flashes on hit
 	// Reads attacker DamageType and tints the target sprite with per-element colors
@@ -1943,8 +1886,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// CompanionBondTetherSystem: genre-aware visual tether between companion and owner
 	// Draws a pulsing line connecting companion to player with loyalty-driven intensity
 	sys.companionBondTetherSystem = engine.NewCompanionBondTetherSystem(game.World, *seed+10300)
-	sys.companionBondTetherSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.companionBondTetherSystem)
+	addGenreSystem(game.World, *genreID, sys.companionBondTetherSystem)
 
 	// CriticalHitScreenShakeSystem: genre-aware camera shake on critical hits
 	// Connects CombatSystem critical hit callback with CameraSystem.ShakeAdvanced
@@ -1958,149 +1900,122 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// EntitySpawnMaterializeSystem: genre-aware visual fade-in when entities spawn
 	sys.entitySpawnMaterializeSystem = engine.NewEntitySpawnMaterializeSystem(game.World, *seed+10400)
-	sys.entitySpawnMaterializeSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entitySpawnMaterializeSystem)
+	addGenreSystem(game.World, *genreID, sys.entitySpawnMaterializeSystem)
 
 	// NPCInteractionProximityGlowSystem: genre-aware glow tint on interactable NPCs near players
 	sys.npcInteractionProximityGlowSystem = engine.NewNPCInteractionProximityGlowSystem(game.World, *seed+10450)
-	sys.npcInteractionProximityGlowSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.npcInteractionProximityGlowSystem)
+	addGenreSystem(game.World, *genreID, sys.npcInteractionProximityGlowSystem)
 
 	// EntityFactionOutlineSystem: genre-aware colored outlines based on team/faction allegiance
 	sys.entityFactionOutlineSystem = engine.NewEntityFactionOutlineSystem(game.World, *seed+10500)
-	sys.entityFactionOutlineSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entityFactionOutlineSystem)
+	addGenreSystem(game.World, *genreID, sys.entityFactionOutlineSystem)
 
 	// ShieldBubbleOverlaySystem: genre-aware translucent bubble around shielded entities
 	sys.shieldBubbleOverlaySystem = engine.NewShieldBubbleOverlaySystem(game.World, *seed+10550)
-	sys.shieldBubbleOverlaySystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.shieldBubbleOverlaySystem)
+	addGenreSystem(game.World, *genreID, sys.shieldBubbleOverlaySystem)
 
 	// EnvironmentalBreathVaporSystem: cold weather breath vapor puffs near entity faces
 	sys.environmentalBreathVaporSystem = engine.NewEnvironmentalBreathVaporSystem(game.World, *seed+10600)
-	sys.environmentalBreathVaporSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.environmentalBreathVaporSystem)
+	addGenreSystem(game.World, *genreID, sys.environmentalBreathVaporSystem)
 
 	// MovementDustSystem: speed-proportional terrain dust behind fast-moving entities
 	sys.movementDustSystem = engine.NewMovementDustSystem(game.World, *seed+10650)
-	sys.movementDustSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.movementDustSystem)
+	addGenreSystem(game.World, *genreID, sys.movementDustSystem)
 
 	// HealthRegenPulseSystem: genre-aware healing pulse particles on health increase
 	sys.healthRegenPulseSystem = engine.NewHealthRegenPulseSystem(game.World, *seed+10675)
-	sys.healthRegenPulseSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.healthRegenPulseSystem)
+	addGenreSystem(game.World, *genreID, sys.healthRegenPulseSystem)
 
 	// StatusEffectGroundTrailSystem: ground-level DoT movement trails
 	// Drops genre-aware particles behind moving entities afflicted by burning/poison/bleeding/frozen
 	sys.statusEffectGroundTrailSystem = engine.NewStatusEffectGroundTrailSystem(game.World, *seed+10690)
-	sys.statusEffectGroundTrailSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.statusEffectGroundTrailSystem)
+	addGenreSystem(game.World, *genreID, sys.statusEffectGroundTrailSystem)
 
 	// WaterSurfaceRippleSystem: ripple/splash particles when entities move through water tiles
 	sys.waterSurfaceRippleSystem = engine.NewWaterSurfaceRippleSystem(game.World, *seed+10700)
-	sys.waterSurfaceRippleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.waterSurfaceRippleSystem)
+	addGenreSystem(game.World, *genreID, sys.waterSurfaceRippleSystem)
 
 	// EntityTargetLockIndicatorSystem: genre-aware targeting reticle on closest hostile
 	sys.entityTargetLockIndicatorSystem = engine.NewEntityTargetLockIndicatorSystem(game.World, *seed+10705)
-	sys.entityTargetLockIndicatorSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entityTargetLockIndicatorSystem)
+	addGenreSystem(game.World, *genreID, sys.entityTargetLockIndicatorSystem)
 
 	// EntityDeathDissolveSystem: genre-aware visual dissolve when entities die
 	sys.entityDeathDissolveSystem = engine.NewEntityDeathDissolveSystem(game.World, *seed+10710)
-	sys.entityDeathDissolveSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.entityDeathDissolveSystem)
+	addGenreSystem(game.World, *genreID, sys.entityDeathDissolveSystem)
 
 	// ArmorHitSparkSystem: material-aware armor deflection sparks on damage
 	sys.armorHitSparkSystem = engine.NewArmorHitSparkSystem(game.World, *seed+10715)
 	sys.armorHitSparkSystem.SetParticleSystem(sys.particleSystem)
-	sys.armorHitSparkSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.armorHitSparkSystem)
+	addGenreSystem(game.World, *genreID, sys.armorHitSparkSystem)
 
 	// MeleeEnchantmentArcParticleSystem: rarity-colored particles along melee swing arcs
 	sys.meleeEnchantmentArcParticleSystem = engine.NewMeleeEnchantmentArcParticleSystem(game.World, *seed+10720)
 	sys.meleeEnchantmentArcParticleSystem.SetParticleSystem(sys.particleSystem)
-	sys.meleeEnchantmentArcParticleSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.meleeEnchantmentArcParticleSystem)
+	addGenreSystem(game.World, *genreID, sys.meleeEnchantmentArcParticleSystem)
 
 	// BattleWoundOverlaySystem: genre-aware wound marks based on health percentage
 	sys.battleWoundOverlaySystem = engine.NewBattleWoundOverlaySystem(game.World, *seed+10725)
-	sys.battleWoundOverlaySystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.battleWoundOverlaySystem)
+	addGenreSystem(game.World, *genreID, sys.battleWoundOverlaySystem)
 
 	// EquipmentDamageCrackOverlaySystem: procedural crack patterns from equipment wear
 	sys.equipmentDamageCrackOverlaySystem = engine.NewEquipmentDamageCrackOverlaySystem(game.World, *seed+10730)
-	sys.equipmentDamageCrackOverlaySystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.equipmentDamageCrackOverlaySystem)
+	addGenreSystem(game.World, *genreID, sys.equipmentDamageCrackOverlaySystem)
 
 	// WeatherEntityWetnessSystem: rain-driven sprite darkening and genre-aware sheen tint
 	sys.weatherEntityWetnessSystem = engine.NewWeatherEntityWetnessSystem(game.World, *seed+10735)
-	sys.weatherEntityWetnessSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.weatherEntityWetnessSystem)
+	addGenreSystem(game.World, *genreID, sys.weatherEntityWetnessSystem)
 
 	// AttackTelegraphGlowSystem: genre-aware attack wind-up warning glow on hostile AI
 	sys.attackTelegraphGlowSystem = engine.NewAttackTelegraphGlowSystem(game.World, *seed+10740)
-	sys.attackTelegraphGlowSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.attackTelegraphGlowSystem)
+	addGenreSystem(game.World, *genreID, sys.attackTelegraphGlowSystem)
 
 	// XPGainBurstSystem: genre-aware XP gain particle bursts on experience increase
 	sys.xpGainBurstSystem = engine.NewXPGainBurstSystem(game.World, *seed+10745)
-	sys.xpGainBurstSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.xpGainBurstSystem)
+	addGenreSystem(game.World, *genreID, sys.xpGainBurstSystem)
 
 	// EquipmentGleamSweepSystem: animated specular gleam sweep across equipped items
 	sys.equipmentGleamSweepSystem = engine.NewEquipmentGleamSweepSystem(game.World, *seed+10750)
-	sys.equipmentGleamSweepSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.equipmentGleamSweepSystem)
+	addGenreSystem(game.World, *genreID, sys.equipmentGleamSweepSystem)
 
 	// SpriteDepthShadingSystem: per-body-part depth shading for entity sprites
 	sys.spriteDepthShadingSystem = engine.NewSpriteDepthShadingSystem(game.World, *seed+10755)
-	sys.spriteDepthShadingSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.spriteDepthShadingSystem)
+	addGenreSystem(game.World, *genreID, sys.spriteDepthShadingSystem)
 
 	// ClothingPatternSystem: seed-based clothing patterns for entity sprites
 	// Attaches genre-aware garment patterns (stripes, checks, dots, borders) for visual variety
 	sys.clothingPatternSystem = engine.NewClothingPatternSystem(game.World, *seed+10760)
-	sys.clothingPatternSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.clothingPatternSystem)
+	addGenreSystem(game.World, *genreID, sys.clothingPatternSystem)
 
 	// SurfaceTextureSystem: creature-form surface textures (fur, scales, chitin, metal, etc.)
 	// Assigns form-appropriate procedural micro-textures to nonhumanoid entities
 	sys.surfaceTextureSystem = engine.NewSurfaceTextureSystem(game.World, *seed+10765)
-	sys.surfaceTextureSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.surfaceTextureSystem)
+	addGenreSystem(game.World, *genreID, sys.surfaceTextureSystem)
 
 	// HumanoidTextureSystem: humanoid-specific surface textures
 	// Assigns skin textures, clothing fabric textures, and hair textures to humanoid entities
 	sys.humanoidTextureSystem = engine.NewHumanoidTextureSystem(game.World, *seed+10767)
-	sys.humanoidTextureSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.humanoidTextureSystem)
+	addGenreSystem(game.World, *genreID, sys.humanoidTextureSystem)
 
 	// BodyTypeSystem: seed-based body type variety for entity sprites
 	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity
 	sys.bodyTypeSystem = engine.NewBodyTypeSystem(game.World, *seed+10770)
-	sys.bodyTypeSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.bodyTypeSystem)
+	addGenreSystem(game.World, *genreID, sys.bodyTypeSystem)
 
 	// HeadgearAssignmentSystem: seed-based headgear variety for humanoid entities
 	// Assigns genre- and role-aware headgear types (crowns, hoods, wizard hats, etc.)
 	sys.headgearAssignmentSystem = engine.NewHeadgearAssignmentSystem(game.World, *seed+10775)
-	sys.headgearAssignmentSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.headgearAssignmentSystem)
+	addGenreSystem(game.World, *genreID, sys.headgearAssignmentSystem)
 
 	// BackAccessorySystem: seed-based back accessories for humanoid entities
 	// Assigns genre- and role-aware back accessories (capes, cloaks, quivers, backpacks, etc.)
 	sys.backAccessorySystem = engine.NewBackAccessorySystem(game.World, *seed+10780)
-	sys.backAccessorySystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.backAccessorySystem)
+	addGenreSystem(game.World, *genreID, sys.backAccessorySystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies
 	sys.factionCompanionBehaviorSystem = engine.NewFactionCompanionBehaviorSystem(game.World, *seed+2198)
 	sys.factionCompanionBehaviorSystem.SetFactionSystem(sys.factionSystem)
-	sys.factionCompanionBehaviorSystem.SetGenre(*genreID)
-	game.World.AddSystem(sys.factionCompanionBehaviorSystem)
+	addGenreSystem(game.World, *genreID, sys.factionCompanionBehaviorSystem)
 
 	// StatusEffectAISystem: bridges status effects with AI behavior
 	// Disables AI actions when entities are stunned, frozen, feared, or paralyzed
@@ -3654,11 +3569,21 @@ func initializeVirtualControls(inputSystem *engine.InputSystem, clientLogger *lo
 // configureDeathCallback sets up the death callback for combat system.
 func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logger *logrus.Logger) {
 	var playerEntity *engine.Entity
-	sys.combatSystem.SetDeathCallback(createDeathCallback(
-		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
-		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem,
-		&sys.progressionSystem, *seed, *genreID, logger, sys.timeProvider,
-	))
+	sys.combatSystem.SetDeathCallback(createDeathCallback(DeathCallbackDeps{
+		Game:                game,
+		PlayerEntity:        &playerEntity,
+		ObjectiveTracker:    sys.objectiveTracker,
+		AudioManager:        &sys.audioManager,
+		RecipeGen:           sys.recipeGen,
+		MagicGen:            sys.magicGenerator,
+		SkillGen:            sys.skillGenerator,
+		DeathParticleSystem: sys.deathParticleSystem,
+		ProgressionSystem:   &sys.progressionSystem,
+		Seed:                *seed,
+		GenreID:             *genreID,
+		Logger:              logger,
+		TP:                  sys.timeProvider,
+	}))
 }
 
 // createGenerationParams creates standard generation parameters for world content.

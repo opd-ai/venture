@@ -173,110 +173,47 @@ func NewRetreatToAllyNode(name string, speed, searchRadius, minAllyDist float64)
 
 // Tick moves entity toward nearest ally.
 func (n *RetreatToAllyNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	// Get entity faction
-	factionComp, ok := entity.GetComponent("faction")
-	if !ok {
-		return NodeFailure
-	}
-	faction, ok := factionComp.(*FactionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Get our position
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	pos, ok := posComp.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Get nearby entities from blackboard
-	nearbyVal, hasNearby := blackboard.Get("nearby_entities")
-	if !hasNearby || nearbyVal == nil {
-		return NodeFailure
-	}
-	nearbyEntities, ok := nearbyVal.([]*Entity)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Find nearest ally
-	var nearestAlly *Entity
-	nearestDist := n.searchRadius + 1
-
-	for _, other := range nearbyEntities {
-		if other == entity {
-			continue
-		}
-
-		// Check faction match
-		otherFaction, hasF := other.GetComponent("faction")
-		if !hasF {
-			continue
-		}
-		of, ok := otherFaction.(*FactionComponent)
-		if !ok || of.FactionID != faction.FactionID {
-			continue
-		}
-
-		// Calculate distance
-		otherPos, hasP := other.GetComponent("position")
-		if !hasP {
-			continue
-		}
-		op, ok := otherPos.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		dx := op.X - pos.X
-		dy := op.Y - pos.Y
-		dist := math.Sqrt(dx*dx + dy*dy)
-
-		if dist < nearestDist && dist > n.minAllyDist {
-			nearestAlly = other
-			nearestDist = dist
-		}
-	}
-
-	if nearestAlly == nil {
-		return NodeFailure // No ally found
-	}
-
-	// Check if already close enough
-	if nearestDist <= n.minAllyDist {
-		n.timeMoving = 0
-		return NodeSuccess
-	}
-
-	// Get ally position and move toward it
-	allyPos, _ := nearestAlly.GetComponent("position")
-	ap := allyPos.(*PositionComponent)
-
-	dx := ap.X - pos.X
-	dy := ap.Y - pos.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
-
-	if dist > 0 {
-		nx := dx / dist
-		ny := dy / dist
-		pos.X += nx * n.speed * deltaTime
-		pos.Y += ny * n.speed * deltaTime
-	}
-
-	// Update velocity for animation
-	if velComp, ok := entity.GetComponent("velocity"); ok {
-		if vel, ok := velComp.(*VelocityComponent); ok {
-			vel.VX = dx / dist * n.speed
-			vel.VY = dy / dist * n.speed
-		}
-	}
-
-	n.timeMoving += deltaTime
-	return NodeRunning
+	params := btMovementParams{Speed: n.speed, StopDist: n.minAllyDist}
+	return runMovementTick(entity, blackboard, deltaTime, params, &n.timeMoving,
+		func(ctx btAllyCtx, _ *Entity, _ *Blackboard) (float64, float64, bool) {
+			var nearestAlly *Entity
+			nearestDist := n.searchRadius + 1
+			for _, other := range ctx.Nearby {
+				if other == entity {
+					continue
+				}
+				otherFaction, hasF := other.GetComponent("faction")
+				if !hasF {
+					continue
+				}
+				of, ok := otherFaction.(*FactionComponent)
+				if !ok || of.FactionID != ctx.Faction.FactionID {
+					continue
+				}
+				otherPos, hasP := other.GetComponent("position")
+				if !hasP {
+					continue
+				}
+				op, ok := otherPos.(*PositionComponent)
+				if !ok {
+					continue
+				}
+				dx := op.X - ctx.Pos.X
+				dy := op.Y - ctx.Pos.Y
+				dist := math.Sqrt(dx*dx + dy*dy)
+				if dist < nearestDist && dist > n.minAllyDist {
+					nearestAlly = other
+					nearestDist = dist
+				}
+			}
+			if nearestAlly == nil {
+				return 0, 0, false
+			}
+			allyPos, _ := nearestAlly.GetComponent("position")
+			ap := allyPos.(*PositionComponent)
+			return ap.X, ap.Y, true
+		},
+	)
 }
 
 // Reset resets movement timer.
@@ -785,32 +722,7 @@ func NewIsOutnumberedNode(name string, range_, ratio float64) *IsOutnumberedNode
 
 // Tick counts nearby allies and enemies to check ratio.
 func (n *IsOutnumberedNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	// Get entity faction
-	factionComp, ok := entity.GetComponent("faction")
-	if !ok {
-		return NodeFailure
-	}
-	faction, ok := factionComp.(*FactionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Get position
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	pos, ok := posComp.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Get nearby entities
-	nearbyVal, hasNearby := blackboard.Get("nearby_entities")
-	if !hasNearby || nearbyVal == nil {
-		return NodeFailure
-	}
-	nearbyEntities, ok := nearbyVal.([]*Entity)
+	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(entity, blackboard)
 	if !ok {
 		return NodeFailure
 	}
@@ -919,40 +831,12 @@ func NewCanSeeTargetNode(name string, maxRange float64) *CanSeeTargetNode {
 
 // Tick checks if target is visible within range.
 func (n *CanSeeTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	targetVal, hasTarget := blackboard.Get("target")
-	if !hasTarget || targetVal == nil {
-		return NodeFailure
-	}
-	target, ok := targetVal.(*Entity)
-	if !ok || target == nil {
+	tp := GetTargetPositions(entity, blackboard)
+	if tp == nil {
 		return NodeFailure
 	}
 
-	// Get positions
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	pos, ok := posComp.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	targetPos, ok := target.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	tPos, ok := targetPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Check distance
-	dx := tPos.X - pos.X
-	dy := tPos.Y - pos.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
-
-	if dist > n.maxRange {
+	if tp.Dist > n.maxRange {
 		return NodeFailure
 	}
 
@@ -1064,44 +948,17 @@ func (n *CoordinatedAttackNode) Tick(entity *Entity, blackboard *Blackboard, del
 	}
 
 	// Perform attack
-	targetVal, hasTarget := blackboard.Get("target")
-	if !hasTarget || targetVal == nil {
-		return NodeFailure
-	}
-	target, ok := targetVal.(*Entity)
-	if !ok || target == nil {
+	tp := GetTargetPositions(entity, blackboard)
+	if tp == nil {
 		return NodeFailure
 	}
 
-	// Check range
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	pos, ok := posComp.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	targetPos, ok := target.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	tPos, ok := targetPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	dx := tPos.X - pos.X
-	dy := tPos.Y - pos.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
-
-	if dist > n.attackRange {
+	if tp.Dist > n.attackRange {
 		return NodeFailure
 	}
 
 	// Deal damage
-	targetHealth, ok := target.GetComponent("health")
+	targetHealth, ok := tp.Target.GetComponent("health")
 	if !ok {
 		return NodeFailure
 	}
@@ -1120,7 +977,7 @@ func (n *CoordinatedAttackNode) Tick(entity *Entity, blackboard *Blackboard, del
 	// Log coordinated attack
 	blackboard.Set("coordinated_attack", map[string]interface{}{
 		"attacker":    entity.ID,
-		"target":      target.ID,
+		"target":      tp.Target.ID,
 		"damage":      coordDamage,
 		"coordinated": true,
 	})
@@ -1165,32 +1022,7 @@ func NewProtectAllyNode(name string, range_, threshold, speed float64) *ProtectA
 
 // Tick finds and protects low-health allies.
 func (n *ProtectAllyNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	// Get faction
-	factionComp, ok := entity.GetComponent("faction")
-	if !ok {
-		return NodeFailure
-	}
-	faction, ok := factionComp.(*FactionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Get position
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	pos, ok := posComp.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Get nearby entities
-	nearbyVal, hasNearby := blackboard.Get("nearby_entities")
-	if !hasNearby || nearbyVal == nil {
-		return NodeFailure
-	}
-	nearbyEntities, ok := nearbyVal.([]*Entity)
+	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(entity, blackboard)
 	if !ok {
 		return NodeFailure
 	}

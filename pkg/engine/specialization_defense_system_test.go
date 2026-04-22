@@ -21,12 +21,19 @@ func TestNewSpecializationDefenseSystem(t *testing.T) {
 		t.Errorf("Expected updateInterval 1.0, got %f", system.updateInterval)
 	}
 
-	if system.originalDefense == nil {
-		t.Error("originalDefense map not initialized")
+	// Verify the bonus cache maps are initialized. A nil map read also returns zero,
+	// so checking GetBonusForEntity alone does not prove initialization.
+	if system.defenseMod.applied == nil {
+		t.Error("defenseMod.applied cache not initialized")
 	}
 
-	if system.appliedBonuses == nil {
-		t.Error("appliedBonuses map not initialized")
+	if system.defenseMod.original == nil {
+		t.Error("defenseMod.original cache not initialized")
+	}
+
+	// Unknown entities should still report zero bonus.
+	if system.GetBonusForEntity(99999) != 0 {
+		t.Error("defenseMod cache not initialized: expected zero bonus for unknown entity")
 	}
 
 	if system.genreID != "fantasy" {
@@ -76,14 +83,14 @@ func TestSpecializationDefenseSystem_Update_IntervalThrottling(t *testing.T) {
 	// First update with small delta - should not process
 	system.Update(entities, 0.5)
 
-	if _, exists := system.appliedBonuses[entity.ID]; exists {
+	if system.GetBonusForEntity(entity.ID) != 0 {
 		t.Error("Should not apply bonus before interval elapsed")
 	}
 
 	// Second update - now interval should be met
 	system.Update(entities, 0.6)
 
-	if _, exists := system.appliedBonuses[entity.ID]; !exists {
+	if system.GetBonusForEntity(entity.ID) == 0 {
 		t.Error("Should apply bonus after interval elapsed")
 	}
 }
@@ -311,16 +318,24 @@ func TestSpecializationDefenseSystem_BonusRemoval(t *testing.T) {
 	if system.GetBonusForEntity(entity.ID) == 0 {
 		t.Fatal("Bonus should be applied initially")
 	}
+	if stats.Defense <= 100.0 {
+		t.Fatal("Defense should have been boosted above 100")
+	}
 
 	// Remove class_progression component
 	entity.RemoveComponent("class_progression")
 
-	// Update again
+	// Update again — processEntity should call restoreAndRemove
 	system.Update(entities, 2.0)
 
 	// Bonus tracking should be removed
 	if system.GetBonusForEntity(entity.ID) != 0 {
 		t.Error("Bonus tracking should be removed when component is removed")
+	}
+
+	// The original defense value should be restored
+	if stats.Defense != 100.0 {
+		t.Errorf("Defense should be restored to 100 after component removal, got %f", stats.Defense)
 	}
 }
 
@@ -353,9 +368,12 @@ func TestSpecializationDefenseSystem_OriginalDefensePreserved(t *testing.T) {
 		t.Errorf("Defense should not compound: first=%f, second=%f", firstDefense, secondDefense)
 	}
 
-	// Verify the original was stored correctly
-	if stored, exists := system.originalDefense[entity.ID]; !exists || stored != originalDefense {
-		t.Errorf("Original defense not stored correctly: expected %f, got %f", originalDefense, stored)
+	// Verify the original was preserved: applying the same spec twice should produce
+	// the same result as applying it once (bonus = originalDefense * (1+spec_bonus)).
+	bonus := system.GetBonusForEntity(entity.ID)
+	expectedDefense := originalDefense * (1.0 + bonus)
+	if firstDefense != expectedDefense {
+		t.Errorf("Original defense not preserved correctly: expected %f, got %f", expectedDefense, firstDefense)
 	}
 }
 

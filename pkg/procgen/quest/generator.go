@@ -86,7 +86,7 @@ func (g *QuestGenerator) extractQuestCount(params procgen.GenerationParams) int 
 }
 
 // selectTemplates selects quest templates based on genre.
-// Uses the data-driven genreQuestTemplates table (TODO REM-144 resolved).
+// Uses the data-driven genreQuestTemplates table.
 func (g *QuestGenerator) selectTemplates(genreID string) ([]QuestTemplate, error) {
 	templates := GetQuestTemplates(genreID)
 	if len(templates) == 0 {

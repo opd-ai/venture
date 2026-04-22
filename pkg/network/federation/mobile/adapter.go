@@ -259,11 +259,29 @@ func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler Syn
 		waitTime := time.Duration(float64(tokensNeeded)/float64(a.config.MaxBandwidth)) * time.Second
 
 		// Wait for tokens to refill or context cancellation
+		if err := waitForBandwidthRefill(ctx, waitTime); err != nil {
+			return err
+		}
+	}
+}
+
+func waitForBandwidthRefill(ctx context.Context, waitTime time.Duration) error {
+	timer := time.NewTimer(waitTime)
+	defer stopAndDrainTimer(timer)
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func stopAndDrainTimer(timer *time.Timer) {
+	if !timer.Stop() {
 		select {
-		case <-time.After(waitTime):
-			continue // retry with iterative loop
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-timer.C:
+		default:
 		}
 	}
 }

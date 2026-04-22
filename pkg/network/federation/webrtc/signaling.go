@@ -148,12 +148,10 @@ func (s *SignalingClient) SendOffer(remotePeerID string, offer *SDPOffer) error 
 		Offer: offer,
 	}
 
-	select {
-	case s.sendChan <- msg:
-		return nil
-	case <-time.After(5 * time.Second):
+	if !sendWithTimeout(s.sendChan, msg, 5*time.Second) {
 		return fmt.Errorf("send offer timeout")
 	}
+	return nil
 }
 
 // SendAnswer sends an SDP answer to a remote peer.
@@ -173,12 +171,10 @@ func (s *SignalingClient) SendAnswer(remotePeerID string, answer *SDPAnswer) err
 		Answer: answer,
 	}
 
-	select {
-	case s.sendChan <- msg:
-		return nil
-	case <-time.After(5 * time.Second):
+	if !sendWithTimeout(s.sendChan, msg, 5*time.Second) {
 		return fmt.Errorf("send answer timeout")
 	}
+	return nil
 }
 
 // SendICECandidate sends an ICE candidate to a remote peer.
@@ -198,12 +194,10 @@ func (s *SignalingClient) SendICECandidate(remotePeerID string, candidate *ICECa
 		Candidate: candidate,
 	}
 
-	select {
-	case s.sendChan <- msg:
-		return nil
-	case <-time.After(5 * time.Second):
+	if !sendWithTimeout(s.sendChan, msg, 5*time.Second) {
 		return fmt.Errorf("send candidate timeout")
 	}
+	return nil
 }
 
 // SendBye notifies a remote peer of disconnection.
@@ -222,12 +216,10 @@ func (s *SignalingClient) SendBye(remotePeerID string) error {
 		To:   remotePeerID,
 	}
 
-	select {
-	case s.sendChan <- msg:
-		return nil
-	case <-time.After(5 * time.Second):
+	if !sendWithTimeout(s.sendChan, msg, 5*time.Second) {
 		return fmt.Errorf("send bye timeout")
 	}
+	return nil
 }
 
 // Receive returns channel for incoming signaling messages.
@@ -365,12 +357,10 @@ func (s *SignalingServer) RelayMessage(msg *SignalingMessage) error {
 	}
 
 	// Deliver message to recipient
-	select {
-	case toClient.recvChan <- msg:
-		return nil
-	case <-time.After(5 * time.Second):
+	if !sendWithTimeout(toClient.recvChan, msg, 5*time.Second) {
 		return fmt.Errorf("relay timeout")
 	}
+	return nil
 }
 
 // GetStats returns server statistics.

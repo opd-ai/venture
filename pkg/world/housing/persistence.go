@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -16,8 +17,12 @@ type SaveData struct {
 	Plots   []*Plot `json:"plots"`
 }
 
+var createSaveFile = func(filename string) (io.WriteCloser, error) {
+	return os.Create(filename)
+}
+
 // Save writes housing data to a compressed JSON file.
-func (m *Manager) Save(filename string) error {
+func (m *Manager) Save(filename string) (err error) {
 	// Create directory if needed
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -40,7 +45,7 @@ func (m *Manager) Save(filename string) error {
 	}
 
 	// Create file
-	file, err := os.Create(filename)
+	file, err := createSaveFile(filename)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"filename": filename,
@@ -50,6 +55,9 @@ func (m *Manager) Save(filename string) error {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
+			if err == nil {
+				err = fmt.Errorf("failed to close file: %w", closeErr)
+			}
 			log.WithFields(log.Fields{
 				"filename": filename,
 				"error":    closeErr.Error(),
@@ -147,7 +155,7 @@ func (m *Manager) Load(filename string) error {
 }
 
 // SavePlayerData saves housing data for a specific player.
-func (m *Manager) SavePlayerData(playerID, filename string) error {
+func (m *Manager) SavePlayerData(playerID, filename string) (err error) {
 	plots := m.GetPlayerPlots(playerID)
 
 	saveData := SaveData{
@@ -167,7 +175,7 @@ func (m *Manager) SavePlayerData(playerID, filename string) error {
 	}
 
 	// Create file
-	file, err := os.Create(filename)
+	file, err := createSaveFile(filename)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"playerID": playerID,
@@ -178,6 +186,9 @@ func (m *Manager) SavePlayerData(playerID, filename string) error {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
+			if err == nil {
+				err = fmt.Errorf("failed to close file: %w", closeErr)
+			}
 			log.WithFields(log.Fields{
 				"playerID": playerID,
 				"filename": filename,

@@ -2,10 +2,22 @@ package choice_consequences
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
+
+type testCloseErrorWriteCloser struct {
+	io.Writer
+	closeErr error
+}
+
+func (c *testCloseErrorWriteCloser) Close() error {
+	return c.closeErr
+}
 
 // testTimestamp is a fixed timestamp for deterministic testing
 const testTimestamp = int64(1640000000)
@@ -746,6 +758,33 @@ func TestSaveLoad(t *testing.T) {
 	alignment := newTracker.GetAlignment(playerID)
 	if alignment.GoodEvil != 1.0 { // Sum of 0.0 + 0.1 + 0.2 + 0.3 + 0.4 = 1.0 (clamped)
 		t.Errorf("Expected GoodEvil 1.0 after load, got %f", alignment.GoodEvil)
+	}
+}
+
+func TestSaveCloseError(t *testing.T) {
+	tracker := NewChoiceTracker()
+	choice := &PlayerChoice{
+		ChoiceID:    "choice_a",
+		StoryNodeID: "node",
+		Timestamp:   testTimestamp,
+	}
+	tracker.RecordChoice("player_close_test", choice)
+
+	origCreateChoiceTrackerFile := createChoiceTrackerFile
+	createChoiceTrackerFile = func(string) (io.WriteCloser, error) {
+		return &testCloseErrorWriteCloser{
+			Writer:   io.Discard,
+			closeErr: errors.New("injected close error"),
+		}, nil
+	}
+	defer func() { createChoiceTrackerFile = origCreateChoiceTrackerFile }()
+
+	err := tracker.Save("unused.json.gz")
+	if err == nil {
+		t.Fatal("Save() error = nil, want close error")
+	}
+	if !strings.Contains(err.Error(), "failed to close file") {
+		t.Fatalf("Save() error = %v, want close error context", err)
 	}
 }
 

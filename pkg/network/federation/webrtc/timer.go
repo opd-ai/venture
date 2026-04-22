@@ -30,9 +30,9 @@ func sendWithTimeout[T any](ch chan<- T, msg T, timeout time.Duration) bool {
 // sendWithTimeoutOrDone sends with an immediate fast-path, then waits for
 // successful send, cancellation via done, or timeout and returns the provided
 // done/timeout errors for callers that need explicit error typing.
-// If send and done are both ready in the blocking select, Go may choose either
-// case; callers that require strict precedence should use distinct error values
-// and handle either result as equivalent terminal state.
+// If send and done are both ready in the blocking select, Go's runtime may
+// choose either case non-deterministically; callers should handle doneErr and
+// timeoutErr appropriately and not assume precedence among ready cases.
 func sendWithTimeoutOrDone[T any](
 	ch chan<- T,
 	msg T,

@@ -85,28 +85,29 @@ func TestExpressionComboSystem_TwoEntitiesSynchronized(t *testing.T) {
 	world := NewWorld()
 	system := NewExpressionComboSystem(world)
 
-	// Create first entity with expression
+	// Create first entity with expression component before flushing to world
+	// so the query cache is populated with the correct component set on flush.
 	entity1 := world.CreateEntity()
-	world.Update(0) // Process entity addition
 	expComp1 := &ExpressionComponent{
 		ActiveExpression: ExpressionDance,
 		ExpressionTime:   3.0,
 		Cooldown:         0,
 	}
 	entity1.AddComponent(expComp1)
+	world.Update(0) // Process entity addition (entity1 now visible to queries)
 
 	// First update - entity1 starts pending combo
 	system.Update(0.1)
 
 	// Create second entity with same expression (within sync window)
 	entity2 := world.CreateEntity()
-	world.Update(0) // Process entity addition
 	expComp2 := &ExpressionComponent{
 		ActiveExpression: ExpressionDance,
 		ExpressionTime:   3.0,
 		Cooldown:         0,
 	}
 	entity2.AddComponent(expComp2)
+	world.Update(0) // Process entity addition (entity2 now visible to queries)
 
 	// Second update - entity2 joins combo
 	system.Update(0.1)

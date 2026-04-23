@@ -466,7 +466,8 @@ func (ts *EbitenTutorialSystem) AdvanceStep() {
 
 // createTemporaryWorld creates a temporary world for condition checking.
 func (ts *EbitenTutorialSystem) createTemporaryWorld(entities []*Entity) *World {
-	world := &World{entities: make(map[uint64]*Entity), entityListDirty: true}
+	world := &World{entities: make(map[uint64]*Entity)}
+	world.entityListDirty.Store(true)
 	for _, entity := range entities {
 		world.entities[entity.ID] = entity
 	}

@@ -157,19 +157,13 @@ func TestGuildVehicleSystem_SiegeEngineMultiplier(t *testing.T) {
 
 			// Create vehicle entity
 			vehicleEntity := world.CreateEntity()
-			vehicleEntity.AddComponent(&guild_vehicle.GuildVehicleFleetComponent{
-				GuildID:           guildID,
-				FleetID:           fleetID,
-				SiegeType:         tt.siegeType,
-				FormationPosition: 0,
-			})
 			vehicleEntity.AddComponent(&VehicleCombatComponent{
 				RammingDamage: tt.baseDamage,
 				WeaponMounted: false,
 			})
 
-			// Add vehicle to fleet
-			err = sys.manager.AddVehicle(guildID, vehicleEntity.ID, fleetID)
+			// Add vehicle to fleet with the correct siege type
+			err = sys.manager.AddVehicleWithType(guildID, vehicleEntity.ID, fleetID, tt.siegeType, 100)
 			if err != nil {
 				t.Fatalf("Failed to add vehicle to fleet: %v", err)
 			}

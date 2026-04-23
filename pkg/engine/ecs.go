@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/companion/learning"
@@ -490,7 +491,7 @@ type World struct {
 
 	// Cached entity list to reduce allocations
 	cachedEntityList []*Entity
-	entityListDirty  bool
+	entityListDirty  atomic.Bool
 
 	// Reusable buffer for entity queries to reduce allocations
 	queryBuffer []*Entity
@@ -577,7 +578,6 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		queryCache:         make(map[string][]*Entity),
 		queryCacheDirty:    make(map[string]bool),
 		queryComponents:    make(map[string][]string), // Selective query invalidation index
-		entityListDirty:    true,
 		Clock:              NewSimulationClock(0), // Default to deterministic simulation clock
 		logger:             logEntry,
 		performanceMetrics: NewPerformanceMetrics(), // Initialize performance metrics
@@ -601,6 +601,7 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		w.logger.Debug("world created")
 	}
 
+	w.entityListDirty.Store(true)
 	return w
 }
 
@@ -627,7 +628,7 @@ func (w *World) AddEntity(entity *Entity) {
 	w.entityMu.Lock()
 	w.entitiesToAdd = append(w.entitiesToAdd, entity)
 	w.entityMu.Unlock()
-	w.entityListDirty = true
+	w.entityListDirty.Store(true)
 	// Selective invalidation deferred to processPendingEntityAdditions.
 }
 
@@ -656,7 +657,7 @@ func (w *World) RemoveEntity(entityID uint64) {
 	w.entityMu.Lock()
 	w.entityIDsToRemove = append(w.entityIDsToRemove, entityID)
 	w.entityMu.Unlock()
-	w.entityListDirty = true
+	w.entityListDirty.Store(true)
 	w.invalidateQueryCacheForComponents(entityComponents)
 
 	if w.logger != nil && w.logger.Logger.GetLevel() >= logrus.DebugLevel {
@@ -734,7 +735,7 @@ func (w *World) Update(deltaTime float64) {
 			// overlap with this entity's components.
 			w.invalidateQueryCacheForComponents(entity.Components)
 		}
-		w.entityListDirty = true
+		w.entityListDirty.Store(true)
 	}
 
 	// Process pending removals
@@ -746,11 +747,11 @@ func (w *World) Update(deltaTime float64) {
 				hook(id)
 			}
 		}
-		w.entityListDirty = true
+		w.entityListDirty.Store(true)
 	}
 
 	// Rebuild cached entity list if needed
-	if w.entityListDirty {
+	if w.entityListDirty.Load() {
 		w.rebuildEntityCache()
 	}
 
@@ -814,7 +815,7 @@ func (w *World) rebuildEntityCache() {
 		w.cachedEntityList = append(w.cachedEntityList, entity)
 	}
 
-	w.entityListDirty = false
+	w.entityListDirty.Store(false)
 }
 
 // GetEntities returns all entities in the world.
@@ -822,7 +823,7 @@ func (w *World) rebuildEntityCache() {
 func (w *World) GetEntities() []*Entity {
 	// Ensure pending entity additions are processed before returning
 	w.processPendingEntityAdditions()
-	if w.entityListDirty {
+	if w.entityListDirty.Load() {
 		w.rebuildEntityCache()
 	}
 	return w.cachedEntityList
@@ -887,7 +888,7 @@ func (w *World) processPendingEntityAdditions() {
 		// overlap with this entity's components (entity.Components is the component map).
 		w.invalidateQueryCacheForComponents(entity.Components)
 	}
-	w.entityListDirty = true
+	w.entityListDirty.Store(true)
 }
 
 // filterEntitiesByComponents filters entities that have all specified components.
@@ -897,7 +898,7 @@ func (w *World) filterEntitiesByComponents(componentTypes []string) []*Entity {
 	w.queryBuffer = w.queryBuffer[:0]
 
 	// Ensure entity list cache is up to date
-	if w.entityListDirty {
+	if w.entityListDirty.Load() {
 		w.rebuildEntityCache()
 	}
 

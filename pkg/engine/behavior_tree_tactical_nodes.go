@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/opd-ai/venture/pkg/engine/aitypes"
 	"github.com/sirupsen/logrus"
 )
 
@@ -186,8 +187,12 @@ func NewHealthBelowNode(name string, threshold float64) *HealthBelowNode {
 }
 
 // Tick checks if entity health is below threshold.
-func (n *HealthBelowNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	healthComp, ok := entity.GetComponent("health")
+func (n *HealthBelowNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
+	healthComp, ok := e.GetComponent("health")
 	if !ok {
 		return NodeFailure
 	}
@@ -222,7 +227,7 @@ func NewHasTargetNode(name string) *HasTargetNode {
 }
 
 // Tick checks if blackboard has a valid target.
-func (n *HasTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *HasTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	target, ok := blackboard.Get("target")
 	if !ok || target == nil {
 		return NodeFailure
@@ -257,8 +262,12 @@ func NewInRangeNode(name string, distance float64) *InRangeNode {
 }
 
 // Tick checks if target is within range.
-func (n *InRangeNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	tp := GetTargetPositions(entity, blackboard)
+func (n *InRangeNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
+	tp := GetTargetPositions(e, blackboard)
 	if tp == nil {
 		return NodeFailure
 	}
@@ -295,9 +304,13 @@ func NewHasAlliesNearbyNode(name string, distance float64, minCount int) *HasAll
 }
 
 // Tick checks for nearby allies using faction matching.
-func (n *HasAlliesNearbyNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *HasAlliesNearbyNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Get entity faction
-	factionComp, ok := entity.GetComponent("faction")
+	factionComp, ok := e.GetComponent("faction")
 	if !ok {
 		return NodeFailure
 	}
@@ -307,7 +320,7 @@ func (n *HasAlliesNearbyNode) Tick(entity *Entity, blackboard *Blackboard, delta
 	}
 
 	// Get our position
-	posComp, ok := entity.GetComponent("position")
+	posComp, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -329,7 +342,7 @@ func (n *HasAlliesNearbyNode) Tick(entity *Entity, blackboard *Blackboard, delta
 
 	allyCount := 0
 	for _, other := range entities {
-		if other == entity {
+		if other == e {
 			continue
 		}
 		// Check faction match
@@ -397,8 +410,12 @@ func NewMoveToTargetNode(name string, speed, stopDist float64) *MoveToTargetNode
 }
 
 // Tick moves entity toward target each frame.
-func (n *MoveToTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	tp := GetTargetPositions(entity, blackboard)
+func (n *MoveToTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
+	tp := GetTargetPositions(e, blackboard)
 	if tp == nil {
 		return NodeFailure
 	}
@@ -418,7 +435,7 @@ func (n *MoveToTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTim
 	}
 
 	// Update velocity component if present for animation
-	if velComp, ok := entity.GetComponent("velocity"); ok {
+	if velComp, ok := e.GetComponent("velocity"); ok {
 		if vel, ok := velComp.(*VelocityComponent); ok {
 			if tp.Dist > 0 {
 				vel.VX = tp.Dx / tp.Dist * n.speed
@@ -459,8 +476,12 @@ func NewFleeFromTargetNode(name string, speed, safeDist float64) *FleeFromTarget
 }
 
 // Tick moves entity away from target each frame.
-func (n *FleeFromTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	tp := GetTargetPositions(entity, blackboard)
+func (n *FleeFromTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
+	tp := GetTargetPositions(e, blackboard)
 	if tp == nil {
 		return NodeFailure
 	}
@@ -516,7 +537,11 @@ func NewSeekCoverNode(name string, speed, coverDist float64) *SeekCoverNode {
 }
 
 // Tick finds and moves toward cover position each frame.
-func (n *SeekCoverNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *SeekCoverNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Check if already at cover
 	atCoverVal, hasAtCover := blackboard.Get("at_cover")
 	if hasAtCover && atCoverVal != nil {
@@ -526,7 +551,7 @@ func (n *SeekCoverNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime f
 	}
 
 	// Get entity position
-	myPos, ok := entity.GetComponent("position")
+	myPos, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -646,7 +671,11 @@ func NewFlankTargetNode(name string, speed, flankDist float64) *FlankTargetNode 
 }
 
 // Tick moves entity to flank position each frame.
-func (n *FlankTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *FlankTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
 	targetVal, ok := blackboard.Get("target")
 	if !ok || targetVal == nil {
 		return NodeFailure
@@ -657,7 +686,7 @@ func (n *FlankTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime
 	}
 
 	// Get positions
-	myPos, ok := entity.GetComponent("position")
+	myPos, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -747,7 +776,11 @@ func NewPatrolNode(name string, speed, waitDuration float64) *PatrolNode {
 }
 
 // Tick moves entity along patrol path.
-func (n *PatrolNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *PatrolNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Get waypoints from blackboard if not set
 	if n.waypoints == nil {
 		wp, hasWP := blackboard.Get("patrol_waypoints")
@@ -768,7 +801,7 @@ func (n *PatrolNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime floa
 	}
 
 	// Get entity position
-	posComp, ok := entity.GetComponent("position")
+	posComp, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -842,14 +875,18 @@ func NewAttackTargetNode(name string, attackRange float64, damage int, cooldown 
 }
 
 // Tick attempts to attack target each frame.
-func (n *AttackTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *AttackTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Update cooldown
 	if n.currentCD > 0 {
 		n.currentCD -= deltaTime
 		return NodeRunning
 	}
 
-	tp := GetTargetPositions(entity, blackboard)
+	tp := GetTargetPositions(e, blackboard)
 	if tp == nil {
 		return NodeFailure
 	}
@@ -875,7 +912,7 @@ func (n *AttackTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTim
 
 	// Set attack event in blackboard for visual feedback
 	blackboard.Set("last_attack", map[string]interface{}{
-		"attacker":    entity.ID,
+		"attacker":    e.ID,
 		"target":      tp.Target.ID,
 		"damage":      n.damage,
 		"attack_type": n.attackType,
@@ -912,13 +949,17 @@ func NewCallForHelpNode(name string, radius float64) *CallForHelpNode {
 }
 
 // Tick broadcasts help signal to nearby allies.
-func (n *CallForHelpNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *CallForHelpNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
 	if n.called {
 		return NodeSuccess // Already called this tick
 	}
 
 	// Get entity faction
-	factionComp, ok := entity.GetComponent("faction")
+	factionComp, ok := e.GetComponent("faction")
 	if !ok {
 		return NodeFailure
 	}
@@ -928,7 +969,7 @@ func (n *CallForHelpNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime
 	}
 
 	// Get our position
-	posComp, ok := entity.GetComponent("position")
+	posComp, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -942,7 +983,7 @@ func (n *CallForHelpNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime
 
 	// Store help call event for AI system to process
 	blackboard.Set("help_call", map[string]interface{}{
-		"caller":   entity.ID,
+		"caller":   e.ID,
 		"faction":  faction.FactionID,
 		"position": []float64{pos.X, pos.Y},
 		"radius":   n.radius,
@@ -979,7 +1020,7 @@ func NewWaitNode(name string, duration float64) *WaitNode {
 }
 
 // Tick waits for duration.
-func (n *WaitNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *WaitNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	n.elapsed += deltaTime
 	if n.elapsed >= n.duration {
 		n.elapsed = 0
@@ -1016,7 +1057,7 @@ func NewRandomSelectorNode(name string, children ...BehaviorNode) *RandomSelecto
 }
 
 // Tick selects and executes a random child.
-func (r *RandomSelectorNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (r *RandomSelectorNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	if len(r.children) == 0 {
 		return NodeFailure
 	}
@@ -1063,7 +1104,7 @@ func NewSucceederNode(name string, child BehaviorNode) *SucceederNode {
 }
 
 // Tick executes child and returns success regardless.
-func (s *SucceederNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (s *SucceederNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	status := s.child.Tick(entity, blackboard, deltaTime)
 	if status == NodeRunning {
 		return NodeRunning
@@ -1096,7 +1137,7 @@ func NewFailerNode(name string, child BehaviorNode) *FailerNode {
 }
 
 // Tick executes child and returns failure regardless.
-func (f *FailerNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (f *FailerNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	status := f.child.Tick(entity, blackboard, deltaTime)
 	if status == NodeRunning {
 		return NodeRunning

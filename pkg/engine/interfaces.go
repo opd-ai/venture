@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/opd-ai/venture/pkg/engine/ai/behavior"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/saveload"
 )
@@ -497,16 +498,12 @@ type PrestigeUIProvider interface {
 	Show(playerID, className string)
 }
 
-// BehaviorNode is the interface that all behavior tree nodes must implement.
-// Originally from: behavior_tree_nodes.go
-type BehaviorNode interface {
-	// Tick executes the node logic and returns the result status.
-	Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus
-	// Reset resets the node state for fresh execution.
-	Reset()
-	// String returns a string representation of the node for debugging.
-	String() string
-}
+// BehaviorNode is a type alias for behavior.BehaviorNode.
+// Defining it here as an alias (rather than a new named interface) means that
+// []BehaviorNode and []behavior.BehaviorNode are the same type, so the wrapper
+// constructors (NewSequenceNode, etc.) in behavior_tree_nodes.go can forward
+// variadic slices to the behavior package without explicit conversion.
+type BehaviorNode = behavior.BehaviorNode
 
 // Synthesizer defines the interface for audio synthesis engines.
 // This allows AudioManagerSystem to use different synthesis implementations.

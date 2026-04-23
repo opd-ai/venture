@@ -5,6 +5,8 @@ package engine
 import (
 	"fmt"
 	"math"
+
+	"github.com/opd-ai/venture/pkg/engine/aitypes"
 )
 
 // ActionNode is a leaf node that performs an action.
@@ -22,8 +24,14 @@ func NewActionNode(name string, action func(*Entity, *Blackboard, float64) NodeS
 }
 
 // Tick executes the action.
-func (a *ActionNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	return a.action(entity, blackboard, deltaTime)
+// The entity parameter satisfies aitypes.EntityContext; the concrete *Entity is
+// recovered via type assertion so the stored closure keeps its *Entity signature.
+func (a *ActionNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
+	return a.action(e, blackboard, deltaTime)
 }
 
 // Reset does nothing for action nodes.
@@ -49,8 +57,14 @@ func NewConditionNode(name string, condition func(*Entity, *Blackboard) bool) *C
 }
 
 // Tick checks the condition.
-func (c *ConditionNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	if c.condition(entity, blackboard) {
+// The entity parameter satisfies aitypes.EntityContext; the concrete *Entity is
+// recovered via type assertion so the stored closure keeps its *Entity signature.
+func (c *ConditionNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entityFromContext(entity)
+	if !ok {
+		return NodeFailure
+	}
+	if c.condition(e, blackboard) {
 		return NodeSuccess
 	}
 	return NodeFailure
@@ -69,7 +83,7 @@ func (c *ConditionNode) String() string {
 // NewHasTargetCondition creates a condition that checks if entity has a target.
 func NewHasTargetCondition() *ConditionNode {
 	return NewConditionNode("HasTarget", func(entity *Entity, blackboard *Blackboard) bool {
-		target, ok := blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(blackboard, "target")
 		return ok && target != nil
 	})
 }
@@ -94,7 +108,7 @@ func NewHealthBelowCondition(threshold float64) *ConditionNode {
 func NewTargetInRangeCondition(range_ float64) *ConditionNode {
 	name := fmt.Sprintf("TargetInRange(%.0f)", range_)
 	return NewConditionNode(name, func(entity *Entity, blackboard *Blackboard) bool {
-		target, ok := blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(blackboard, "target")
 		if !ok || target == nil {
 			return false
 		}
@@ -221,7 +235,7 @@ func NewFindTargetAction(detectionRange float64, world *World) *ActionNode {
 // NewMoveToTargetAction creates an action that moves towards the target.
 func NewMoveToTargetAction(speed float64) *ActionNode {
 	return NewActionNode("MoveToTarget", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-		target, ok := blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(blackboard, "target")
 		if !ok || target == nil {
 			return NodeFailure
 		}
@@ -276,7 +290,7 @@ func NewMoveToTargetAction(speed float64) *ActionNode {
 // NewAttackTargetAction creates an action that attacks the target.
 func NewAttackTargetAction() *ActionNode {
 	return NewActionNode("AttackTarget", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-		target, ok := blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(blackboard, "target")
 		if !ok || target == nil {
 			return NodeFailure
 		}
@@ -310,7 +324,7 @@ func NewAttackTargetAction() *ActionNode {
 // NewFleeFromTargetAction creates an action that moves away from the target.
 func NewFleeFromTargetAction(speed float64) *ActionNode {
 	return NewActionNode("FleeFromTarget", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-		target, ok := blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(blackboard, "target")
 		if !ok || target == nil {
 			return NodeFailure
 		}

@@ -84,7 +84,7 @@ func moveToFormation(entity *Entity, pos *PositionComponent, targetX, targetY fl
 func NewFlankTargetAction(world *World) *ActionNode {
 	return NewActionNode("FlankTarget", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
 		// Get target from blackboard
-		target, ok := blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(blackboard, "target")
 		if !ok || target == nil {
 			return NodeFailure
 		}
@@ -194,7 +194,7 @@ func NewFocusFireAction() *ActionNode {
 		}
 
 		// Check if squad has a shared priority target
-		priorityTarget, ok := squad.SharedBlackboard.GetEntity("priority_target")
+		priorityTarget, ok := GetEntityFromBlackboard(squad.SharedBlackboard, "priority_target")
 		if !ok || priorityTarget == nil {
 			return NodeFailure
 		}
@@ -406,7 +406,7 @@ func evaluateRetreatDecision(entity *Entity, squad *SquadComponent, blackboard *
 
 // setRetreatDirection calculates and sets the retreat direction away from the target.
 func setRetreatDirection(entity *Entity, squad *SquadComponent, blackboard *Blackboard) {
-	target, ok := blackboard.GetEntity("target")
+	target, ok := GetEntityFromBlackboard(blackboard, "target")
 	if !ok {
 		return
 	}
@@ -431,7 +431,7 @@ func setRetreatDirection(entity *Entity, squad *SquadComponent, blackboard *Blac
 
 // setPriorityTarget sets the squad's priority target from the leader's current target.
 func setPriorityTarget(squad *SquadComponent, blackboard *Blackboard) {
-	if target, ok := blackboard.GetEntity("target"); ok {
+	if target, ok := GetEntityFromBlackboard(blackboard, "target"); ok {
 		squad.SharedBlackboard.Set("priority_target", target)
 	}
 }
@@ -461,7 +461,7 @@ func NewSquadHasPriorityTargetCondition() *ConditionNode {
 			return false
 		}
 
-		target, ok := squad.SharedBlackboard.GetEntity("priority_target")
+		target, ok := GetEntityFromBlackboard(squad.SharedBlackboard, "priority_target")
 		return ok && target != nil
 	})
 }

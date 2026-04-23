@@ -202,7 +202,7 @@ func TestMeleeBehaviorTree(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		status = bt.Tick(entity, 0.016)
 		// Should find target and start combat
-		target, ok := bt.Blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(bt.Blackboard, "target")
 		if ok && target != nil {
 			// Target acquired
 			break
@@ -210,7 +210,7 @@ func TestMeleeBehaviorTree(t *testing.T) {
 	}
 
 	// Verify target was found
-	target, ok := bt.Blackboard.GetEntity("target")
+	target, ok := GetEntityFromBlackboard(bt.Blackboard, "target")
 	if !ok || target == nil {
 		t.Error("Expected melee AI to find target")
 	}
@@ -246,13 +246,13 @@ func TestRangedBehaviorTree(t *testing.T) {
 	// Find target
 	for i := 0; i < 5; i++ {
 		bt.Tick(entity, 0.016)
-		target, ok := bt.Blackboard.GetEntity("target")
+		target, ok := GetEntityFromBlackboard(bt.Blackboard, "target")
 		if ok && target != nil {
 			break
 		}
 	}
 
-	target, ok := bt.Blackboard.GetEntity("target")
+	target, ok := GetEntityFromBlackboard(bt.Blackboard, "target")
 	if !ok || target == nil {
 		t.Error("Expected ranged AI to find target")
 	}

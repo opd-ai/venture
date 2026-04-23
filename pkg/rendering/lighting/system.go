@@ -338,8 +338,9 @@ func (s *System) ApplyAOToImage(img, depthMap *image.RGBA) *image.RGBA {
 func (s *System) ApplyFullPostProcessing(img, depthMap *image.RGBA) *image.RGBA {
 	result := img
 
-	// Apply ambient occlusion first (darkening)
-	if s.config.AOConfig.Enabled {
+	// Apply ambient occlusion first (darkening).
+	// EnableShadows is a legacy compatibility toggle that forces AO on.
+	if s.config.AOConfig.Enabled || s.config.EnableShadows {
 		result = s.ApplyAOToImage(result, depthMap)
 	}
 

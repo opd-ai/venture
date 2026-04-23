@@ -410,19 +410,27 @@ func TestSystem_ApplyFullPostProcessing_AllDisabled(t *testing.T) {
 
 // TestSystem_ApplyFullPostProcessing_EnableShadowsForcesAO tests legacy shadow toggle behavior.
 func TestSystem_ApplyFullPostProcessing_EnableShadowsForcesAO(t *testing.T) {
+	configureBaseAOOnly := func(cfg *LightingConfig) {
+		cfg.AOConfig.Enabled = false
+		cfg.AOConfig.Seed = 12345
+		cfg.AOConfig.Intensity = 0.8
+		// Keep only the base AO pass active so test assertions isolate
+		// EnableShadows forcing AOConfig.Enabled for this render pass.
+		cfg.AOConfig.CornerIntensity = 0
+		cfg.AOConfig.EdgeIntensity = 0
+	}
+
 	config := DefaultConfig()
 	config.BloomConfig.Enabled = false
-	config.AOConfig.Enabled = false
-	config.AOConfig.Seed = 12345
-	config.AOConfig.Intensity = 0.8
-	config.AOConfig.CornerIntensity = 0
-	config.AOConfig.EdgeIntensity = 0
+	configureBaseAOOnly(&config)
 	config.EnableShadows = true
 
 	img := createTestImage(100, 100, color.RGBA{150, 150, 150, 255})
 	img.Set(50, 50, color.RGBA{255, 255, 255, 255})
 
-	withoutShadowsConfig := config
+	withoutShadowsConfig := DefaultConfig()
+	withoutShadowsConfig.BloomConfig.Enabled = false
+	configureBaseAOOnly(&withoutShadowsConfig)
 	withoutShadowsConfig.EnableShadows = false
 	withoutShadows := NewSystemWithConfig(withoutShadowsConfig).ApplyFullPostProcessing(img, nil)
 	withShadows := NewSystemWithConfig(config).ApplyFullPostProcessing(img, nil)

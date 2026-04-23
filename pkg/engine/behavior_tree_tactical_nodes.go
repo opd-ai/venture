@@ -188,7 +188,7 @@ func NewHealthBelowNode(name string, threshold float64) *HealthBelowNode {
 
 // Tick checks if entity health is below threshold.
 func (n *HealthBelowNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -263,7 +263,7 @@ func NewInRangeNode(name string, distance float64) *InRangeNode {
 
 // Tick checks if target is within range.
 func (n *InRangeNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -305,7 +305,7 @@ func NewHasAlliesNearbyNode(name string, distance float64, minCount int) *HasAll
 
 // Tick checks for nearby allies using faction matching.
 func (n *HasAlliesNearbyNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -411,7 +411,7 @@ func NewMoveToTargetNode(name string, speed, stopDist float64) *MoveToTargetNode
 
 // Tick moves entity toward target each frame.
 func (n *MoveToTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -477,7 +477,7 @@ func NewFleeFromTargetNode(name string, speed, safeDist float64) *FleeFromTarget
 
 // Tick moves entity away from target each frame.
 func (n *FleeFromTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -538,7 +538,7 @@ func NewSeekCoverNode(name string, speed, coverDist float64) *SeekCoverNode {
 
 // Tick finds and moves toward cover position each frame.
 func (n *SeekCoverNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -672,7 +672,7 @@ func NewFlankTargetNode(name string, speed, flankDist float64) *FlankTargetNode 
 
 // Tick moves entity to flank position each frame.
 func (n *FlankTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -777,7 +777,7 @@ func NewPatrolNode(name string, speed, waitDuration float64) *PatrolNode {
 
 // Tick moves entity along patrol path.
 func (n *PatrolNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -876,7 +876,7 @@ func NewAttackTargetNode(name string, attackRange float64, damage int, cooldown 
 
 // Tick attempts to attack target each frame.
 func (n *AttackTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -950,7 +950,7 @@ func NewCallForHelpNode(name string, radius float64) *CallForHelpNode {
 
 // Tick broadcasts help signal to nearby allies.
 func (n *CallForHelpNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}

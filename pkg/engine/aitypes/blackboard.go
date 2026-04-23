@@ -6,7 +6,8 @@ import "math/rand"
 // Blackboard is a shared data structure for behavior tree state.
 // It stores key-value pairs that nodes can read and write to share information.
 // Entity references must be stored as interface{} and retrieved via Get; callers
-// in pkg/engine use GetEntityFromBlackboard to recover the concrete *Entity type.
+// in pkg/engine use GetEntityFromBlackboard to recover the concrete *engine.Entity
+// type.
 type Blackboard struct {
 	data map[string]interface{}
 	rng  *rand.Rand

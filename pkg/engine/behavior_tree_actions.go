@@ -27,7 +27,7 @@ func NewActionNode(name string, action func(*Entity, *Blackboard, float64) NodeS
 // The entity parameter satisfies aitypes.EntityContext; the concrete *Entity is
 // recovered via type assertion so the stored closure keeps its *Entity signature.
 func (a *ActionNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -60,7 +60,7 @@ func NewConditionNode(name string, condition func(*Entity, *Blackboard) bool) *C
 // The entity parameter satisfies aitypes.EntityContext; the concrete *Entity is
 // recovered via type assertion so the stored closure keeps its *Entity signature.
 func (c *ConditionNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}

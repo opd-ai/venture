@@ -40,7 +40,7 @@ func NewUseConsumableNode(name string, consumableType item.ConsumableType, healt
 
 // Tick attempts to use a consumable from inventory.
 func (n *UseConsumableNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -178,7 +178,7 @@ func NewRetreatToAllyNode(name string, speed, searchRadius, minAllyDist float64)
 
 // Tick moves entity toward nearest ally.
 func (n *RetreatToAllyNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -256,7 +256,7 @@ func NewInteractWithEnvironmentNode(name, interactionType string, range_, cooldo
 
 // Tick attempts to interact with a nearby environmental object.
 func (n *InteractWithEnvironmentNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -369,7 +369,7 @@ func NewAmbushNode(name string, waitTime, ambushRange float64) *AmbushNode {
 
 // Tick manages ambush setup and execution.
 func (n *AmbushNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -508,7 +508,7 @@ func NewFormationNode(name string, formationType FormationType, spacing, speed f
 
 // Tick maintains formation position relative to squad leader.
 func (n *FormationNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -700,7 +700,7 @@ func NewHasConsumableNode(name string, consumableType item.ConsumableType) *HasC
 
 // Tick checks inventory for matching consumable.
 func (n *HasConsumableNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -747,7 +747,7 @@ func NewIsOutnumberedNode(name string, range_, ratio float64) *IsOutnumberedNode
 
 // Tick counts nearby allies and enemies to check ratio.
 func (n *IsOutnumberedNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -860,7 +860,7 @@ func NewCanSeeTargetNode(name string, maxRange float64) *CanSeeTargetNode {
 
 // Tick checks if target is visible within range.
 func (n *CanSeeTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -949,7 +949,7 @@ func NewCoordinatedAttackNode(name string, range_ float64, damage int, cooldown 
 
 // Tick coordinates attack with squad members.
 func (n *CoordinatedAttackNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}
@@ -1059,7 +1059,7 @@ func NewProtectAllyNode(name string, range_, threshold, speed float64) *ProtectA
 
 // Tick finds and protects low-health allies.
 func (n *ProtectAllyNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	e, ok := entity.(*Entity)
+	e, ok := entityFromContext(entity)
 	if !ok {
 		return NodeFailure
 	}

@@ -339,9 +339,13 @@ func (s *System) ApplyFullPostProcessing(img, depthMap *image.RGBA) *image.RGBA 
 	result := img
 
 	// Apply ambient occlusion first (darkening).
-	// EnableShadows is a legacy compatibility toggle that forces AO on.
+	// EnableShadows is a legacy compatibility toggle that forces base AO on.
 	if s.config.AOConfig.Enabled || s.config.EnableShadows {
-		result = s.ApplyAOToImage(result, depthMap)
+		aoConfig := s.config.AOConfig
+		if s.config.EnableShadows {
+			aoConfig.Enabled = true
+		}
+		result = ApplyEnhancedAO(result, depthMap, aoConfig)
 	}
 
 	// Apply bloom last (brightening highlights)

@@ -414,19 +414,27 @@ func TestSystem_ApplyFullPostProcessing_EnableShadowsForcesAO(t *testing.T) {
 	config.BloomConfig.Enabled = false
 	config.AOConfig.Enabled = false
 	config.AOConfig.Seed = 12345
+	config.AOConfig.Intensity = 0.8
+	config.AOConfig.CornerIntensity = 0
+	config.AOConfig.EdgeIntensity = 0
 	config.EnableShadows = true
 
-	system := NewSystemWithConfig(config)
 	img := createTestImage(100, 100, color.RGBA{150, 150, 150, 255})
 	img.Set(50, 50, color.RGBA{255, 255, 255, 255})
 
-	result := system.ApplyFullPostProcessing(img, nil)
+	withoutShadowsConfig := config
+	withoutShadowsConfig.EnableShadows = false
+	withoutShadows := NewSystemWithConfig(withoutShadowsConfig).ApplyFullPostProcessing(img, nil)
+	withShadows := NewSystemWithConfig(config).ApplyFullPostProcessing(img, nil)
 
-	if result == img {
+	if withShadows == img {
 		t.Fatal("EnableShadows path should produce a new image")
 	}
-	if imagesEqual(result, img) {
-		t.Error("EnableShadows=true should force ambient occlusion processing")
+	if !imagesEqual(withoutShadows, img) {
+		t.Fatal("AO disabled without shadow toggle should not alter pixels")
+	}
+	if imagesEqual(withShadows, img) {
+		t.Error("EnableShadows=true should force base ambient occlusion processing")
 	}
 }
 

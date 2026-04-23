@@ -113,12 +113,13 @@ type LightingConfig struct {
 	// GammaCorrection applies gamma correction (typically 2.2)
 	GammaCorrection float64
 
-	// EnableShadows is reserved for future shadow casting support and is
-	// currently a no-op. Setting this to true has no effect on rendering.
+	// EnableShadows is a legacy compatibility toggle that enables the lighting
+	// package's shadow-like ambient-occlusion pass, even when AOConfig.Enabled
+	// is false. It does not enable engine-level shadow casting.
 	//
-	// Deprecated: This field exists for API forward-compatibility but has no
-	// implementation. Shadow casting may be added in a future release via
-	// pkg/engine/shadow_system.go. Do not rely on this field for any logic.
+	// Deprecated: Prefer AOConfig.Enabled for explicit ambient-occlusion control.
+	// This field is retained for backward compatibility and may be removed in a
+	// future major version.
 	EnableShadows bool
 
 	// BloomConfig configures bloom/glow effects (Phase 17.1)

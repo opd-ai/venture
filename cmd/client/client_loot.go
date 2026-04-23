@@ -200,7 +200,6 @@ func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID
 }
 
 // dropInventoryItems drops all items from an entity's inventory with scatter physics.
-// Returns true if items were dropped.
 func dropInventoryItems(
 	game *engine.EbitenGame,
 	enemy *engine.Entity,

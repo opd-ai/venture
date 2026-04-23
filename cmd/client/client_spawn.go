@@ -1138,16 +1138,16 @@ func generateBookshelfColor(genreID string, seed int64) color.RGBA {
 
 	// Base colors per genre
 	var baseR, baseG, baseB uint8
-	switch genreID {
+	switch canonicalGenreID(genreID) {
 	case "fantasy":
 		baseR, baseG, baseB = 101, 67, 33 // Dark wood brown
-	case "sci-fi":
+	case "scifi":
 		baseR, baseG, baseB = 120, 130, 140 // Metallic gray
 	case "horror":
 		baseR, baseG, baseB = 60, 50, 45 // Very dark brown
 	case "cyberpunk":
 		baseR, baseG, baseB = 80, 80, 100 // Dark bluish
-	case "post-apocalyptic":
+	case "postapoc":
 		baseR, baseG, baseB = 90, 85, 70 // Weathered brown
 	default:
 		baseR, baseG, baseB = 100, 80, 60 // Default wood

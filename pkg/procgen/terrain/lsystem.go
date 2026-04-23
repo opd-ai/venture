@@ -175,13 +175,13 @@ func (g *LSystemGenerator) Validate(result interface{}) error {
 
 	// Check for start symbol
 	if !strings.HasPrefix(lsystemString, "S") {
-		return fmt.Errorf("L-system string must start with 'S' (start room), got: %s", lsystemString)
+		return fmt.Errorf("l-system string must start with 'S' (start room), got: %s", lsystemString)
 	}
 
 	// Count rooms to ensure we meet minimum requirements
 	roomCount := g.countRooms(lsystemString)
 	if roomCount < 2 {
-		return fmt.Errorf("L-system string has too few rooms (%d), need at least 2", roomCount)
+		return fmt.Errorf("l-system string has too few rooms (%d), need at least 2", roomCount)
 	}
 
 	// Validate symbols - all characters should be valid L-system symbols

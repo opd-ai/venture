@@ -122,9 +122,7 @@ func (s *EventQuestSystem) generateQuestsForActiveEvents(
 		quests := GenerateEventQuests(event, seed)
 
 		// Add to available quests
-		for _, q := range quests {
-			questComp.AvailableQuests = append(questComp.AvailableQuests, q)
-		}
+		questComp.AvailableQuests = append(questComp.AvailableQuests, quests...)
 
 		questComp.LastGenerationEventID = event.Definition.ID
 

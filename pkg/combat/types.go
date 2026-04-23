@@ -88,37 +88,37 @@ var (
 	ErrHPExceedsMax = errors.New("HP cannot exceed MaxHP")
 
 	// ErrNegativeMana indicates Mana is negative.
-	ErrNegativeMana = errors.New("Mana cannot be negative")
+	ErrNegativeMana = errors.New("mana cannot be negative")
 
 	// ErrNegativeMaxMana indicates MaxMana is negative.
-	ErrNegativeMaxMana = errors.New("MaxMana cannot be negative")
+	ErrNegativeMaxMana = errors.New("maxMana cannot be negative")
 
 	// ErrManaExceedsMax indicates Mana exceeds MaxMana.
-	ErrManaExceedsMax = errors.New("Mana cannot exceed MaxMana")
+	ErrManaExceedsMax = errors.New("mana cannot exceed MaxMana")
 
 	// ErrNegativeAttack indicates Attack is negative.
-	ErrNegativeAttack = errors.New("Attack cannot be negative")
+	ErrNegativeAttack = errors.New("attack cannot be negative")
 
 	// ErrNegativeMagicPower indicates MagicPower is negative.
-	ErrNegativeMagicPower = errors.New("MagicPower cannot be negative")
+	ErrNegativeMagicPower = errors.New("magicPower cannot be negative")
 
 	// ErrNegativeDefense indicates Defense is negative.
-	ErrNegativeDefense = errors.New("Defense cannot be negative")
+	ErrNegativeDefense = errors.New("defense cannot be negative")
 
 	// ErrNegativeMagicDefense indicates MagicDefense is negative.
-	ErrNegativeMagicDefense = errors.New("MagicDefense cannot be negative")
+	ErrNegativeMagicDefense = errors.New("magicDefense cannot be negative")
 
 	// ErrNegativeSpeed indicates Speed is negative.
-	ErrNegativeSpeed = errors.New("Speed cannot be negative")
+	ErrNegativeSpeed = errors.New("speed cannot be negative")
 
 	// ErrInvalidCritChance indicates CritChance is outside valid range.
-	ErrInvalidCritChance = errors.New("CritChance must be between 0.0 and 1.0")
+	ErrInvalidCritChance = errors.New("critChance must be between 0.0 and 1.0")
 
 	// ErrInvalidCritDamage indicates CritDamage is below minimum.
-	ErrInvalidCritDamage = errors.New("CritDamage must be at least 1.0")
+	ErrInvalidCritDamage = errors.New("critDamage must be at least 1.0")
 
 	// ErrInvalidEvasion indicates Evasion is outside valid range.
-	ErrInvalidEvasion = errors.New("Evasion must be between 0.0 and 1.0")
+	ErrInvalidEvasion = errors.New("evasion must be between 0.0 and 1.0")
 
 	// ErrInvalidResistance indicates a resistance value is outside valid range.
 	// Note: Range is -0.5 to 1.0 to match the runtime clamping in CalculateDamage.

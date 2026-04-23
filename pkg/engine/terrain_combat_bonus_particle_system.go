@@ -105,9 +105,7 @@ func (s *TerrainCombatBonusParticleSystem) processEntity(entity *Entity, shouldP
 	comp, ok := entity.GetComponent("terrain_combat_bonus")
 	if !ok {
 		// No bonus - cleanup cached state
-		if _, had := s.lastBonusState[entity.ID]; had {
-			delete(s.lastBonusState, entity.ID)
-		}
+		delete(s.lastBonusState, entity.ID)
 		return
 	}
 

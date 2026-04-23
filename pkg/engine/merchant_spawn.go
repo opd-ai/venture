@@ -94,9 +94,7 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 
 	// Copy inventory items
 	merchantComp.Inventory = make([]*item.Item, 0, len(merchantData.Inventory))
-	for _, itm := range merchantData.Inventory {
-		merchantComp.Inventory = append(merchantComp.Inventory, itm)
-	}
+	merchantComp.Inventory = append(merchantComp.Inventory, merchantData.Inventory...)
 
 	merchant.AddComponent(merchantComp)
 

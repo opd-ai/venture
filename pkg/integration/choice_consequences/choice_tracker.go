@@ -347,13 +347,9 @@ func (ct *ChoiceTracker) IsContentAvailable(playerID, contentID string) bool {
 	if !exists {
 		return true
 	}
-	if _, stillLocked := state.ContentLocks[contentID]; stillLocked {
-		delete(state.ContentLocks, contentID)
-	}
+	delete(state.ContentLocks, contentID)
 	return true
 }
-
-// hasChoice checks if player has made a specific choice.
 func (ct *ChoiceTracker) hasChoice(state *PlayerState, choiceID string) bool {
 	for _, choice := range state.ChoiceHistory {
 		if choice.ChoiceID == choiceID {

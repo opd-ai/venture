@@ -44,11 +44,7 @@ func (e *ExperienceComponent) AddXP(xp int) bool {
 
 	e.CurrentXP += xp
 	e.TotalXP += xp
-
-	if e.CurrentXP >= e.RequiredXP {
-		return true
-	}
-	return false
+	return e.CurrentXP >= e.RequiredXP
 }
 
 // CanLevelUp checks if the entity has enough XP to level up.

@@ -113,9 +113,7 @@ func (s *WeatherCompanionBonusParticleSystem) processEntity(entity *Entity, shou
 	comp, ok := entity.GetComponent("weather_companion_bonus")
 	if !ok {
 		// No bonus - cleanup cached state
-		if _, had := s.lastBonusState[entity.ID]; had {
-			delete(s.lastBonusState, entity.ID)
-		}
+		delete(s.lastBonusState, entity.ID)
 		return
 	}
 

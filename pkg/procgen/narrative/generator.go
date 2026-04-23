@@ -487,7 +487,7 @@ func (g *StoryArcGenerator) generateAct2Points(genre string, difficulty float64,
 			Participants:      []string{"Player"},
 			Location:          fmt.Sprintf("Area %d", i+2),
 			TriggerConditions: []string{fmt.Sprintf("completed_challenge_%d", i-1)},
-			Consequences:      []string{fmt.Sprintf("Closer to confrontation"), "Resources gained"},
+			Consequences:      []string{"Closer to confrontation", "Resources gained"},
 		})
 	}
 

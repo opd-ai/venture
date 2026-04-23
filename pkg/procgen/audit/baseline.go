@@ -25,7 +25,7 @@ var baselineHashPrefixes = map[string]string{
 	"Item":      "2b36ce659bf7c7b6",
 	"Legendary": "bc3b12fd01179b64",
 	"Magic":     "67956a60c3646731",
-	"Quest":     "0235ef4b824e6040",
+	"Quest":     "c77dac4cf03d38fb",
 	"Recipe":    "547f0b59015c7510",
 	"Skills":    "cef103c9c0f578e7",
 	"Station":   "9f3cbfe6094f8491",

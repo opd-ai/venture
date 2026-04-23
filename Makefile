@@ -122,6 +122,11 @@ lint: ## Run linters
 	go vet ./...
 	@echo "Validating network type interfaces..."
 	@bash scripts/validate-network-types.sh
+	@if command -v staticcheck >/dev/null 2>&1; then \
+		staticcheck ./...; \
+	else \
+		echo "staticcheck not installed, skipping (install: go install honnef.co/go/tools/cmd/staticcheck@latest)"; \
+	fi
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run; \
 	else \

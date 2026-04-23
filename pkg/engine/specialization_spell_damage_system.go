@@ -240,9 +240,7 @@ func (s *SpecializationSpellDamageSystem) getGenreMultiplier() float64 {
 
 // removeBonus removes any stored bonus for an entity.
 func (s *SpecializationSpellDamageSystem) removeBonus(entityID uint64) {
-	if _, exists := s.appliedBonuses[entityID]; exists {
-		delete(s.appliedBonuses, entityID)
-	}
+	delete(s.appliedBonuses, entityID)
 }
 
 // GetDamageMultiplier returns the spell damage multiplier for an entity.

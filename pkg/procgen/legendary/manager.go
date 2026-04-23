@@ -545,7 +545,7 @@ func generateLegendaryRewards() []*LegendaryReward {
 		reward := &LegendaryReward{
 			ID:          fmt.Sprintf("legendary_item_%d", i),
 			Name:        fmt.Sprintf("Legendary Item %d", i),
-			Description: fmt.Sprintf("A unique legendary item of immense power"),
+			Description: "A unique legendary item of immense power",
 			ItemID:      fmt.Sprintf("item_%d", i),
 			Stats: map[string]int{
 				"damage":  100 + i*5,

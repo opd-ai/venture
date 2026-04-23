@@ -366,12 +366,12 @@ func (c *TerrainCache) terrainToEntry(t *Terrain) diskCacheEntry {
 
 	stairsUp := make([]diskPoint, len(t.StairsUp))
 	for i, p := range t.StairsUp {
-		stairsUp[i] = diskPoint{X: p.X, Y: p.Y}
+		stairsUp[i] = diskPoint(p)
 	}
 
 	stairsDown := make([]diskPoint, len(t.StairsDown))
 	for i, p := range t.StairsDown {
-		stairsDown[i] = diskPoint{X: p.X, Y: p.Y}
+		stairsDown[i] = diskPoint(p)
 	}
 
 	return diskCacheEntry{
@@ -408,12 +408,12 @@ func (c *TerrainCache) entryToTerrain(e *diskCacheEntry) *Terrain {
 
 	t.StairsUp = make([]Point, len(e.StairsUp))
 	for i, p := range e.StairsUp {
-		t.StairsUp[i] = Point{X: p.X, Y: p.Y}
+		t.StairsUp[i] = Point(p)
 	}
 
 	t.StairsDown = make([]Point, len(e.StairsDown))
 	for i, p := range e.StairsDown {
-		t.StairsDown[i] = Point{X: p.X, Y: p.Y}
+		t.StairsDown[i] = Point(p)
 	}
 
 	return t

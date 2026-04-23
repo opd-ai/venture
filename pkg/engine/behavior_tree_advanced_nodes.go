@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/opd-ai/venture/pkg/engine/aitypes"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/sirupsen/logrus"
 )
@@ -38,7 +39,11 @@ func NewUseConsumableNode(name string, consumableType item.ConsumableType, healt
 }
 
 // Tick attempts to use a consumable from inventory.
-func (n *UseConsumableNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *UseConsumableNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Update cooldown
 	if n.currentCooldown > 0 {
 		n.currentCooldown -= deltaTime
@@ -46,7 +51,7 @@ func (n *UseConsumableNode) Tick(entity *Entity, blackboard *Blackboard, deltaTi
 	}
 
 	// Get health to check if we should use healing items
-	healthComp, hasHealth := entity.GetComponent("health")
+	healthComp, hasHealth := e.GetComponent("health")
 	if !hasHealth {
 		return NodeFailure
 	}
@@ -65,7 +70,7 @@ func (n *UseConsumableNode) Tick(entity *Entity, blackboard *Blackboard, deltaTi
 	}
 
 	// Get inventory
-	invComp, hasInv := entity.GetComponent("inventory")
+	invComp, hasInv := e.GetComponent("inventory")
 	if !hasInv {
 		return NodeFailure
 	}
@@ -103,14 +108,14 @@ func (n *UseConsumableNode) Tick(entity *Entity, blackboard *Blackboard, deltaTi
 		}
 	case item.ConsumableBomb:
 		// Store bomb use event in blackboard for other systems to process
-		posComp, hasPos := entity.GetComponent("position")
+		posComp, hasPos := e.GetComponent("position")
 		if hasPos {
 			if pos, ok := posComp.(*PositionComponent); ok {
 				blackboard.Set("item_used", map[string]interface{}{
 					"type":     "bomb",
 					"item":     foundItem,
 					"position": []float64{pos.X, pos.Y},
-					"entity":   entity.ID,
+					"entity":   e.ID,
 				})
 			}
 		}
@@ -119,7 +124,7 @@ func (n *UseConsumableNode) Tick(entity *Entity, blackboard *Blackboard, deltaTi
 		blackboard.Set("item_used", map[string]interface{}{
 			"type":           "scroll",
 			"item":           foundItem,
-			"entity":         entity.ID,
+			"entity":         e.ID,
 			"spell_effect":   foundItem.SpellEffectID,
 			"spell_duration": foundItem.SpellDuration,
 		})
@@ -133,7 +138,7 @@ func (n *UseConsumableNode) Tick(entity *Entity, blackboard *Blackboard, deltaTi
 
 	// Log the action
 	blackboard.Set("last_item_use", map[string]interface{}{
-		"entity": entity.ID,
+		"entity": e.ID,
 		"item":   foundItem.Name,
 		"type":   n.consumableType.String(),
 	})
@@ -172,14 +177,18 @@ func NewRetreatToAllyNode(name string, speed, searchRadius, minAllyDist float64)
 }
 
 // Tick moves entity toward nearest ally.
-func (n *RetreatToAllyNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *RetreatToAllyNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
 	params := btMovementParams{Speed: n.speed, StopDist: n.minAllyDist}
-	return runMovementTick(entity, blackboard, deltaTime, params, &n.timeMoving,
+	return runMovementTick(e, blackboard, deltaTime, params, &n.timeMoving,
 		func(ctx btAllyCtx, _ *Entity, _ *Blackboard) (float64, float64, bool) {
 			var nearestAlly *Entity
 			nearestDist := n.searchRadius + 1
 			for _, other := range ctx.Nearby {
-				if other == entity {
+				if other == e {
 					continue
 				}
 				otherFaction, hasF := other.GetComponent("faction")
@@ -246,7 +255,11 @@ func NewInteractWithEnvironmentNode(name, interactionType string, range_, cooldo
 }
 
 // Tick attempts to interact with a nearby environmental object.
-func (n *InteractWithEnvironmentNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *InteractWithEnvironmentNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Update cooldown
 	if n.currentCooldown > 0 {
 		n.currentCooldown -= deltaTime
@@ -254,7 +267,7 @@ func (n *InteractWithEnvironmentNode) Tick(entity *Entity, blackboard *Blackboar
 	}
 
 	// Get position
-	posComp, ok := entity.GetComponent("position")
+	posComp, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -312,7 +325,7 @@ func (n *InteractWithEnvironmentNode) Tick(entity *Entity, blackboard *Blackboar
 		if dist <= n.interactionRange {
 			// Trigger interaction
 			blackboard.Set("environment_interaction", map[string]interface{}{
-				"entity":       entity.ID,
+				"entity":       e.ID,
 				"interactable": interactable.ID,
 				"type":         n.interactionType,
 				"position":     []float64{ip.X, ip.Y},
@@ -355,13 +368,17 @@ func NewAmbushNode(name string, waitTime, ambushRange float64) *AmbushNode {
 }
 
 // Tick manages ambush setup and execution.
-func (n *AmbushNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *AmbushNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Check if we have an ambush position set
 	ambushPosVal, hasPos := blackboard.Get("ambush_position")
 	if !hasPos || ambushPosVal == nil {
 		// No ambush position - try to find one
 		// Look for a position with cover near expected enemy paths
-		posComp, ok := entity.GetComponent("position")
+		posComp, ok := e.GetComponent("position")
 		if !ok {
 			return NodeFailure
 		}
@@ -387,7 +404,7 @@ func (n *AmbushNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime floa
 	}
 
 	// Get entity position
-	posComp, ok := entity.GetComponent("position")
+	posComp, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -441,7 +458,7 @@ func (n *AmbushNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime floa
 					if dist <= n.ambushRange {
 						// Target in range - spring ambush!
 						blackboard.Set("ambush_triggered", map[string]interface{}{
-							"attacker": entity.ID,
+							"attacker": e.ID,
 							"target":   target.ID,
 							"position": []float64{pos.X, pos.Y},
 						})
@@ -490,9 +507,13 @@ func NewFormationNode(name string, formationType FormationType, spacing, speed f
 }
 
 // Tick maintains formation position relative to squad leader.
-func (n *FormationNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *FormationNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Get squad info
-	squadComp, hasSquad := entity.GetComponent("squad")
+	squadComp, hasSquad := e.GetComponent("squad")
 	if !hasSquad {
 		return NodeFailure
 	}
@@ -544,7 +565,7 @@ func (n *FormationNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime f
 	targetX, targetY := n.calculateFormationPosition(leaderPos.X, leaderPos.Y, n.formationSlot, blackboard)
 
 	// Get entity position
-	posComp, ok := entity.GetComponent("position")
+	posComp, ok := e.GetComponent("position")
 	if !ok {
 		return NodeFailure
 	}
@@ -562,7 +583,7 @@ func (n *FormationNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime f
 		// In position
 		n.timeInPosition += deltaTime
 		// Stop velocity
-		if velComp, ok := entity.GetComponent("velocity"); ok {
+		if velComp, ok := e.GetComponent("velocity"); ok {
 			if vel, ok := velComp.(*VelocityComponent); ok {
 				vel.VX = 0
 				vel.VY = 0
@@ -579,7 +600,7 @@ func (n *FormationNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime f
 		pos.Y += ny * n.speed * deltaTime
 
 		// Update velocity
-		if velComp, ok := entity.GetComponent("velocity"); ok {
+		if velComp, ok := e.GetComponent("velocity"); ok {
 			if vel, ok := velComp.(*VelocityComponent); ok {
 				vel.VX = nx * n.speed
 				vel.VY = ny * n.speed
@@ -678,8 +699,12 @@ func NewHasConsumableNode(name string, consumableType item.ConsumableType) *HasC
 }
 
 // Tick checks inventory for matching consumable.
-func (n *HasConsumableNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	invComp, hasInv := entity.GetComponent("inventory")
+func (n *HasConsumableNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
+	invComp, hasInv := e.GetComponent("inventory")
 	if !hasInv {
 		return NodeFailure
 	}
@@ -721,8 +746,12 @@ func NewIsOutnumberedNode(name string, range_, ratio float64) *IsOutnumberedNode
 }
 
 // Tick counts nearby allies and enemies to check ratio.
-func (n *IsOutnumberedNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(entity, blackboard)
+func (n *IsOutnumberedNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
+	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(e, blackboard)
 	if !ok {
 		return NodeFailure
 	}
@@ -731,7 +760,7 @@ func (n *IsOutnumberedNode) Tick(entity *Entity, blackboard *Blackboard, deltaTi
 	enemyCount := 0
 
 	for _, other := range nearbyEntities {
-		if other == entity {
+		if other == e {
 			continue
 		}
 
@@ -796,7 +825,7 @@ func NewIsInCoverNode(name string) *IsInCoverNode {
 }
 
 // Tick checks blackboard for cover status.
-func (n *IsInCoverNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *IsInCoverNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	atCover, hasCover := blackboard.Get("at_cover")
 	if !hasCover {
 		return NodeFailure
@@ -830,8 +859,12 @@ func NewCanSeeTargetNode(name string, maxRange float64) *CanSeeTargetNode {
 }
 
 // Tick checks if target is visible within range.
-func (n *CanSeeTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	tp := GetTargetPositions(entity, blackboard)
+func (n *CanSeeTargetNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
+	tp := GetTargetPositions(e, blackboard)
 	if tp == nil {
 		return NodeFailure
 	}
@@ -871,7 +904,7 @@ func NewIsAmbushingNode(name string) *IsAmbushingNode {
 }
 
 // Tick checks blackboard for ambush state.
-func (n *IsAmbushingNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *IsAmbushingNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	inAmbush, has := blackboard.Get("in_ambush")
 	if !has {
 		return NodeFailure
@@ -915,7 +948,11 @@ func NewCoordinatedAttackNode(name string, range_ float64, damage int, cooldown 
 }
 
 // Tick coordinates attack with squad members.
-func (n *CoordinatedAttackNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (n *CoordinatedAttackNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
 	// Update cooldown
 	if n.currentCD > 0 {
 		n.currentCD -= deltaTime
@@ -927,7 +964,7 @@ func (n *CoordinatedAttackNode) Tick(entity *Entity, blackboard *Blackboard, del
 	if !hasSignal && !n.signalSent {
 		// Send coordination signal
 		blackboard.Set("squad_attack_signal", map[string]interface{}{
-			"initiator": entity.ID,
+			"initiator": e.ID,
 			"ready":     true,
 		})
 		n.signalSent = true
@@ -948,7 +985,7 @@ func (n *CoordinatedAttackNode) Tick(entity *Entity, blackboard *Blackboard, del
 	}
 
 	// Perform attack
-	tp := GetTargetPositions(entity, blackboard)
+	tp := GetTargetPositions(e, blackboard)
 	if tp == nil {
 		return NodeFailure
 	}
@@ -976,7 +1013,7 @@ func (n *CoordinatedAttackNode) Tick(entity *Entity, blackboard *Blackboard, del
 
 	// Log coordinated attack
 	blackboard.Set("coordinated_attack", map[string]interface{}{
-		"attacker":    entity.ID,
+		"attacker":    e.ID,
 		"target":      tp.Target.ID,
 		"damage":      coordDamage,
 		"coordinated": true,
@@ -1021,8 +1058,12 @@ func NewProtectAllyNode(name string, range_, threshold, speed float64) *ProtectA
 }
 
 // Tick finds and protects low-health allies.
-func (n *ProtectAllyNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(entity, blackboard)
+func (n *ProtectAllyNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
+	e, ok := entity.(*Entity)
+	if !ok {
+		return NodeFailure
+	}
+	faction, pos, nearbyEntities, ok := getFactionAndNearbyEntities(e, blackboard)
 	if !ok {
 		return NodeFailure
 	}
@@ -1032,7 +1073,7 @@ func (n *ProtectAllyNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime
 	lowestHealth := n.healthThreshold
 
 	for _, other := range nearbyEntities {
-		if other == entity {
+		if other == e {
 			continue
 		}
 

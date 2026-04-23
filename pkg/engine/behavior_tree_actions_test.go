@@ -294,7 +294,7 @@ func TestClearTargetAction(t *testing.T) {
 	}
 
 	// Check target was cleared
-	clearedTarget, ok := bb.GetEntity("target")
+	clearedTarget, ok := GetEntityFromBlackboard(bb, "target")
 	if ok && clearedTarget != nil {
 		t.Error("Expected target to be cleared")
 	}
@@ -331,7 +331,7 @@ func TestFindTargetAction(t *testing.T) {
 	}
 
 	// Check target was set
-	target, ok := bb.GetEntity("target")
+	target, ok := GetEntityFromBlackboard(bb, "target")
 	if !ok || target == nil {
 		t.Fatal("Expected target to be set")
 	}

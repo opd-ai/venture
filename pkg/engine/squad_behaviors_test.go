@@ -152,7 +152,7 @@ func TestFocusFireAction_WithPriorityTarget(t *testing.T) {
 	}
 
 	// Check target was set in personal blackboard
-	savedTarget, ok := blackboard.GetEntity("target")
+	savedTarget, ok := GetEntityFromBlackboard(blackboard, "target")
 	if !ok || savedTarget != target {
 		t.Error("Priority target not set in blackboard")
 	}

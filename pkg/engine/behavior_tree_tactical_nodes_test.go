@@ -4,6 +4,8 @@ package engine
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/engine/aitypes"
 )
 
 // TestHealthBelowNode tests the health threshold condition.
@@ -334,7 +336,7 @@ func TestRandomSelectorNode(t *testing.T) {
 // successNode always returns success.
 type successNode struct{}
 
-func (s *successNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (s *successNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	return NodeSuccess
 }
 func (s *successNode) Reset()         {}
@@ -343,7 +345,7 @@ func (s *successNode) String() string { return "Success" }
 // failureNode always returns failure.
 type failureNode struct{}
 
-func (f *failureNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
+func (f *failureNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, deltaTime float64) NodeStatus {
 	return NodeFailure
 }
 func (f *failureNode) Reset()         {}

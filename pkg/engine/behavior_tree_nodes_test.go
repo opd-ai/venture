@@ -70,7 +70,7 @@ func TestBlackboard(t *testing.T) {
 	// Test GetEntity
 	entity := NewEntity(123)
 	bb.Set("entity", entity)
-	entityVal, ok := bb.GetEntity("entity")
+	entityVal, ok := GetEntityFromBlackboard(bb, "entity")
 	if !ok || entityVal.ID != 123 {
 		t.Errorf("GetEntity() failed")
 	}

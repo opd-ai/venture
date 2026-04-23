@@ -163,7 +163,7 @@ func TestSquadMemberTree_FocusFire(t *testing.T) {
 	}
 
 	// Personal blackboard should have the priority target
-	priorityTarget, ok := bt.Blackboard.GetEntity("target")
+	priorityTarget, ok := GetEntityFromBlackboard(bt.Blackboard, "target")
 	if !ok || priorityTarget != target {
 		t.Error("Priority target not set in member's blackboard")
 	}

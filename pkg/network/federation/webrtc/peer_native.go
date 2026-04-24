@@ -31,17 +31,12 @@ func (p *Peer) simulateConnection(ctx context.Context) {
 
 	select {
 	case <-ctx.Done():
-		p.stateChangeChan <- StateFailed
+		p.setState(StateFailed)
 		return
 	default:
 	}
 
-	p.mu.Lock()
-	p.state = StateConnected
-	p.stats.State = StateConnected
-	p.mu.Unlock()
-
-	p.stateChangeChan <- StateConnected
+	p.setState(StateConnected)
 
 	go func() {
 		defer recovery.RecoverPanicWithLogger("webrtc_peer", "process messages", nil)()

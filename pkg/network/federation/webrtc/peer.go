@@ -205,6 +205,10 @@ func (p *Peer) Close() error {
 		"was_connected": wasConnected,
 	}).Debug("peer connection closed")
 
+	// Release underlying pion handles (PeerConnection, DataChannel) to avoid
+	// browser resource leaks on WASM or dangling goroutines on native.
+	p.closeTransportHandles()
+
 	// Only close closeChan if processMessages goroutine is running
 	if wasConnected {
 		close(p.closeChan)

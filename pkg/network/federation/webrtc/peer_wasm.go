@@ -97,9 +97,10 @@ func (p *Peer) pionConnect(ctx context.Context, remotePeerID string) error {
 				defer recovery.RecoverPanicWithLogger("webrtc_peer", "process messages", nil)()
 				p.processMessages()
 			}()
-		case pionwebrtc.PeerConnectionStateDisconnected,
-			pionwebrtc.PeerConnectionStateFailed:
+		case pionwebrtc.PeerConnectionStateDisconnected:
 			p.setState(StateDisconnected)
+		case pionwebrtc.PeerConnectionStateFailed:
+			p.setState(StateFailed)
 		case pionwebrtc.PeerConnectionStateClosed:
 			p.setState(StateClosed)
 		}

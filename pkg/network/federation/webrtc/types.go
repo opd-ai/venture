@@ -230,6 +230,31 @@ type Peer struct {
 	dataChannel interface{}
 }
 
+// webrtcCloseable is implemented by underlying WebRTC handles that require
+// explicit shutdown, such as peer connections and data channels.
+type webrtcCloseable interface {
+	Close() error
+}
+
+// closeTransportHandles releases any stored underlying WebRTC transport handles.
+// It type-asserts peerConn/dataChannel to webrtcCloseable under the mutex and
+// nils the fields so repeated shutdown paths are idempotent.
+func (p *Peer) closeTransportHandles() {
+	p.mu.Lock()
+	dc := p.dataChannel
+	pc := p.peerConn
+	p.dataChannel = nil
+	p.peerConn = nil
+	p.mu.Unlock()
+
+	if c, ok := dc.(webrtcCloseable); ok && c != nil {
+		_ = c.Close()
+	}
+	if c, ok := pc.(webrtcCloseable); ok && c != nil {
+		_ = c.Close()
+	}
+}
+
 // ConnectionMetrics holds aggregated metrics for all peer connections.
 type ConnectionMetrics struct {
 	// TotalConnections is the total number of connections attempted.

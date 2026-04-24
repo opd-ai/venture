@@ -1,6 +1,10 @@
 // Package webrtc signaling coordination.
 // This file implements WebSocket-based signaling for WebRTC connection establishment,
 // including both client (peer) and server (relay) components for SDP/ICE exchange.
+//
+// Platform split:
+//   - signaling_native.go (!js || !wasm): stub transport (in-process, tests only)
+//   - signaling_wasm.go (js && wasm): real browser WebSocket transport
 package webrtc
 
 import (
@@ -34,6 +38,13 @@ type SignalingClient struct {
 
 	// timeProvider abstracts time access for deterministic testing.
 	timeProvider TimeProvider
+
+	// wsConn holds the browser WebSocket object on WASM builds (syscall/js.Value), nil on native.
+	wsConn interface{}
+
+	// wsOnMsgFunc holds the js.Func callback registered on the WebSocket on WASM, nil on native.
+	// Must be released on Close() to avoid memory leaks.
+	wsOnMsgFunc interface{}
 }
 
 // DefaultSignalingChannelCapacity is the default capacity for signaling message channels.
@@ -63,6 +74,8 @@ func NewSignalingClientWithCapacity(url, peerID string, channelCapacity int) *Si
 }
 
 // Connect establishes connection to the signaling server.
+// The actual transport (stub on native, WebSocket on WASM) is set up by
+// connectTransport() which is provided by platform-specific build-tagged files.
 func (s *SignalingClient) Connect() error {
 	s.mu.Lock()
 	if s.connected {
@@ -72,8 +85,13 @@ func (s *SignalingClient) Connect() error {
 	s.connected = true
 	s.mu.Unlock()
 
-	// In production, this would establish WebSocket connection
-	// For testing, we simulate the connection
+	if err := s.connectTransport(); err != nil {
+		s.mu.Lock()
+		s.connected = false
+		s.mu.Unlock()
+		return err
+	}
+
 	go func() {
 		defer recovery.RecoverPanicWithLogger("webrtc_signaling", "process messages", nil)()
 		s.processMessages()
@@ -92,7 +110,6 @@ func (s *SignalingClient) processMessages() {
 		case <-s.closeChan:
 			return
 		case msg := <-s.sendChan:
-			// In production, send via WebSocket
 			s.handleSend(msg)
 		case <-ticker.C:
 			// Clean up stale peers
@@ -101,21 +118,11 @@ func (s *SignalingClient) processMessages() {
 	}
 }
 
-// handleSend processes outgoing signaling messages.
+// handleSend processes outgoing signaling messages by forwarding them via the
+// platform transport.  sendViaTransport is provided by build-tagged files.
 func (s *SignalingClient) handleSend(msg *SignalingMessage) {
-	// Simulate message relay to recipient
-	// In production, this goes through WebSocket to server
 	msg.Timestamp = s.timeProvider.Now()
-
-	// Validate recipient exists
-	s.mu.RLock()
-	_, exists := s.peers[msg.To]
-	s.mu.RUnlock()
-
-	if !exists && msg.Type != "bye" {
-		// Peer not registered, message dropped
-		return
-	}
+	s.sendViaTransport(msg)
 }
 
 // cleanupPeers removes peers that haven't been seen in 5 minutes.
@@ -266,6 +273,9 @@ func (s *SignalingClient) Close() error {
 	}
 	s.connected = false
 	s.mu.Unlock()
+
+	// Release platform transport resources (js.Func + WebSocket on WASM; no-op on native).
+	s.closeTransport()
 
 	close(s.closeChan)
 	return nil

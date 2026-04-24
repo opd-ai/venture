@@ -140,7 +140,7 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 			strTotal := float64(attrComp.GetTotal(AttrStrength))
 			strCarryBonus := strTotal * effects.CarryCapPerStr * s.genreMultiplier
 			inv.MaxWeight += strCarryBonus
-			attrComp.AppliedBonuses[CoreAttribute(200+AttrStrength)] = strCarryBonus
+			attrComp.AppliedBonuses[attrTertiaryOffset+AttrStrength] = strCarryBonus
 		}
 	}
 
@@ -157,7 +157,7 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 		agiTotal := float64(attrComp.GetTotal(AttrAgility))
 		agiSpeedBonus := agiTotal * effects.SpeedBonusPerAgi / 100.0 * s.genreMultiplier
 		stats.SpeedBonus += agiSpeedBonus
-		attrComp.AppliedBonuses[CoreAttribute(200+AttrAgility)] = agiSpeedBonus
+		attrComp.AppliedBonuses[attrTertiaryOffset+AttrAgility] = agiSpeedBonus
 	}
 
 	// Intelligence bonuses (MagicPower on StatsComponent, mana on ManaComponent)
@@ -173,7 +173,7 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 			intTotal := float64(attrComp.GetTotal(AttrIntelligence))
 			intManaBonus := int(intTotal * effects.MaxManaPerInt * s.genreMultiplier)
 			mana.Max += intManaBonus
-			attrComp.AppliedBonuses[CoreAttribute(100+AttrIntelligence)] = float64(intManaBonus) // Store mana bonus separately
+			attrComp.AppliedBonuses[attrSecondaryOffset+AttrIntelligence] = float64(intManaBonus) // Store mana bonus separately
 		}
 	}
 
@@ -183,7 +183,7 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 			intTotal := float64(attrComp.GetTotal(AttrIntelligence))
 			intManaRegenBonus := intTotal * effects.ManaRegenPerInt * s.genreMultiplier
 			mana.Regen += intManaRegenBonus
-			attrComp.AppliedBonuses[CoreAttribute(200+AttrIntelligence)] = intManaRegenBonus
+			attrComp.AppliedBonuses[attrTertiaryOffset+AttrIntelligence] = intManaRegenBonus
 		}
 	}
 
@@ -204,7 +204,7 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 			vitTotal := float64(attrComp.GetTotal(AttrVitality))
 			vitRegenBonus := vitTotal * effects.HealthRegenPerVit * s.genreMultiplier
 			health.RegenRate += vitRegenBonus
-			attrComp.AppliedBonuses[CoreAttribute(200+AttrVitality)] = vitRegenBonus
+			attrComp.AppliedBonuses[attrTertiaryOffset+AttrVitality] = vitRegenBonus
 		}
 	}
 
@@ -266,7 +266,7 @@ func (s *AttributeAllocationSystem) removeStrengthBonus(stats *StatsComponent, a
 
 // removeStrengthCarryBonus removes the carry capacity bonus from strength (G26 fix).
 func (s *AttributeAllocationSystem) removeStrengthCarryBonus(entity *Entity, attrComp *AttributeAllocationComponent) {
-	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrStrength)]; ok {
+	if bonus, ok := attrComp.AppliedBonuses[attrTertiaryOffset+AttrStrength]; ok {
 		if invComp, hasInv := entity.GetComponent("inventory"); hasInv {
 			if inv, ok2 := invComp.(*InventoryComponent); ok2 {
 				inv.MaxWeight -= bonus
@@ -290,7 +290,7 @@ func (s *AttributeAllocationSystem) removeAgilitySpeedBonus(stats *StatsComponen
 	if stats == nil {
 		return
 	}
-	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrAgility)]; ok {
+	if bonus, ok := attrComp.AppliedBonuses[attrTertiaryOffset+AttrAgility]; ok {
 		stats.SpeedBonus -= bonus
 	}
 }
@@ -318,7 +318,7 @@ func (s *AttributeAllocationSystem) removeManaBonus(entity *Entity, attrComp *At
 	if !ok {
 		return
 	}
-	if manaBonus, ok := attrComp.AppliedBonuses[CoreAttribute(100+AttrIntelligence)]; ok {
+	if manaBonus, ok := attrComp.AppliedBonuses[attrSecondaryOffset+AttrIntelligence]; ok {
 		mana.Max -= int(manaBonus)
 	}
 }
@@ -336,7 +336,7 @@ func (s *AttributeAllocationSystem) removeManaRegenBonus(entity *Entity, attrCom
 	if !ok {
 		return
 	}
-	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrIntelligence)]; ok {
+	if bonus, ok := attrComp.AppliedBonuses[attrTertiaryOffset+AttrIntelligence]; ok {
 		mana.Regen -= bonus
 	}
 }
@@ -372,7 +372,7 @@ func (s *AttributeAllocationSystem) removeVitalityRegenBonus(entity *Entity, att
 	if !ok {
 		return
 	}
-	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrVitality)]; ok {
+	if bonus, ok := attrComp.AppliedBonuses[attrTertiaryOffset+AttrVitality]; ok {
 		health.RegenRate -= bonus
 	}
 }

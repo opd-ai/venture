@@ -28,6 +28,22 @@ const (
 	NumCoreAttributes
 )
 
+// Secondary-bonus key offsets for AppliedBonuses.
+// CoreAttribute values run from 0–5 (NumCoreAttributes–1). Two reserved offset
+// ranges are used to store secondary bonuses from the same attribute without
+// colliding with primary bonus keys or each other.
+// Range [100, 199]: secondary effect #1 per attribute (e.g., INT→MaxMana).
+// Range [1000, 1999]: secondary effect #2 per attribute (e.g., STR→CarryCap).
+const (
+	// attrSecondaryOffset is the base offset for the first secondary bonus key.
+	// Already used by CoreAttribute(100+AttrIntelligence) → mana max bonus.
+	attrSecondaryOffset CoreAttribute = 100
+	// attrTertiaryOffset is the base offset for the second secondary bonus key
+	// introduced by G26 (CarryCapPerStr, SpeedBonusPerAgi, ManaRegenPerInt,
+	// HealthRegenPerVit). Using 1000 avoids collision with the [100,199] range.
+	attrTertiaryOffset CoreAttribute = 1000
+)
+
 // String returns the display name for a core attribute.
 func (a CoreAttribute) String() string {
 	switch a {

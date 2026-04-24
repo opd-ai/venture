@@ -1050,7 +1050,7 @@ func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64)
 		// G21 fix: secondary path for InputProvider implementations (e.g. MobileInputAdapter).
 		// Call Update() first if the provider tracks live hardware state.
 		if provider, ok := inputComp.(InputProvider); ok {
-			if updater, ok := inputComp.(mobileInputUpdater); ok {
+			if updater, isUpdater := inputComp.(mobileInputUpdater); isUpdater {
 				updater.Update()
 			}
 			s.processInputProvider(entity, provider)

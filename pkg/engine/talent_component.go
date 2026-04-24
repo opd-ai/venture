@@ -114,6 +114,10 @@ type TalentComponent struct {
 	// It must be subtracted before applying new bonuses to prevent unbounded
 	// stat growth on reset / reallocation (G23 fix).
 	AppliedBonuses TalentBonus
+	// AppliedDeltas maps stat keys to the absolute amount added to each stat.
+	// Using absolute deltas (not percentages) ensures removal is always
+	// precise regardless of how many other systems also modified the stat.
+	AppliedDeltas map[string]float64
 }
 
 // Type returns the component type identifier.
@@ -130,6 +134,7 @@ func NewTalentComponent() *TalentComponent {
 		PointsInCategory:  make(map[TalentCategory]int),
 		Dirty:             true,
 		CachedBonuses:     TalentBonus{},
+		AppliedDeltas:     make(map[string]float64),
 	}
 }
 

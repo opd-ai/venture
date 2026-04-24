@@ -334,10 +334,10 @@ VR mode is currently **experimental**. Two adapter tiers are provided:
 
 | Build | Adapter | Head Tracking | Controllers | Haptics |
 |-------|---------|---------------|-------------|---------|
-| Default (`go build`) | Stub | Mouse fallback | Keyboard fallback | None |
+| Default (`go build`) | Stub | Mouse fallback | None / not connected | None |
 | VR build (`go build -tags vr`) | OpenXR 1.x | ✅ xrLocateViews | ✅ Action-input system | ✅ xrApplyHapticFeedback |
 
-The default build uses stub adapters for graceful degradation on systems without a VR runtime.  The `-tags vr` build links against the Khronos OpenXR Loader and provides full hardware head tracking, controller input, and haptic feedback through any OpenXR-compatible runtime (SteamVR, Monado, Meta Link, Windows Mixed Reality).
+The default build uses stub adapters for graceful degradation on systems without a VR runtime. The `-tags vr` build links against the Khronos OpenXR Loader and provides full hardware head tracking, controller input, and haptic feedback through any OpenXR-compatible runtime. Note that the runtime auto-detection (`--vr`) checks for SteamVR and Oculus installation paths; runtimes such as Monado that do not install to those paths require `--force-vr` to activate VR mode.
 
 **What works (default build):**
 - VR runtime path detection (SteamVR, Oculus installation paths)
@@ -364,7 +364,8 @@ Example usage:
 
 # VR build — OpenXR hardware adapters (requires OpenXR loader)
 # Linux: sudo apt install libopenxr-loader1 libopenxr-dev
-# Windows: install the Khronos OpenXR SDK, then:
+# Windows: install the Khronos OpenXR SDK, then set both flags:
+#   set CGO_CFLAGS=-I"C:\Program Files\OpenXR-SDK\include"
 #   set CGO_LDFLAGS=-L"C:\Program Files\OpenXR-SDK\lib"
 go build -tags vr ./cmd/client && ./venture-client --vr
 

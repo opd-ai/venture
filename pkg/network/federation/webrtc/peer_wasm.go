@@ -72,6 +72,9 @@ func (p *Peer) pionConnect(ctx context.Context, remotePeerID string) error {
 
 	// 3. Route incoming data-channel messages into recvChan.
 	dc.OnMessage(func(msg pionwebrtc.DataChannelMessage) {
+		// Defensive copy: pion's WASM shim delivers each message in a fresh
+		// slice, but we copy to ensure the consumer can hold it after the
+		// callback returns without risk of buffer reuse.
 		payload := make([]byte, len(msg.Data))
 		copy(payload, msg.Data)
 		select {
@@ -143,6 +146,9 @@ func (p *Peer) pionConnect(ctx context.Context, remotePeerID string) error {
 	}
 
 	// 7. Wait for the SDP answer from the remote peer.
+	// The loop is bounded by ctx (ConnectionTimeout) via the case <-ctx.Done() arm.
+	// Non-answer messages (e.g., ICE candidates forwarded by the signaling server)
+	// are logged and skipped; the answer is always the terminating condition.
 	sigRecv := sigClient.Receive()
 	for {
 		select {
@@ -152,7 +158,14 @@ func (p *Peer) pionConnect(ctx context.Context, remotePeerID string) error {
 				p.setState(StateFailed)
 				return fmt.Errorf("signaling channel closed before answer")
 			}
-			if msg == nil || msg.Type != "answer" || msg.Answer == nil {
+			if msg == nil {
+				continue
+			}
+			if msg.Type != "answer" || msg.Answer == nil {
+				log.WithFields(log.Fields{
+					"peer_id":      p.ID,
+					"message_type": msg.Type,
+				}).Debug("ignoring non-answer signaling message while waiting for SDP answer")
 				continue
 			}
 			remoteDesc := pionwebrtc.SessionDescription{
@@ -186,6 +199,8 @@ func (p *Peer) trySend(data []byte) {
 	}
 	pionDC, ok := dc.(*pionwebrtc.DataChannel)
 	if !ok {
+		// Internal invariant violation: dataChannel was set to a non-DataChannel value.
+		log.WithField("peer_id", p.ID).Error("WebRTC dataChannel field holds unexpected type, cannot send")
 		return
 	}
 	if err := pionDC.Send(data); err != nil {

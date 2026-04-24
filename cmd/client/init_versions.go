@@ -336,6 +336,9 @@ func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// G17 (AUDIT.md): on WASM builds, create a WebRTCTransport so federation
 	// can use browser-to-browser P2P instead of TCP (unavailable in browsers).
 	// wireWebRTCFederation returns nil on native builds (see webrtc_native.go).
+	// Both transports are created because federationProtocol is still used by
+	// portal/bounty systems that are not yet WebRTC-aware; webRTCTransport is
+	// used specifically by the guild manager as the P2P broadcast transport.
 	sys.webRTCTransport = wireWebRTCFederation(serverID)
 
 	// Phase 39: Portal system for cross-server travel

@@ -21,6 +21,9 @@ type ClassAffinitySystem struct {
 	xpStreakBonus   float64 // Multiplier for consecutive same-affinity actions
 	streakDecayTime float64 // Seconds before streak resets
 
+	// elapsedTime is a monotonic counter incremented each frame (G29 fix).
+	elapsedTime float64
+
 	// Update interval for performance
 	updateInterval int
 	frameCounter   int
@@ -53,6 +56,7 @@ func NewClassAffinitySystem(world *World) *ClassAffinitySystem {
 
 // Update processes class affinity bonus recalculations for dirty entities.
 func (s *ClassAffinitySystem) Update(entities []*Entity, deltaTime float64) {
+	s.elapsedTime += deltaTime // G29 fix: monotonic timer for streak decay
 	s.frameCounter++
 	if s.frameCounter < s.updateInterval {
 		return
@@ -99,8 +103,10 @@ func (s *ClassAffinitySystem) processEntity(entity *Entity, deltaTime float64) {
 }
 
 // decayStreaks reduces streak counters based on time since last activity.
-func (s *ClassAffinitySystem) decayStreaks(affinity *ClassAffinityComponent, deltaTime float64) {
-	currentTime := 0.0 // Would be game time in real implementation
+// G29 fix: uses s.elapsedTime (a monotonic counter incremented in Update) instead
+// of the hardcoded 0.0 that caused streaks to never decay.
+func (s *ClassAffinitySystem) decayStreaks(affinity *ClassAffinityComponent, _ float64) {
+	currentTime := s.elapsedTime
 
 	for _, data := range affinity.Affinities {
 		if data.CurrentStreak > 0 {
@@ -228,7 +234,7 @@ func (s *ClassAffinitySystem) awardAffinityXP(entity *Entity, affinity *ClassAff
 	if data.CurrentStreak > data.PeakStreak {
 		data.PeakStreak = data.CurrentStreak
 	}
-	data.LastActivityTime = 0 // Would be game time
+	data.LastActivityTime = s.elapsedTime // G29 fix: record monotonic elapsed time
 
 	affinity.TotalAffinityXP += xpAmount
 

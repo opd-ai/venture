@@ -9,6 +9,8 @@ type Stats struct {
 	Damage int
 	// Defense for armor
 	Defense int
+	// Healing for consumables (e.g. health potions)
+	Healing int
 	// AttackSpeed for weapons (higher is faster)
 	AttackSpeed float64
 	// Value is the base price

@@ -110,6 +110,10 @@ type TalentComponent struct {
 	Dirty bool
 	// CachedBonuses holds the calculated total bonuses from all talents.
 	CachedBonuses TalentBonus
+	// AppliedBonuses records the last bonus set written to the entity's stats.
+	// It must be subtracted before applying new bonuses to prevent unbounded
+	// stat growth on reset / reallocation (G23 fix).
+	AppliedBonuses TalentBonus
 }
 
 // Type returns the component type identifier.

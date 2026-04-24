@@ -84,6 +84,9 @@ func (h *EbitenHUDSystem) Draw(screen interface{}) {
 	// Draw health bar
 	h.drawHealthBar()
 
+	// Draw mana bar below health bar (G24 fix)
+	h.drawManaBar()
+
 	// Draw stats panel
 	h.drawStatsPanel()
 
@@ -123,7 +126,15 @@ func (h *EbitenHUDSystem) drawHealthBar() {
 	if health.Max == 0 {
 		return
 	}
-	healthPct := float32(health.Current / health.Max)
+	// G27 fix: use explicit float32 division and clamp to [0,1] to prevent
+	// overheal from drawing the fill outside the background rectangle.
+	healthPct := float32(health.Current) / float32(health.Max)
+	if healthPct > 1.0 {
+		healthPct = 1.0
+	}
+	if healthPct < 0.0 {
+		healthPct = 0.0
+	}
 	fillWidth := barWidth * healthPct
 
 	healthColor := h.getHealthColor(healthPct)
@@ -137,6 +148,51 @@ func (h *EbitenHUDSystem) drawHealthBar() {
 	// Health text
 	healthText := fmt.Sprintf("%.0f / %.0f", health.Current, health.Max)
 	h.drawText(healthText, int(barX+barWidth/2-30), int(barY+5), color.White)
+}
+
+// drawManaBar draws the player's mana bar below the health bar (G24 fix).
+// Mirrors the health bar layout but uses a blue fill.
+func (h *EbitenHUDSystem) drawManaBar() {
+	manaComp, ok := h.playerEntity.GetComponent("mana")
+	if !ok {
+		return
+	}
+	mana, ok := manaComp.(*ManaComponent)
+	if !ok {
+		return
+	}
+
+	barX := float32(20)
+	barY := float32(46) // Directly below the health bar (20 + 20 height + 6 gap)
+	barWidth := float32(200)
+	barHeight := float32(14)
+
+	// Background (dark blue-gray)
+	vector.DrawFilledRect(h.screen, barX, barY, barWidth, barHeight,
+		color.RGBA{20, 20, 60, 255}, false)
+
+	if mana.Max == 0 {
+		return
+	}
+	manaPct := float32(mana.Current) / float32(mana.Max)
+	if manaPct > 1.0 {
+		manaPct = 1.0
+	}
+	if manaPct < 0.0 {
+		manaPct = 0.0
+	}
+
+	// Blue fill
+	vector.DrawFilledRect(h.screen, barX, barY, barWidth*manaPct, barHeight,
+		color.RGBA{60, 120, 255, 255}, false)
+
+	// Border
+	vector.StrokeRect(h.screen, barX, barY, barWidth, barHeight, 1,
+		color.RGBA{180, 180, 255, 200}, false)
+
+	// Mana text
+	manaText := fmt.Sprintf("%d / %d", mana.Current, mana.Max)
+	h.drawText(manaText, int(barX+barWidth/2-20), int(barY+2), color.RGBA{200, 220, 255, 255})
 }
 
 // drawStatsPanel draws the player's stats in the top right.

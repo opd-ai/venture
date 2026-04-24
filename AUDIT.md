@@ -119,7 +119,7 @@ analysis in this audit is based on source-level inspection.
 
 ### MEDIUM
 
-- [ ] **[G19] `CompanionSystem.executeScout()` Uses Hardcoded Velocity**
+- [x] **[G19] `CompanionSystem.executeScout()` Uses Hardcoded Velocity**
   — `pkg/engine/companion_system.go:496–502` —
   The comment reads "This is a stub - full implementation would use pathfinding".
   The body unconditionally sets `VX = 80.0`, `VY = 80.0`. A companion in Scout
@@ -143,7 +143,7 @@ analysis in this audit is based on source-level inspection.
 
 ### LOW
 
-- [ ] **[G18] `ClassProgressionSystem.Update()` is a No-op**
+- [x] **[G18] `ClassProgressionSystem.Update()` is a No-op**
   — `pkg/engine/class_progression_system.go:18–20` —
   The `Update` method body is a single comment: "Currently a stub - progression
   happens through LevelUp() calls / This system could be extended to apply
@@ -167,7 +167,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G20] BehaviorTree Ambush Node Uses Random Positional Offset**
+- [x] **[G20] BehaviorTree Ambush Node Uses Random Positional Offset**
   — `pkg/engine/behavior_tree_advanced_nodes.go:391–396` —
   The comment states "In a full implementation, this would use pathfinding data."
   The ambush position is computed as the enemy's current position plus a ±50-unit
@@ -190,7 +190,7 @@ analysis in this audit is based on source-level inspection.
 
 ### CRITICAL (Rev 4)
 
-- [ ] **[G21] Mobile Player Entity Receives No Input — `*MobileInputAdapter` Silently Dropped**
+- [x] **[G21] Mobile Player Entity Receives No Input — `*MobileInputAdapter` Silently Dropped**
   — `pkg/engine/input_system.go:1035–1041`, `pkg/mobile/input_adapter.go:49–52`,
   `cmd/mobile/mobile.go:308–309` —
   `AddComponent` stores components keyed by `Type()`. Both `EbitenInput` and
@@ -241,7 +241,7 @@ analysis in this audit is based on source-level inspection.
 
 ### HIGH (Rev 4)
 
-- [ ] **[G22] XP Double-Award on Every Kill**
+- [x] **[G22] XP Double-Award on Every Kill**
   — `pkg/engine/system_init.go:931`, `cmd/client/client_loot.go:512` —
   Two independent callbacks both call `AwardXP` for the same kill event.
   The `SetKillCallback` registered at `system_init.go:918` calls
@@ -274,7 +274,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G23] TalentSystem Stat Accumulation — Old Bonuses Never Removed**
+- [x] **[G23] TalentSystem Stat Accumulation — Old Bonuses Never Removed**
   — `pkg/engine/talent_system.go:183–212` —
   `applyStatsBonuses(stats, bonuses)` at line 183 directly adds flat bonuses
   to live `StatsComponent` fields:
@@ -314,7 +314,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G24] Desktop HUD Has No Mana Bar**
+- [x] **[G24] Desktop HUD Has No Mana Bar**
   — `pkg/engine/hud_system.go:71–99` —
   `HUDSystem.Draw()` calls `drawHealthBar()`, `drawStatsPanel()`,
   `drawExperienceBar()`, `drawNetworkStatus()`, and `drawTerritoryBonuses()`.
@@ -342,7 +342,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G25] Server `consumeItem` Heals Player by `item.Stats.Defense`**
+- [x] **[G25] Server `consumeItem` Heals Player by `item.Stats.Defense`**
   — `cmd/server/player_management.go:298` —
   The server-side item consumption handler computes:
   ```go
@@ -373,7 +373,7 @@ analysis in this audit is based on source-level inspection.
 
 ### MEDIUM (Rev 4)
 
-- [ ] **[G26] `AttributeEffects` Fields Defined and Defaulted But Never Applied**
+- [x] **[G26] `AttributeEffects` Fields Defined and Defaulted But Never Applied**
   — `pkg/engine/attribute_allocation_system.go:113–200`,
   `pkg/engine/attribute_allocation_component.go:93–108` —
   `AttributeEffects` (returned by `DefaultAttributeEffects()`) defines five
@@ -407,7 +407,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G27] HUD Health Bar Overflows Background on Overheal**
+- [x] **[G27] HUD Health Bar Overflows Background on Overheal**
   — `pkg/engine/hud_system.go:126` —
   ```go
   healthPct := float32(health.Current / health.Max)
@@ -442,7 +442,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G28] Entity Death Callback Fires Every Frame Until Entity Is Removed**
+- [x] **[G28] Entity Death Callback Fires Every Frame Until Entity Is Removed**
   — `pkg/engine/combat_system.go:218–250` —
   `handleEntityDeath` detects `health.Current <= 0` and calls
   `s.onDeathCallback(entity, attacker)`, but does NOT add `DeadComponent`
@@ -480,7 +480,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G29] `ClassAffinitySystem.decayStreaks` Uses Hardcoded `currentTime = 0`**
+- [x] **[G29] `ClassAffinitySystem.decayStreaks` Uses Hardcoded `currentTime = 0`**
   — `pkg/engine/class_affinity_system.go:103` —
   ```go
   currentTime := 0.0 // Would be game time in real implementation
@@ -516,7 +516,7 @@ analysis in this audit is based on source-level inspection.
 
 ### LOW (Rev 4)
 
-- [ ] **[G30] Entities Can Attack Themselves — No Self-Damage Guard**
+- [x] **[G30] Entities Can Attack Themselves — No Self-Damage Guard**
   — `pkg/engine/combat_system.go:278` —
   `validateAttackEntities(attacker, target *Entity)` checks that both
   entities are non-nil and live, but does not check
@@ -541,7 +541,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G31] `CarryOverSystem` Not Registered in `system_init.go`**
+- [x] **[G31] `CarryOverSystem` Not Registered in `system_init.go`**
   — `pkg/engine/system_init.go` (absent), `cmd/client/init_versions.go:259` —
   `CarryOverSystem` is instantiated and registered in
   `cmd/client/init_versions.go:259` (client-only), but is absent from

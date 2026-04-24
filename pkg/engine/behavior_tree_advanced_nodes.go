@@ -387,11 +387,31 @@ func (n *AmbushNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, 
 			return NodeFailure
 		}
 
-		// Use current position or nearby cover as ambush point
-		// In a full implementation, this would use pathfinding data
+		// Select a cover position: prefer a direction away from any known target
+		// (fall back to uniform-circular sampling when no target is on the blackboard).
+		// Full pathfinding / VisibilityComponent cover selection is future work.
 		rng := blackboard.GetRNG()
-		offsetX := (rng.Float64() - 0.5) * 100 // Random offset within 50 units
-		offsetY := (rng.Float64() - 0.5) * 100
+		const ambushRadius = 50.0
+
+		angle := rng.Float64() * 2 * math.Pi
+
+		// If a target entity is on the blackboard, pick the direction opposite to it.
+		if targetVal, hasTarget := blackboard.Get("target"); hasTarget && targetVal != nil {
+			if target, ok := targetVal.(*Entity); ok {
+				if tPosComp, ok2 := target.GetComponent("position"); ok2 {
+					if tPos, ok3 := tPosComp.(*PositionComponent); ok3 {
+						dx := pos.X - tPos.X
+						dy := pos.Y - tPos.Y
+						if dx != 0 || dy != 0 {
+							angle = math.Atan2(dy, dx) + (rng.Float64()-0.5)*math.Pi/2
+						}
+					}
+				}
+			}
+		}
+
+		offsetX := math.Cos(angle) * ambushRadius
+		offsetY := math.Sin(angle) * ambushRadius
 
 		blackboard.Set("ambush_position", []float64{pos.X + offsetX, pos.Y + offsetY})
 		return NodeRunning

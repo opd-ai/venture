@@ -227,6 +227,15 @@ func (s *CombatSystem) handleEntityDeath(entity *Entity) {
 		return
 	}
 
+	// G28 fix: add DeadComponent immediately to prevent this callback from
+	// firing again on subsequent frames before the entity is removed.
+	if !entity.HasComponent("dead") {
+		entity.AddComponent(NewDeadComponent(0.0))
+	} else {
+		// Already marked dead; callback was already invoked.
+		return
+	}
+
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entityID":      entity.ID,
@@ -277,6 +286,14 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 
 // validateAttackEntities checks if attacker and target entities are in a valid state for combat.
 func (s *CombatSystem) validateAttackEntities(attacker, target *Entity) bool {
+	// G30 fix: an entity cannot damage itself.
+	if attacker.ID == target.ID {
+		if s.logger != nil {
+			s.logger.WithField("entity_id", attacker.ID).Debug("attack blocked - self-attack")
+		}
+		return false
+	}
+
 	// Priority 1.3: Dead entities cannot attack
 	if attacker.HasComponent("dead") {
 		if s.logger != nil {

@@ -133,12 +133,31 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 		attrComp.AppliedBonuses[AttrStrength] = strAttackBonus
 	}
 
+	// G26 fix: STR → carry capacity (InventoryComponent.MaxWeight)
+	invComp, hasInv := entity.GetComponent("inventory")
+	if hasInv {
+		if inv, ok := invComp.(*InventoryComponent); ok {
+			strTotal := float64(attrComp.GetTotal(AttrStrength))
+			strCarryBonus := strTotal * effects.CarryCapPerStr * s.genreMultiplier
+			inv.MaxWeight += strCarryBonus
+			attrComp.AppliedBonuses[CoreAttribute(200+AttrStrength)] = strCarryBonus
+		}
+	}
+
 	// Agility bonuses (evasion on StatsComponent)
 	if stats != nil {
 		agiTotal := float64(attrComp.GetTotal(AttrAgility))
 		agiEvasionBonus := agiTotal * effects.EvasionBonusPerAgi / 100.0 * s.genreMultiplier
 		stats.Evasion += agiEvasionBonus
 		attrComp.AppliedBonuses[AttrAgility] = agiEvasionBonus
+	}
+
+	// G26 fix: AGI → movement speed bonus (StatsComponent.SpeedBonus)
+	if stats != nil {
+		agiTotal := float64(attrComp.GetTotal(AttrAgility))
+		agiSpeedBonus := agiTotal * effects.SpeedBonusPerAgi / 100.0 * s.genreMultiplier
+		stats.SpeedBonus += agiSpeedBonus
+		attrComp.AppliedBonuses[CoreAttribute(200+AttrAgility)] = agiSpeedBonus
 	}
 
 	// Intelligence bonuses (MagicPower on StatsComponent, mana on ManaComponent)
@@ -158,6 +177,16 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 		}
 	}
 
+	// G26 fix: INT → mana regen (ManaComponent.Regen)
+	if hasMana {
+		if mana, ok := manaComp.(*ManaComponent); ok {
+			intTotal := float64(attrComp.GetTotal(AttrIntelligence))
+			intManaRegenBonus := intTotal * effects.ManaRegenPerInt * s.genreMultiplier
+			mana.Regen += intManaRegenBonus
+			attrComp.AppliedBonuses[CoreAttribute(200+AttrIntelligence)] = intManaRegenBonus
+		}
+	}
+
 	// Vitality bonuses (HealthComponent)
 	if hasHealth {
 		health, ok := healthComp.(*HealthComponent)
@@ -166,6 +195,16 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 			vitHealthBonus := vitTotal * effects.MaxHealthPerVit * s.genreMultiplier
 			health.Max += vitHealthBonus
 			attrComp.AppliedBonuses[AttrVitality] = vitHealthBonus
+		}
+	}
+
+	// G26 fix: VIT → health regen (HealthComponent.RegenRate)
+	if hasHealth {
+		if health, ok := healthComp.(*HealthComponent); ok {
+			vitTotal := float64(attrComp.GetTotal(AttrVitality))
+			vitRegenBonus := vitTotal * effects.HealthRegenPerVit * s.genreMultiplier
+			health.RegenRate += vitRegenBonus
+			attrComp.AppliedBonuses[CoreAttribute(200+AttrVitality)] = vitRegenBonus
 		}
 	}
 
@@ -203,10 +242,14 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 // removeAppliedBonuses removes previously applied attribute bonuses from stats.
 func (s *AttributeAllocationSystem) removeAppliedBonuses(entity *Entity, stats *StatsComponent, attrComp *AttributeAllocationComponent, hasHealth, hasMana bool) {
 	s.removeStrengthBonus(stats, attrComp)
+	s.removeStrengthCarryBonus(entity, attrComp)
 	s.removeAgilityBonus(stats, attrComp)
+	s.removeAgilitySpeedBonus(stats, attrComp)
 	s.removeIntelligenceBonus(stats, attrComp)
 	s.removeManaBonus(entity, attrComp, hasMana)
+	s.removeManaRegenBonus(entity, attrComp, hasMana)
 	s.removeVitalityBonus(entity, attrComp, hasHealth)
+	s.removeVitalityRegenBonus(entity, attrComp, hasHealth)
 	s.removeEnduranceBonus(stats, attrComp)
 	s.removeLuckBonus(stats, attrComp)
 }
@@ -221,6 +264,17 @@ func (s *AttributeAllocationSystem) removeStrengthBonus(stats *StatsComponent, a
 	}
 }
 
+// removeStrengthCarryBonus removes the carry capacity bonus from strength (G26 fix).
+func (s *AttributeAllocationSystem) removeStrengthCarryBonus(entity *Entity, attrComp *AttributeAllocationComponent) {
+	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrStrength)]; ok {
+		if invComp, hasInv := entity.GetComponent("inventory"); hasInv {
+			if inv, ok2 := invComp.(*InventoryComponent); ok2 {
+				inv.MaxWeight -= bonus
+			}
+		}
+	}
+}
+
 // removeAgilityBonus removes the evasion bonus from agility.
 func (s *AttributeAllocationSystem) removeAgilityBonus(stats *StatsComponent, attrComp *AttributeAllocationComponent) {
 	if stats == nil {
@@ -228,6 +282,16 @@ func (s *AttributeAllocationSystem) removeAgilityBonus(stats *StatsComponent, at
 	}
 	if bonus, ok := attrComp.AppliedBonuses[AttrAgility]; ok {
 		stats.Evasion -= bonus
+	}
+}
+
+// removeAgilitySpeedBonus removes the speed bonus from agility (G26 fix).
+func (s *AttributeAllocationSystem) removeAgilitySpeedBonus(stats *StatsComponent, attrComp *AttributeAllocationComponent) {
+	if stats == nil {
+		return
+	}
+	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrAgility)]; ok {
+		stats.SpeedBonus -= bonus
 	}
 }
 
@@ -259,6 +323,24 @@ func (s *AttributeAllocationSystem) removeManaBonus(entity *Entity, attrComp *At
 	}
 }
 
+// removeManaRegenBonus removes the mana regen bonus from intelligence (G26 fix).
+func (s *AttributeAllocationSystem) removeManaRegenBonus(entity *Entity, attrComp *AttributeAllocationComponent, hasMana bool) {
+	if !hasMana {
+		return
+	}
+	manaComp, ok := entity.GetComponent("mana")
+	if !ok {
+		return
+	}
+	mana, ok := manaComp.(*ManaComponent)
+	if !ok {
+		return
+	}
+	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrIntelligence)]; ok {
+		mana.Regen -= bonus
+	}
+}
+
 // removeVitalityBonus removes the health bonus from vitality.
 func (s *AttributeAllocationSystem) removeVitalityBonus(entity *Entity, attrComp *AttributeAllocationComponent, hasHealth bool) {
 	if !hasHealth {
@@ -274,6 +356,24 @@ func (s *AttributeAllocationSystem) removeVitalityBonus(entity *Entity, attrComp
 	}
 	if bonus, ok := attrComp.AppliedBonuses[AttrVitality]; ok {
 		health.Max -= bonus
+	}
+}
+
+// removeVitalityRegenBonus removes the health regen bonus from vitality (G26 fix).
+func (s *AttributeAllocationSystem) removeVitalityRegenBonus(entity *Entity, attrComp *AttributeAllocationComponent, hasHealth bool) {
+	if !hasHealth {
+		return
+	}
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
+	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+	if bonus, ok := attrComp.AppliedBonuses[CoreAttribute(200+AttrVitality)]; ok {
+		health.RegenRate -= bonus
 	}
 }
 

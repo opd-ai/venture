@@ -18,15 +18,9 @@ func TestLootDropFromInventory(t *testing.T) {
 
 	// Set death callback that tracks drops
 	combatSystem.SetDeathCallback(func(entity *Entity) {
-		// Only process once (callback called every frame while dead)
-		if entity.HasComponent("dead") {
-			return
-		}
-
+		// G28: handleEntityDeath adds DeadComponent before the callback fires;
+		// this callback runs exactly once per entity death.
 		callbackExecuted = true
-
-		// Add dead component
-		entity.AddComponent(NewDeadComponent(0.0))
 
 		// Check if entity has inventory
 		if invComp, hasInv := entity.GetComponent("inventory"); hasInv {
@@ -144,13 +138,8 @@ func TestLootDropFromEquipment(t *testing.T) {
 	var droppedEquipCount int
 
 	combatSystem.SetDeathCallback(func(entity *Entity) {
-		// Only process once
-		if entity.HasComponent("dead") {
-			return
-		}
-
-		entity.AddComponent(NewDeadComponent(0.0))
-
+		// G28: handleEntityDeath adds DeadComponent before the callback fires;
+		// this callback runs exactly once per entity death.
 		if equipComp, hasEquip := entity.GetComponent("equipment"); hasEquip {
 			equipment := equipComp.(*EquipmentComponent)
 			equippedItems := equipment.UnequipAll()
@@ -241,13 +230,8 @@ func TestLootDropWithPhysics(t *testing.T) {
 	var droppedItemEntity *Entity
 
 	combatSystem.SetDeathCallback(func(entity *Entity) {
-		// Only process once
-		if entity.HasComponent("dead") {
-			return
-		}
-
-		entity.AddComponent(NewDeadComponent(0.0))
-
+		// G28: handleEntityDeath now adds DeadComponent before the callback fires,
+		// so the entity already has "dead" here. The callback runs exactly once.
 		if invComp, hasInv := entity.GetComponent("inventory"); hasInv {
 			inventory := invComp.(*InventoryComponent)
 			posComp, _ := entity.GetComponent("position")
@@ -325,13 +309,9 @@ func TestLootDropEmptyInventory(t *testing.T) {
 	callbackCalled := false
 
 	combatSystem.SetDeathCallback(func(entity *Entity) {
-		// Only process once
-		if entity.HasComponent("dead") {
-			return
-		}
-
+		// G28: handleEntityDeath adds DeadComponent before the callback fires;
+		// this callback runs exactly once per entity death.
 		callbackCalled = true
-		entity.AddComponent(NewDeadComponent(0.0))
 
 		// Try to process empty inventory - should not crash
 		if invComp, hasInv := entity.GetComponent("inventory"); hasInv {
@@ -389,13 +369,9 @@ func TestLootDropNoInventory(t *testing.T) {
 	callbackCalled := false
 
 	combatSystem.SetDeathCallback(func(entity *Entity) {
-		// Only process once
-		if entity.HasComponent("dead") {
-			return
-		}
-
+		// G28: handleEntityDeath adds DeadComponent before the callback fires;
+		// this callback runs exactly once per entity death.
 		callbackCalled = true
-		entity.AddComponent(NewDeadComponent(0.0))
 
 		// Should handle missing inventory gracefully
 		if invComp, hasInv := entity.GetComponent("inventory"); hasInv {

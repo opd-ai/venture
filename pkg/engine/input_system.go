@@ -1027,6 +1027,12 @@ func (s *InputSystem) handleHelpTopics() bool {
 	return false
 }
 
+// mobileInputUpdater is satisfied by InputProvider implementations that need a
+// per-frame update call (e.g. MobileInputAdapter which reads live touch state).
+type mobileInputUpdater interface {
+	Update()
+}
+
 // processEntityInputs iterates through entities and processes their input components.
 func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
@@ -1035,12 +1041,40 @@ func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64)
 			continue
 		}
 
-		input, ok := inputComp.(*EbitenInput)
-		if !ok {
+		// Primary path: desktop EbitenInput
+		if input, ok := inputComp.(*EbitenInput); ok {
+			s.processInput(entity, input, deltaTime)
 			continue
 		}
-		s.processInput(entity, input, deltaTime)
+
+		// G21 fix: secondary path for InputProvider implementations (e.g. MobileInputAdapter).
+		// Call Update() first if the provider tracks live hardware state.
+		if provider, ok := inputComp.(InputProvider); ok {
+			if updater, ok := inputComp.(mobileInputUpdater); ok {
+				updater.Update()
+			}
+			s.processInputProvider(entity, provider)
+		}
 	}
+}
+
+// processInputProvider handles input processing for entities whose input component
+// implements InputProvider but is not a *EbitenInput (e.g. MobileInputAdapter).
+func (s *InputSystem) processInputProvider(entity *Entity, provider InputProvider) {
+	s.detectInputMethod()
+	velComp, ok := entity.GetComponent("velocity")
+	if !ok {
+		return
+	}
+	velocity, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return
+	}
+
+	moveX, moveY := provider.GetMovement()
+	velocity.VX = moveX * s.MoveSpeed
+	velocity.VY = moveY * s.MoveSpeed
+	s.updateMovementAnimation(entity, velocity)
 }
 
 // processInput handles input processing for a single entity.

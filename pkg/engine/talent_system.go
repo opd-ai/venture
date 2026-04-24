@@ -69,12 +69,17 @@ func (s *TalentSystem) processEntity(entity *Entity) bool {
 		return false
 	}
 
+	// G23 fix: remove previously applied bonuses before computing new ones so
+	// that talent resets and reallocations don't permanently stack old values.
+	s.removeTalentBonuses(entity, talent.AppliedBonuses)
+
 	// Calculate total bonuses from all allocated talents
 	bonuses := s.calculateTotalBonuses(talent)
 	talent.CachedBonuses = bonuses
 
 	// Apply bonuses to entity stats
 	s.applyBonuses(entity, bonuses)
+	talent.AppliedBonuses = bonuses
 
 	talent.Dirty = false
 	return true
@@ -243,6 +248,59 @@ func (s *TalentSystem) applyCombatBonuses(entity *Entity, bonuses TalentBonus) {
 	combat.BlockChanceBonus = bonuses.BlockChanceBonus
 	combat.HealingReceivedBonus = bonuses.HealingReceivedBonus
 	combat.StatusResistBonus = bonuses.StatusResistBonus
+}
+
+// removeTalentBonuses subtracts previously applied talent bonuses from entity stats.
+// This must be called before applying a new set of bonuses to avoid unbounded
+// stat growth on talent reset or reallocation (G23 fix).
+func (s *TalentSystem) removeTalentBonuses(entity *Entity, prev TalentBonus) {
+	// Remove flat and percentage bonuses from StatsComponent.
+	if statsComp, ok := entity.GetComponent("stats"); ok {
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			// Undo percentage first, then flat (reverse of apply order).
+			if prev.DamagePercent != 0 {
+				stats.Attack /= (1.0 + prev.DamagePercent)
+			}
+			if prev.DefensePercent != 0 {
+				stats.Defense /= (1.0 + prev.DefensePercent)
+			}
+			if prev.MagicPowerPercent != 0 {
+				stats.MagicPower /= (1.0 + prev.MagicPowerPercent)
+			}
+			if prev.MagicDefensePercent != 0 {
+				stats.MagicDefense /= (1.0 + prev.MagicDefensePercent)
+			}
+			stats.Attack -= prev.FlatDamage
+			stats.Defense -= prev.FlatDefense
+			stats.MagicPower -= prev.FlatMagicPower
+			stats.MagicDefense -= prev.FlatMagicDefense
+			stats.CritChance -= prev.CritChanceBonus
+			stats.CritDamage -= prev.CritDamageBonus
+			stats.Lifesteal -= prev.LifestealPercent
+			stats.BlockChance -= prev.BlockChanceBonus
+			stats.Evasion -= prev.DodgeChanceBonus
+		}
+	}
+
+	// Remove health bonuses.
+	if healthComp, ok := entity.GetComponent("health"); ok {
+		if health, ok := healthComp.(*HealthComponent); ok {
+			if prev.HealthPercent != 0 {
+				health.Max /= (1.0 + prev.HealthPercent)
+			}
+			health.Max -= prev.FlatHealth
+		}
+	}
+
+	// Remove mana bonuses.
+	if manaComp, ok := entity.GetComponent("mana"); ok {
+		if mana, ok := manaComp.(*ManaComponent); ok {
+			if prev.ManaPercent != 0 {
+				mana.Max = int(float64(mana.Max) / (1.0 + prev.ManaPercent))
+			}
+			mana.Max -= int(prev.FlatMana)
+		}
+	}
 }
 
 // AllocateTalentPoint allocates a talent point on behalf of an entity.

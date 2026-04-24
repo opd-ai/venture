@@ -92,7 +92,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
 
 ### HIGH
 
-- [ ] **G1 — OpenXR controller/headset adapters return zero values** —
+- [x] **G1 — OpenXR controller/headset adapters return zero values** —
   `pkg/engine/vr_openxr_adapters.go:91-230` — All 11 controller/headset methods
   (`GetTrigger`, `GetGrip`, `GetThumbstick`, `IsThumbstickPressed`, `GetButton`,
   `SetHaptic`, `GetHeadOrientation`, `GetHeadPosition`, plus the two

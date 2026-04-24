@@ -41,6 +41,15 @@ func NewSystemWithLogger(config LightingConfig, logger *log.Logger) *System {
 	if logger == nil {
 		logger = log.StandardLogger()
 	}
+	// G9 (AUDIT.md): emit a one-time deprecation warning when EnableShadows is
+	// set without the modern AOConfig.Enabled flag, so callers can migrate.
+	if config.EnableShadows && !config.AOConfig.Enabled {
+		logger.WithFields(log.Fields{
+			"field":      "EnableShadows",
+			"package":    "lighting",
+			"migration":  "set AOConfig.Enabled=true instead",
+		}).Warn("EnableShadows is deprecated: use AOConfig.Enabled for explicit ambient-occlusion control")
+	}
 	return &System{
 		lights: make([]Light, 0),
 		config: config,

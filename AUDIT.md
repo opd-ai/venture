@@ -220,7 +220,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   or document `*Server` as the low-level API and `*ServerManager` as the high-level
   wrapper. Validation: `go build ./... && go test ./pkg/hostplay/...`.
 
-- [ ] **G9 — `EnableShadows` deprecation path not enforced** —
+- [x] **G9 — `EnableShadows` deprecation path not enforced** —
   `pkg/rendering/lighting/types.go:116-123` marks `EnableShadows` as `// Deprecated:` but
   no `staticcheck` configuration or build-time deprecation warning is emitted; new
   callers can still set the legacy field without notice. The legacy 2026-04-23 finding

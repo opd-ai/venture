@@ -5,6 +5,8 @@ import (
 	"image"
 	"image/color"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TestLightType_String tests light type string conversion.
@@ -962,4 +964,72 @@ func TestSystem_DirectionalLight_WithPointLights(t *testing.T) {
 		t.Errorf("Point light did not create localized highlight: center=%+v, edge=%+v",
 			centerColor, edgeColor)
 	}
+}
+
+// TestNewSystemWithLogger_EnableShadowsDeprecationWarning asserts that
+// NewSystemWithLogger (and therefore NewSystemWithConfig) emits a logrus warning
+// when EnableShadows=true but AOConfig.Enabled=false, satisfying AUDIT.md G9.
+func TestNewSystemWithLogger_EnableShadowsDeprecationWarning(t *testing.T) {
+var warned bool
+
+// Capture logrus output via a hook.
+hook := &captureHook{level: logrus.WarnLevel, onWarn: func(entry *logrus.Entry) {
+if entry.Level == logrus.WarnLevel {
+if _, ok := entry.Data["field"]; ok {
+warned = true
+}
+}
+}}
+logrus.AddHook(hook)
+defer logrus.StandardLogger().ReplaceHooks(logrus.LevelHooks{})
+
+cfg := LightingConfig{
+EnableShadows: true,
+AOConfig:      EnhancedAOConfig{AOConfig: AOConfig{Enabled: false}},
+}
+_ = NewSystemWithLogger(cfg, nil)
+
+if !warned {
+t.Error("expected deprecation warning for EnableShadows=true with AOConfig.Enabled=false")
+}
+}
+
+// TestNewSystemWithLogger_NoWarnWhenAOEnabled asserts no deprecation warning when
+// AOConfig.Enabled=true (the preferred migration path).
+func TestNewSystemWithLogger_NoWarnWhenAOEnabled(t *testing.T) {
+var warned bool
+
+hook := &captureHook{level: logrus.WarnLevel, onWarn: func(entry *logrus.Entry) {
+if entry.Level == logrus.WarnLevel {
+if _, ok := entry.Data["field"]; ok {
+warned = true
+}
+}
+}}
+logrus.AddHook(hook)
+defer logrus.StandardLogger().ReplaceHooks(logrus.LevelHooks{})
+
+cfg := LightingConfig{
+EnableShadows: true,
+AOConfig:      EnhancedAOConfig{AOConfig: AOConfig{Enabled: true}},
+}
+_ = NewSystemWithLogger(cfg, nil)
+
+if warned {
+t.Error("expected no deprecation warning when AOConfig.Enabled=true")
+}
+}
+
+// captureHook is a minimal logrus hook for test-level log capture.
+type captureHook struct {
+level  logrus.Level
+onWarn func(*logrus.Entry)
+}
+
+func (h *captureHook) Levels() []logrus.Level { return logrus.AllLevels }
+func (h *captureHook) Fire(entry *logrus.Entry) error {
+if h.onWarn != nil {
+h.onWarn(entry)
+}
+return nil
 }

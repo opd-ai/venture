@@ -66,7 +66,7 @@ analysis in this audit is based on source-level inspection.
 | `pkg/memprofile` | ✅ Complete | `fmt.Printf` exemption formally documented at `profile.go:195` |
 | `pkg/engine/class_progression_system.go` | ⚠️ Partial | `Update()` is a no-op; progression via explicit API only (G18) |
 | `pkg/engine/companion_system.go` | ⚠️ Stub | `executeScout()` uses hardcoded velocity instead of pathfinding (G19) |
-| `pkg/engine/behavior_tree_advanced_nodes.go` | ⚠️ Stub | Ambush node uses random offset, not cover-based pathfinding (G21) |
+| `pkg/engine/behavior_tree_advanced_nodes.go` | ⚠️ Stub | Ambush node uses random offset, not cover-based pathfinding (G20) |
 | `cmd/client` | ✅ Complete | All v1–v8 systems wired via init_versions.go + handlers.go |
 | `cmd/server` | ✅ Complete | All systems wired via v4–v8 system files |
 | `cmd/mobile` | ✅ Complete | MobileInputAdapter, engine systems, lifecycle all present |
@@ -158,7 +158,7 @@ analysis in this audit is based on source-level inspection.
 
 ---
 
-- [ ] **[G21] BehaviorTree Ambush Node Uses Random Positional Offset**
+- [ ] **[G20] BehaviorTree Ambush Node Uses Random Positional Offset**
   — `pkg/engine/behavior_tree_advanced_nodes.go:391–396` —
   The comment states "In a full implementation, this would use pathfinding data."
   The ambush position is computed as the enemy's current position plus a ±50-unit
@@ -176,10 +176,6 @@ analysis in this audit is based on source-level inspection.
 
   **Validation**: `go test ./pkg/engine/ -run TestBehaviorTreeAmbush`; enemy
   ambush positions resolve to walkable cells.
-
----
-
-## False Positives Considered and Rejected
 
 | Candidate | Reason Rejected |
 |---|---|

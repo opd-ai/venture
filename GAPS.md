@@ -1,11 +1,10 @@
-# Implementation Gaps — 2026-04-24 (rev 2)
+# Implementation Gaps — 2026-04-25 (rev 3)
 
-> **Rev 2 — forward-pass re-audit.** This file supersedes the prior `GAPS.md`
-> (2026-04-24 implementation gaps, IDs G1–G14). All prior findings have been
-> re-verified against the current tree.
+> **Rev 3 — forward-pass re-audit (2026-04-25).** This file supersedes the
+> `GAPS.md` rev 2 (2026-04-24). All G1–G16 findings from that revision remain
+> resolved. Four new gaps G17–G20 were identified and are documented below.
 >
-> **Rev 2 final pass (2026-04-24)**: All gaps G1–G16 confirmed resolved in
-> code. GAPS.md updated to reflect current state.
+> **Rev 2 baseline (2026-04-24)**: All gaps G1–G16 confirmed resolved in code.
 >
 > **Legacy ID compatibility**: G1–G14 are preserved below with updated status.
 > The legacy "Gap 1"–"Gap 6" identifiers (from the prior concurrency-safety
@@ -331,5 +330,142 @@ the cleanup task."
 | G14-6 | `CleanupTask` stop channel undocumented (Prior Gap 6) | ✅ RESOLVED | — | — |
 | G15 | `HotReloadSystem` never registered | ✅ RESOLVED | — | — |
 | G16 | `FileSystemModRepository` unused in production | ✅ RESOLVED | — | — |
+| G17 | WebRTC browser-to-browser federation is simulated | 🔴 OPEN | — | see below |
+| G18 | `ClassProgressionSystem.Update()` is a no-op | 🔴 OPEN | — | see below |
+| G19 | Companion scout behavior uses hardcoded velocity | 🔴 OPEN | — | see below |
+| G20 | BehaviorTree ambush node uses random position offset | 🔴 OPEN | — | see below |
 
-**All gaps fully resolved.**
+---
+
+## G17 — WebRTC Browser-to-Browser Federation is Simulated, Not Real
+
+**Status**: 🔴 OPEN  
+**Severity**: HIGH
+
+- **Finding**: The entire `pkg/network/federation/webrtc/` package is a
+  simulation harness, not a real WebRTC implementation. The package header at
+  `peer.go:4` states: _"This is a stub implementation for testing; real WebRTC
+  integration requires `github.com/pion/webrtc/v3`."_ The `Connect()` method
+  (`peer.go:77`) calls `simulateConnection()` (line 112), which sleeps for a
+  random interval then sets state to `StateConnected` artificially. No ICE
+  candidate gathering, no DTLS handshake, and no data channel creation occur.
+  The signaling server (`signaling.go:76,299`) is also simulated. The WASM
+  initializer `initWebRTCFederation()` (`cmd/client/webrtc_wasm.go:20`) is
+  defined but never called from any build entrypoint. `NewWebRTCTransport()`
+  (`transport_webrtc.go:31`) is never instantiated in production code — only in
+  `_test.go` files. `github.com/pion/webrtc/v3` does not appear in `go.mod`.
+
+- **Impact**: Browser-to-browser (WASM) federation — where two browser tabs
+  connect to each other without a dedicated TCP relay server — is listed as a
+  feature in `README.md` (line 60: "federation/WebRTC, portals") but is
+  non-functional. Desktop server federation over TCP works correctly and is
+  unaffected by this gap.
+
+- **Affected Files**:
+  - `pkg/network/federation/webrtc/peer.go:4,69,77,112`
+  - `pkg/network/federation/webrtc/signaling.go:76,299`
+  - `pkg/network/federation/webrtc/nat_traversal.go:188`
+  - `pkg/network/federation/transport_webrtc.go:31` (never called in production)
+  - `cmd/client/webrtc_wasm.go:20` (initializer never invoked)
+  - `go.mod` (missing `github.com/pion/webrtc/v3`)
+
+- **Remediation Path**:
+  1. Add `github.com/pion/webrtc/v3` to `go.mod` (`go get
+     github.com/pion/webrtc/v3`). The pion library is WASM-safe and requires no
+     CGo.
+  2. Replace `simulateConnection()` in `peer.go` with `pion.NewPeerConnection`,
+     data-channel setup, and SDP offer/answer exchange via the existing signaling
+     transport interface.
+  3. Call `initWebRTCFederation(clientID)` from `cmd/client/main.go`'s WASM
+     startup path and wire the returned `*Peer` into the federation protocol via
+     `NewWebRTCTransport`.
+  4. Update README to clarify the feature is experimental / in progress until
+     implementation is complete.
+
+---
+
+## G18 — `ClassProgressionSystem.Update()` is a No-op
+
+**Status**: 🔴 OPEN  
+**Severity**: LOW
+
+- **Finding**: The `Update` method body of `ClassProgressionSystem` at
+  `pkg/engine/class_progression_system.go:18–20` contains only a comment:
+  _"Currently a stub - progression happens through LevelUp() calls / This
+  system could be extended to apply passive effects."_ The system is registered
+  in the ECS world at `cmd/client/handlers.go:2170` and
+  `cmd/server/v4_systems.go:99`, runs every frame, and consumes a scheduler
+  slot while producing zero output.
+
+- **Impact**: Time-based passive class effects (per-second stamina modifiers,
+  class-specific buff tick-downs, passive aura reapplication) cannot be
+  expressed declaratively via the system. Core progression (XP, level-up
+  events, stat bonuses) is unaffected.
+
+- **Affected Files**:
+  - `pkg/engine/class_progression_system.go:18–20`
+  - `cmd/client/handlers.go:2170` (registration)
+  - `cmd/server/v4_systems.go:99` (registration)
+
+- **Remediation**: If passive effects are intentionally deferred, add a
+  `// Passive-effect processing is deferred to LevelUp() calls; see GAPS.md
+  G18` comment and note in ROADMAP.md. If passive effects are desired, iterate
+  entities with the `class_progression` component and apply class-specific regen
+  ticks per frame using the component's current class/level state.
+
+---
+
+## G19 — Companion Scout Behavior Uses Hardcoded Diagonal Velocity
+
+**Status**: 🔴 OPEN  
+**Severity**: MEDIUM
+
+- **Finding**: `CompanionSystem.executeScout()` at
+  `pkg/engine/companion_system.go:494–502` contains the comment _"This is a
+  stub - full implementation would use pathfinding"_ and unconditionally sets
+  `velocityComp.VX = 80.0`, `velocityComp.VY = 80.0`. A companion placed in
+  Scout mode will always move diagonally north-east at maximum speed, ignoring
+  walls, owner position, visibility radius, and exploration targets.
+
+- **Impact**: Any companion assigned `BehaviorScout` mode exhibits broken
+  movement. The Companion system is wired and registered; the damage is
+  isolated to the scout behavior path.
+
+- **Affected Files**:
+  - `pkg/engine/companion_system.go:494–502` (stub body)
+  - `pkg/engine/companion_system.go:160` (caller: `executeBehavior` switch case)
+
+- **Remediation**: Minimum fix — add angular variation so scouts cycle through
+  cardinal directions using a per-companion step counter. Full fix — query
+  `SpatialPartition` for walkable cells at increasing radii from the owner,
+  drive the companion toward the least-recently-visited cell, and return it to
+  the owner when the radius is exhausted.
+
+---
+
+## G20 — BehaviorTree Ambush Node Uses Random Position Offset
+
+**Status**: 🔴 OPEN  
+**Severity**: LOW
+
+- **Finding**: The ambush action node in
+  `pkg/engine/behavior_tree_advanced_nodes.go:391–396` contains the comment
+  _"In a full implementation, this would use pathfinding data."_ The ambush
+  position is computed as the entity's current position plus a random
+  `(rng.Float64()-0.5)*100` X/Y offset. No cover detection, line-of-sight
+  check, or walkability validation is performed; enemies may target positions
+  inside solid terrain or in full view of the player.
+
+- **Impact**: Enemy AI for stealth/ambush archetypes (assassins, hunters, traps)
+  is degraded. The node evaluates to `NodeRunning` and enemies move to a
+  semi-random nearby location rather than seeking genuine cover.
+
+- **Affected Files**:
+  - `pkg/engine/behavior_tree_advanced_nodes.go:385–397` (ambush node action)
+
+- **Remediation**: Replace the random offset with a query to
+  `SpatialPartition.Query()` filtering for passable tiles with low
+  `VisibilityComponent.Visibility` score (populated by the lighting system).
+  Fall back to the random offset if no low-visibility tiles are found nearby.
+
+---

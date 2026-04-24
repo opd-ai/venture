@@ -3,11 +3,15 @@
 
 // Package main provides WebRTC federation support for WASM builds.
 // Phase 4.2 (PLAN.md): Browser-to-browser federation via WebRTC.
+// G17 (AUDIT.md): Replaces simulated connection with real pion/webrtc/v3.
 package main
 
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/network/federation/webrtc"
 )
 
@@ -28,6 +32,23 @@ func initWebRTCFederation(clientID string) (*webrtc.Peer, error) {
 	}
 
 	return peer, nil
+}
+
+// wireWebRTCFederation creates a WebRTCTransport for WASM federation and
+// returns it so the caller can wire it into the guild manager.  The returned
+// transport manages peers independently; use transport.AddPeer / ConnectPeer
+// to establish browser-to-browser connections at runtime.
+func wireWebRTCFederation(serverID string) *federation.WebRTCTransport {
+	if webrtcConfig == nil {
+		webrtcConfig = webrtc.DefaultConfig()
+	}
+	transport := federation.NewWebRTCTransport(webrtcConfig)
+	log.WithFields(log.Fields{
+		"server_id":      serverID,
+		"signaling_url":  webrtcConfig.SignalingURL,
+		"stun_servers":   webrtcConfig.STUNServers,
+	}).Info("WebRTC federation transport initialized for WASM build")
+	return transport
 }
 
 // setWebRTCSignalingServer configures the signaling server URL for peer discovery.

@@ -1,8 +1,8 @@
 // Package webrtc peer connection implementation.
 // This file implements individual WebRTC peer connections with connection
 // establishment, state management, and message send/receive operations.
-// Note: This is a stub implementation for testing; real WebRTC integration
-// requires github.com/pion/webrtc/v3.
+// Native (non-WASM) builds use a simulated connection for testing; WASM builds
+// use github.com/pion/webrtc/v3 for real browser-to-browser P2P connections.
 package webrtc
 
 import (
@@ -12,8 +12,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 var errSendTimeout = errors.New("send timeout")
@@ -45,7 +43,9 @@ func NewPeer(id string, config *Config) (*Peer, error) {
 }
 
 // Connect establishes a connection to a remote peer.
-// This initiates the WebRTC offer/answer exchange via the signaling server.
+// On WASM builds this initiates a real WebRTC offer/answer exchange via the
+// signaling server using github.com/pion/webrtc/v3.  On native builds it
+// falls back to a lightweight in-process simulation suitable for testing.
 func (p *Peer) Connect(remotePeerID string) error {
 	p.mu.Lock()
 	if p.state != StateNew {
@@ -58,24 +58,13 @@ func (p *Peer) Connect(remotePeerID string) error {
 	p.stats.State = StateConnecting
 	p.mu.Unlock()
 
-	// In a real implementation, this would:
-	// 1. Create WebRTC PeerConnection
-	// 2. Create data channel
-	// 3. Generate SDP offer
-	// 4. Send offer via signaling server
-	// 5. Wait for answer and ICE candidates
-	// 6. Establish P2P connection
-	//
-	// For testing, we simulate the connection process.
-
 	ctx, cancel := context.WithTimeout(context.Background(), p.Config.ConnectionTimeout)
 	defer cancel()
 
-	// Simulate connection establishment
-	go func(ctx context.Context) {
-		defer recovery.RecoverPanicWithLogger("webrtc_peer", "simulate connection", nil)()
-		p.simulateConnection(ctx)
-	}(ctx)
+	// Delegate to the build-tag-selected connection implementation.
+	// WASM: peer_wasm.go — real pion/webrtc PeerConnection + data channel.
+	// Native: peer_native.go — simulated in-process connection for tests.
+	p.launchConnectionAttempt(ctx, remotePeerID)
 
 	// Wait for connection or timeout
 	for {
@@ -109,51 +98,17 @@ func (p *Peer) Connect(remotePeerID string) error {
 	}
 }
 
-// simulateConnection simulates the WebRTC connection process for testing.
-// In production, this would be replaced with actual WebRTC negotiation.
-func (p *Peer) simulateConnection(ctx context.Context) {
-	// Simulate minimal connection delay for testing
-	// In production, signaling (100-500ms) + ICE gathering (500-2000ms)
-	time.Sleep(10 * time.Millisecond)
-
-	// Check for cancellation
-	select {
-	case <-ctx.Done():
-		p.stateChangeChan <- StateFailed
-		return
-	default:
-	}
-
-	// Connection successful
-	p.mu.Lock()
-	p.state = StateConnected
-	p.stats.State = StateConnected
-	p.mu.Unlock()
-
-	// Notify state change
-	p.stateChangeChan <- StateConnected
-
-	// Start message processing
-	go func() {
-		defer recovery.RecoverPanicWithLogger("webrtc_peer", "process messages", nil)()
-		p.processMessages()
-	}()
-}
-
-// processMessages handles sending and receiving messages on the data channel.
+// processMessages handles dispatching queued outgoing messages to the data
+// channel.  It runs in a dedicated goroutine started once the connection is
+// established.  The actual send is delegated to trySend, which is
+// implemented per-platform in peer_native.go / peer_wasm.go.
 func (p *Peer) processMessages() {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-p.closeChan:
 			return
-		case <-p.sendChan:
-			// In production, this would send via WebRTC data channel
-			// Stats are updated in Send() method
-		case <-ticker.C:
-			// Periodic housekeeping
+		case data := <-p.sendChan:
+			p.trySend(data)
 		}
 	}
 }

@@ -221,15 +221,13 @@ type Peer struct {
 	// timeProvider abstracts time access for deterministic testing.
 	timeProvider TimeProvider
 
-	// This is a stub implementation. In a real WebRTC implementation,
-	// this struct would also hold:
-	// - *webrtc.PeerConnection (from github.com/pion/webrtc/v3)
-	// - *webrtc.DataChannel
-	// - signaling connection (WebSocket)
-	// - ICE candidate queues
-	//
-	// For testing purposes, we simulate WebRTC behavior without the
-	// external dependency, following Venture's minimal dependency principle.
+	// peerConn holds the underlying WebRTC peer connection.
+	// Value is *webrtc.PeerConnection (WASM builds via pion) or nil (native builds).
+	peerConn interface{}
+
+	// dataChannel holds the WebRTC data channel used for game federation messages.
+	// Value is *webrtc.DataChannel (WASM builds via pion) or nil (native builds).
+	dataChannel interface{}
 }
 
 // ConnectionMetrics holds aggregated metrics for all peer connections.

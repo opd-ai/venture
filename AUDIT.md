@@ -182,7 +182,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   inside the host-and-play / single-player branch (avoid double-loading when an
   embedded server is already managing mods).
 
-- [ ] **G6 — `pkg/engine/vr_webxr_adapters.go` documented but missing** —
+- [x] **G6 — `pkg/engine/vr_webxr_adapters.go` documented but missing** —
   `pkg/vr/doc.go:79,84` and `pkg/engine/vr_openxr_adapters.go:9,31-35` both reference
   a `pkg/engine/vr_webxr_adapters.go` file with `//go:build js` constraints for the
   WASM VR path. The file does not exist (`ls pkg/engine/vr_*.go` confirms only

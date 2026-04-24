@@ -195,7 +195,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `navigator.xr` (`requestSession("immersive-vr")`, `XRReferenceSpace`, frame
   callbacks). Add a `//go:build js` smoke test.
 
-- [ ] **G7 — `cmd/client` does not expose Prometheus/health endpoints** —
+- [x] **G7 — `cmd/client` does not expose Prometheus/health endpoints** —
   `pkg/observability/MetricsExporter` is used only in `cmd/server/main.go:1270`. The
   client has no `/metrics`, `/healthz`, `/ready`, or `/status` server. ROADMAP §64
   records "Health Check Endpoints" as ✅ Achieved but the implementation is

@@ -207,7 +207,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   opt-in flag `--metrics-port` to avoid surprising desktop users. Register the
   client-side perf monitor and embedded server (if any) as sources.
 
-- [ ] **G8 — Dead `Server` constructor in `pkg/hostplay`** —
+- [x] **G8 — Dead `Server` constructor in `pkg/hostplay`** —
   `pkg/hostplay/host_and_play.go:45` (`hostplay.New(...)` returning `*Server`) and the
   `*Server` type are not referenced outside the package's own tests. The live
   host-and-play path uses `pkg/hostplay.NewServerManager` (`cmd/client/util.go:210`),

@@ -51,10 +51,12 @@ func (l *AsyncLoader) StartGeneration(generator procgen.Generator, seed int64, p
 		// Generate terrain (this is the slow part: 12-50ms for composite)
 		result, err := generator.Generate(seed, params)
 		if err != nil {
-			l.mu.Lock()
-			l.err = err
-			l.progress = 0.0
-			l.mu.Unlock()
+			func() {
+				l.mu.Lock()
+				defer l.mu.Unlock()
+				l.err = err
+				l.progress = 0.0
+			}()
 			if l.logger != nil {
 				l.logger.WithError(err).Error("async terrain generation failed")
 			}
@@ -64,10 +66,12 @@ func (l *AsyncLoader) StartGeneration(generator procgen.Generator, seed int64, p
 		// Validate result type
 		terrain, ok := result.(*Terrain)
 		if !ok {
-			l.mu.Lock()
-			l.err = fmt.Errorf("generator returned invalid type: expected *Terrain, got %T", result)
-			l.progress = 0.0
-			l.mu.Unlock()
+			func() {
+				l.mu.Lock()
+				defer l.mu.Unlock()
+				l.err = fmt.Errorf("generator returned invalid type: expected *Terrain, got %T", result)
+				l.progress = 0.0
+			}()
 			if l.logger != nil {
 				l.logger.WithField("type", fmt.Sprintf("%T", result)).Error("invalid terrain type")
 			}
@@ -78,10 +82,12 @@ func (l *AsyncLoader) StartGeneration(generator procgen.Generator, seed int64, p
 		l.setProgress(0.9)
 
 		// Store result and mark complete
-		l.mu.Lock()
-		l.result = terrain
-		l.progress = 1.0
-		l.mu.Unlock()
+		func() {
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			l.result = terrain
+			l.progress = 1.0
+		}()
 
 		if l.logger != nil {
 			l.logger.WithFields(logrus.Fields{
@@ -140,6 +146,6 @@ func (l *AsyncLoader) GetResult() *Terrain {
 // setProgress updates the progress value (thread-safe helper).
 func (l *AsyncLoader) setProgress(p float64) {
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.progress = p
-	l.mu.Unlock()
 }

@@ -23,6 +23,7 @@ type fileSystemMod struct {
 	id      string
 	version string
 	hash    string
+	modtime int64 // Unix nanosecond timestamp of the file when last hashed
 }
 
 // NewFileSystemFileWatcher creates a new filesystem-based file watcher.
@@ -46,17 +47,25 @@ func (w *FileSystemFileWatcher) SetLogger(logger *logrus.Logger) {
 }
 
 // GetFileHash implements FileWatcher interface.
-// Returns SHA256 hash of mod file contents.
+// Returns SHA256 hash of mod file contents.  The cache entry is automatically
+// invalidated when the file's modification time has changed since it was last
+// hashed, so callers detect on-disk changes without explicit cache management.
 func (w *FileSystemFileWatcher) GetFileHash(modID string) (string, error) {
+	filename := filepath.Join(w.modsDir, modID+".json")
+
+	// Stat the file first to check modtime before acquiring a write lock.
+	info, statErr := os.Stat(filename)
+
 	w.mu.RLock()
 	cached, exists := w.cache[modID]
 	w.mu.RUnlock()
 
-	if exists {
+	if exists && statErr == nil && info.ModTime().UnixNano() == cached.modtime {
+		// File is unchanged since last hash — return cached value.
 		return cached.hash, nil
 	}
 
-	// Cache miss - compute hash from filesystem
+	// Cache miss or file modified — (re-)read and hash from filesystem.
 	data, err := w.readModFile(modID)
 	if err != nil {
 		return "", err
@@ -64,13 +73,18 @@ func (w *FileSystemFileWatcher) GetFileHash(modID string) (string, error) {
 
 	hash := ComputeHash(data)
 
-	// Update cache
+	// Update cache, recording the current modtime so future calls can detect changes.
 	version, _ := w.extractVersion(data)
+	var modtime int64
+	if statErr == nil {
+		modtime = info.ModTime().UnixNano()
+	}
 	w.mu.Lock()
 	w.cache[modID] = &fileSystemMod{
 		id:      modID,
 		version: version,
 		hash:    hash,
+		modtime: modtime,
 	}
 	w.mu.Unlock()
 
@@ -84,17 +98,21 @@ func (w *FileSystemFileWatcher) GetModData(modID string) ([]byte, error) {
 }
 
 // GetModVersion implements FileWatcher interface.
-// Extracts version field from mod JSON.
+// Extracts version field from mod JSON.  Like GetFileHash, the cached value is
+// automatically invalidated when the file's modtime changes.
 func (w *FileSystemFileWatcher) GetModVersion(modID string) (string, error) {
+	filename := filepath.Join(w.modsDir, modID+".json")
+	info, statErr := os.Stat(filename)
+
 	w.mu.RLock()
 	cached, exists := w.cache[modID]
 	w.mu.RUnlock()
 
-	if exists {
+	if exists && statErr == nil && info.ModTime().UnixNano() == cached.modtime {
 		return cached.version, nil
 	}
 
-	// Cache miss - read from filesystem
+	// Cache miss or stale — read from filesystem.
 	data, err := w.readModFile(modID)
 	if err != nil {
 		return "", err
@@ -105,13 +123,17 @@ func (w *FileSystemFileWatcher) GetModVersion(modID string) (string, error) {
 		return "", err
 	}
 
-	// Update cache
 	hash := ComputeHash(data)
+	var modtime int64
+	if statErr == nil {
+		modtime = info.ModTime().UnixNano()
+	}
 	w.mu.Lock()
 	w.cache[modID] = &fileSystemMod{
 		id:      modID,
 		version: version,
 		hash:    hash,
+		modtime: modtime,
 	}
 	w.mu.Unlock()
 

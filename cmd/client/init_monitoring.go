@@ -19,14 +19,17 @@ import (
 )
 
 // startPerformanceMonitoring initializes all performance monitoring goroutines.
-// Only runs when verbose mode is enabled.
-func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.Entry) {
+// Only runs when verbose mode is enabled. Returns a cancel function that stops
+// the legacy metrics goroutine on game exit (AUDIT.md G14-5).
+func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.Entry) context.CancelFunc {
 	if !*verbose {
-		return
+		return func() {}
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	perfMonitor, stabilityMonitor := initializeMonitors(game, clientLogger)
-	startLegacyMetricsMonitor(perfMonitor, clientLogger)
+	startLegacyMetricsMonitor(ctx, perfMonitor, clientLogger)
 	startStabilityMonitor(game, stabilityMonitor, clientLogger)
+	return cancel
 }
 
 // initializeMonitors creates and configures performance and stability monitors.
@@ -49,13 +52,19 @@ func initializeMonitors(game *engine.EbitenGame, clientLogger *logrus.Entry) (*e
 }
 
 // startLegacyMetricsMonitor starts background goroutine for legacy performance metrics.
-func startLegacyMetricsMonitor(perfMonitor *engine.PerformanceMonitor, clientLogger *logrus.Entry) {
+// The goroutine shuts down cleanly when ctx is cancelled (AUDIT.md G14-5).
+func startLegacyMetricsMonitor(ctx context.Context, perfMonitor *engine.PerformanceMonitor, clientLogger *logrus.Entry) {
 	go func() {
 		ticker := time.NewTicker(perfMonitorInterval * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			metrics := perfMonitor.GetMetrics()
-			clientLogger.WithField("metrics", metrics.String()).Info("performance metrics")
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				metrics := perfMonitor.GetMetrics()
+				clientLogger.WithField("metrics", metrics.String()).Info("performance metrics")
+			}
 		}
 	}()
 }

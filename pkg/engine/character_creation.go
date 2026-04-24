@@ -247,6 +247,9 @@ type EbitenCharacterCreation struct {
 	// Preset name buttons for WASM/mobile fallback
 	presetNameButtons []*mobile.TouchButton
 
+	// Portrait preset buttons for WASM/mobile: procedural color-based portraits (G12).
+	portraitPresetButtons []*mobile.TouchButton
+
 	// Deterministic name generation
 	worldSeed      int64 // World seed for deterministic name generation
 	nameGenCounter int   // Counter to allow multiple unique name generations per seed
@@ -346,6 +349,9 @@ func (cc *EbitenCharacterCreation) SetDefaultNameFromSeed(seed int64) {
 	// Generate preset name buttons with deterministic random names.
 	// Uses the world seed offset by index to produce varied but reproducible names.
 	cc.generatePresetNameButtons(seed)
+
+	// G12: initialise the portrait preset gallery (fixed set, seed-independent).
+	cc.generatePortraitPresetButtons()
 }
 
 // generatePresetNameButtons creates touch buttons with seed-derived random names
@@ -385,6 +391,56 @@ func (cc *EbitenCharacterCreation) generatePresetNameButtons(seed int64) {
 	)
 }
 
+// portraitPresetEntry describes a named procedurally-generated portrait colour for
+// mobile/WASM platforms where file-based import is unavailable (AUDIT.md G12).
+type portraitPresetEntry struct {
+	name  string
+	color color.RGBA
+}
+
+// portraitPresets is the gallery of selectable procedural portrait styles.
+var portraitPresets = []portraitPresetEntry{
+	{"Flame", color.RGBA{210, 70, 30, 255}},
+	{"Ocean", color.RGBA{30, 100, 200, 255}},
+	{"Forest", color.RGBA{40, 130, 50, 255}},
+	{"Shadow", color.RGBA{55, 30, 80, 255}},
+	{"Sand", color.RGBA{200, 165, 65, 255}},
+	{"Frost", color.RGBA{160, 210, 230, 255}},
+}
+
+// portraitPresetSize is the edge length of the square procedural portrait generated
+// for the preset gallery on mobile/WASM (G12).
+const portraitPresetSize = 64
+
+// generatePresetPortraitImage creates a portraitPresetSize×portraitPresetSize
+// solid-colour portrait image.
+// Called from button callbacks inside the Ebiten game loop, so ebiten.NewImage is safe.
+func generatePresetPortraitImage(c color.RGBA) *ebiten.Image {
+	img := ebiten.NewImage(portraitPresetSize, portraitPresetSize)
+	img.Fill(c)
+	return img
+}
+
+// generatePortraitPresetButtons creates touch buttons for the portrait preset gallery
+// shown on mobile/WASM in the portrait-selection step (G12).
+func (cc *EbitenCharacterCreation) generatePortraitPresetButtons() {
+	cc.portraitPresetButtons = make([]*mobile.TouchButton, len(portraitPresets))
+	for i, p := range portraitPresets {
+		capturedPreset := p
+		cc.portraitPresetButtons[i] = mobile.NewTouchButton(
+			0, 0,
+			80, 36,
+			capturedPreset.name,
+			func() { cc.handlePortraitPreset(capturedPreset) },
+		)
+	}
+}
+
+// handlePortraitPreset applies a preset colour portrait when a gallery swatch is tapped.
+func (cc *EbitenCharacterCreation) handlePortraitPreset(p portraitPresetEntry) {
+	cc.characterData.Portrait = generatePresetPortraitImage(p.color)
+	cc.characterData.PortraitPath = "preset:" + p.name
+}
 // GetDefaults returns the current default values
 func (cc *EbitenCharacterCreation) GetDefaults() CharacterCreationDefaults {
 	return cc.defaults
@@ -424,6 +480,15 @@ func (cc *EbitenCharacterCreation) updateTouchControls() {
 
 	if cc.currentStep == stepNameInput {
 		for _, btn := range cc.presetNameButtons {
+			if btn != nil {
+				btn.Update()
+			}
+		}
+	}
+
+	// G12 (AUDIT.md): update portrait preset gallery buttons on mobile/WASM.
+	if cc.currentStep == stepPortraitSelection {
+		for _, btn := range cc.portraitPresetButtons {
 			if btn != nil {
 				btn.Update()
 			}
@@ -489,6 +554,24 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 		buttonY := cc.panelY + 200 // Below the input box
 
 		for i, btn := range cc.presetNameButtons {
+			if btn != nil {
+				btn.SetPosition(
+					float64(startX+i*(buttonWidth+buttonSpacing)),
+					float64(buttonY),
+				)
+			}
+		}
+	}
+
+	// G12: Position portrait preset gallery buttons below the portrait preview area.
+	if cc.currentStep == stepPortraitSelection && len(cc.portraitPresetButtons) > 0 {
+		buttonSpacing := 8
+		buttonWidth := 80
+		totalWidth := len(cc.portraitPresetButtons)*buttonWidth + (len(cc.portraitPresetButtons)-1)*buttonSpacing
+		startX := cc.panelX + cc.panelWidth/2 - totalWidth/2
+		buttonY := cc.panelY + 340 // Below the portrait preview area
+
+		for i, btn := range cc.portraitPresetButtons {
 			if btn != nil {
 				btn.SetPosition(
 					float64(startX+i*(buttonWidth+buttonSpacing)),
@@ -1519,6 +1602,24 @@ func (cc *EbitenCharacterCreation) drawPresetNameButtons(screen *ebiten.Image) {
 	}
 }
 
+// drawPortraitPresetGallery renders the procedural portrait-colour gallery on
+// mobile/WASM (G12, AUDIT.md).  It draws a hint label and delegates button
+// rendering to the TouchButton instances owned by portraitPresetButtons.
+func (cc *EbitenCharacterCreation) drawPortraitPresetGallery(screen *ebiten.Image, x, y, _ int) {
+	hintText := "Choose a portrait colour:"
+	// basicfont.Face7x13 has 7px-wide glyphs; halved (≈3) for centering is the
+	// same approximation used throughout this file for text layout.
+	const halfGlyphWidth = 3
+	hintX := x - len(hintText)*halfGlyphWidth
+	text.Draw(screen, hintText, basicfont.Face7x13, hintX, y+13,
+		color.RGBA{100, 200, 100, 255})
+	for _, btn := range cc.portraitPresetButtons {
+		if btn != nil {
+			btn.Draw(screen)
+		}
+	}
+}
+
 // drawBackButton renders the back navigation button.
 func (cc *EbitenCharacterCreation) drawBackButton(screen *ebiten.Image) {
 	if cc.backButton != nil {
@@ -1787,11 +1888,9 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 		text.Draw(screen, browseText, basicfont.Face7x13, browseTextX, browseButtonY+17,
 			color.RGBA{255, 255, 255, 255})
 	} else {
-		// Mobile/WASM: show preset-only hint instead of a non-functional browse button.
-		presetHint := "Portrait: type a preset name above or skip"
-		hintX := buttonX + buttonW/2 - len(presetHint)*3
-		text.Draw(screen, presetHint, basicfont.Face7x13, hintX, browseButtonY+17,
-			color.RGBA{100, 200, 100, 255})
+		// G12: Mobile/WASM — show the procedural preset gallery so players can
+		// select a colour-coded portrait without a file dialog.
+		cc.drawPortraitPresetGallery(screen, buttonX, browseButtonY, buttonW)
 	}
 
 	// Skip button

@@ -715,9 +715,10 @@ func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, 
 		game.World.AddSystem(sys.modBrowserSys)
 	}
 
-	// Provide a default in-memory repository.  A network-backed repository can be
-	// injected here in the future (e.g. HTTPModRepository pointing at a mod CDN).
-	sys.modBrowserSys.SetRepository(engine.NewInMemoryModRepository())
+	// G16 (AUDIT.md): Use the filesystem-backed mod repository so the mod browser
+	// shows mods already present in the mods/ directory on disk, rather than an
+	// empty in-memory store that was only suitable for testing.
+	sys.modBrowserSys.SetRepository(engine.NewFileSystemModRepository(modCfg.ModsDirectory))
 
 	// Install callback: parse raw JSON bytes into a Mod and add it to the manager.
 	sys.modBrowserSys.SetInstallCallback(func(modID string, modData []byte) error {
@@ -742,4 +743,34 @@ func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, 
 	})
 
 	log.Debug("ModBrowserSystem wired with modding.Manager callbacks")
+
+	// G15 (AUDIT.md): Register HotReloadSystem for live mod reloading.
+	// The system monitors the mods directory for changes and applies updates
+	// without requiring a game restart, fulfilling the Modding System goal.
+	hotReload := engine.NewHotReloadSystem(game.World)
+	hotReload.SetFileWatcher(engine.NewFileSystemFileWatcher(modCfg.ModsDirectory))
+	hotReload.SetReloadCallback(func(modID string, modData []byte) error {
+		mod, err := modding.ParseModFromBytes(modData)
+		if err != nil {
+			return fmt.Errorf("hot_reload: parse %s: %w", modID, err)
+		}
+		_ = sys.modManager.RemoveMod(modID)
+		if err := sys.modManager.AddMod(mod); err != nil {
+			return fmt.Errorf("hot_reload: add %s: %w", modID, err)
+		}
+		if err := sys.modManager.EnableMod(modID); err != nil {
+			return fmt.Errorf("hot_reload: enable %s: %w", modID, err)
+		}
+		log.WithField("mod_id", modID).Info("mod reloaded via HotReloadSystem")
+		return nil
+	})
+	hotReload.SetRollbackCallback(func(modID string, state *engine.ModState) error {
+		log.WithFields(logrus.Fields{
+			"mod_id":  modID,
+			"version": state.Version,
+		}).Warn("hot_reload: rollback requested; state migration not configured in this build")
+		return fmt.Errorf("hot_reload: rollback not configured for mod %s", modID)
+	})
+	game.World.AddSystem(hotReload)
+	log.Debug("HotReloadSystem registered for live mod reloading")
 }

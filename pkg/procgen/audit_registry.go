@@ -20,15 +20,15 @@ var (
 // Call from an init() function in the generator's package.
 func RegisterAuditEntry(e AuditEntry) {
 	auditMu.Lock()
+	defer auditMu.Unlock()
 	auditEntries = append(auditEntries, e)
-	auditMu.Unlock()
 }
 
 // GetAuditEntries returns a snapshot of all registered audit entries.
 func GetAuditEntries() []AuditEntry {
 	auditMu.Lock()
+	defer auditMu.Unlock()
 	cp := make([]AuditEntry, len(auditEntries))
 	copy(cp, auditEntries)
-	auditMu.Unlock()
 	return cp
 }

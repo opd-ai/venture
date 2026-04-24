@@ -211,30 +211,37 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 // Start begins listening for client connections.
 // Starts the accept loop and periodic cleanup of idle connections.
 func (s *TCPServer) Start() error {
-	s.clientsMu.Lock()
-	defer s.clientsMu.Unlock()
+	// Phase 1: check and set running state under the lock.
+	// Using a closure with defer so that all early-return paths release the lock
+	// without the fragile manual-unlock pattern that was here before (AUDIT.md G14-3).
+	if err := func() error {
+		s.clientsMu.Lock()
+		defer s.clientsMu.Unlock()
 
-	if s.running {
-		return fmt.Errorf("server already running")
+		if s.running {
+			return fmt.Errorf("server already running")
+		}
+
+		listener, err := net.Listen("tcp", s.config.Address)
+		if err != nil {
+			return fmt.Errorf("failed to listen on %s: %w", s.config.Address, err)
+		}
+
+		s.listener = listener
+		s.running = true
+		return nil
+	}(); err != nil {
+		return err
 	}
 
-	listener, err := net.Listen("tcp", s.config.Address)
-	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", s.config.Address, err)
-	}
-
-	s.listener = listener
-	s.running = true
-
-	// Start accept loop (unlock before spawning goroutine to prevent race)
-	s.clientsMu.Unlock()
+	// Phase 2: spawn goroutines outside the lock so the mutex is not held while
+	// the goroutines are starting (they may attempt to acquire it themselves).
 	s.wg.Add(1)
 	go s.acceptLoop()
 
 	// Start cleanup goroutine for idle connection management
 	s.wg.Add(1)
 	go s.cleanupLoop()
-	s.clientsMu.Lock()
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{

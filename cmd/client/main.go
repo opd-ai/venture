@@ -95,7 +95,8 @@ func main() {
 			sys.tradeRouteManager.Stop()
 		}
 	}()
-	startPerformanceMonitoring(game, clientLogger)
+	stopPerfMonitoring := startPerformanceMonitoring(game, clientLogger)
+	defer stopPerfMonitoring()
 
 	// G7 (AUDIT.md): opt-in Prometheus metrics endpoint for host-and-play observability.
 	stopClientMetrics := initializeClientMetrics(game, clientLogger)

@@ -254,7 +254,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `os.Exit` or `ebiten.Termination` is appropriate per platform) and call it from the
   confirm action.
 
-- [ ] **G12 — `pkg/engine/character_creation_mobile.go` — portrait dialog returns error** —
+- [x] **G12 — `pkg/engine/character_creation_mobile.go` — portrait dialog returns error** —
   `OpenPortraitDialog()` on `js || android || ios` returns
   `fmt.Errorf("file dialogs are not supported on mobile/WASM platforms")`
   (`pkg/engine/character_creation_mobile.go:15-17`). On mobile, character creation

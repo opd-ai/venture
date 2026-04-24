@@ -249,7 +249,7 @@ For detailed performance optimization, see **[Performance Tuning Guide](docs/PER
 | `--palette-rarity` | `epic` | Palette rarity/intensity (`common`, `uncommon`, `rare`, `epic`, `legendary`) |
 | `-profile` | `true` | Enable performance profiling with frame time tracking |
 | `-no-tutorial` | `false` | Disable tutorial for experienced players |
-| `--vr` | `false` | Enable experimental VR mode with auto-detection of VR runtime paths (activates stereoscopic rendering, head tracking with mouse fallback, VR controllers, and VR UI) **[Experimental: Uses mock adapters without hardware SDK integration]** |
+| `--vr` | `false` | Enable experimental VR mode with auto-detection of VR runtime paths (activates stereoscopic rendering, head tracking with mouse fallback, VR controllers, and VR UI) **[Experimental: default build uses stub adapters; build with `-tags vr` for OpenXR hardware integration]** |
 | `--force-vr` | `false` | Force experimental VR mode even without detected runtime paths (for testing VR systems without VR software installed) |
 | `--verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
 
@@ -325,24 +325,31 @@ The `--vr` flag enables **experimental** virtual reality mode with support for V
 |--------|-------------|
 | **Stereoscopic Rendering** | Renders separate images for each eye with proper eye separation for depth perception |
 | **Head Tracking** | Tracks camera orientation (uses mouse fallback when no VR runtime detected) |
-| **VR Controller Input** | Supports VR controller input mapping (uses mock adapters) |
+| **VR Controller Input** | Supports VR controller input mapping (OpenXR with `-tags vr`, stub otherwise) |
 | **VR UI** | Adapts the user interface for VR display with spatial positioning |
 
 **⚠️ Current Limitations:**
 
-VR mode is currently **experimental and uses mock/stub adapters** rather than real hardware SDK integration (OpenVR/OpenXR). The system performs runtime detection by checking for VR software installations (SteamVR, Oculus) and environment variables, but does not connect to actual VR hardware devices.
+VR mode is currently **experimental**. Two adapter tiers are provided:
 
-**What works:**
+| Build | Adapter | Head Tracking | Controllers | Haptics |
+|-------|---------|---------------|-------------|---------|
+| Default (`go build`) | Stub | Mouse fallback | Keyboard fallback | No-op |
+| VR build (`go build -tags vr`) | OpenXR 1.x | ✅ xrLocateViews | ✅ Action-input system | ✅ xrApplyHapticFeedback |
+
+The default build uses stub adapters for graceful degradation on systems without a VR runtime.  The `-tags vr` build links against the Khronos OpenXR Loader and provides full hardware head tracking, controller input, and haptic feedback through any OpenXR-compatible runtime (SteamVR, Monado, Meta Link, Windows Mixed Reality).
+
+**What works (default build):**
 - VR runtime path detection (SteamVR, Oculus installation paths)
 - Stereoscopic dual-eye rendering with configurable eye separation
 - Head tracking simulation with mouse fallback
 - VR UI layout and spatial positioning
-- Mock controller input for development/testing
+- Stub controller input for development/testing
 
-**What doesn't work:**
-- Actual VR headset hardware integration (no OpenVR/OpenXR SDK)
-- Real-time head tracking from physical headsets
-- Physical VR controller input from hardware devices
+**What works (VR build, `-tags vr`):**
+- All of the above, plus:
+- Real-time head orientation and position via `xrLocateViews`
+- Physical VR controller axes (trigger, grip, thumbstick) and buttons
 - Haptic feedback to controllers
 
 **Runtime Detection:**
@@ -352,8 +359,13 @@ VR mode is currently **experimental and uses mock/stub adapters** rather than re
 
 Example usage:
 ```bash
-# Enable VR mode with runtime path detection
+# Default build — stub adapters (no SDK required)
 ./venture-client --vr
+
+# VR build — OpenXR hardware adapters (requires OpenXR loader)
+# Linux: sudo apt install libopenxr-loader1 libopenxr-dev
+# Windows: install the Khronos OpenXR SDK and set CGO_LDFLAGS
+go build -tags vr ./cmd/client && ./venture-client --vr
 
 # Force VR mode for testing stereoscopic rendering
 ./venture-client --force-vr
@@ -362,7 +374,7 @@ Example usage:
 ./venture-client --force-vr --genre scifi --seed 2077 --fullscreen
 ```
 
-**Development Status:** VR hardware integration is planned for future releases. Current implementation provides the architecture and rendering pipeline for VR support, using mock adapters until hardware SDKs are integrated.
+**Development Status:** OpenXR 1.x hardware adapters are implemented (`pkg/engine/vr_openxr_adapters.go`). Validation on real VR headsets is pending; the feature remains experimental until that validation is complete.
 
 ### Mod Configuration
 

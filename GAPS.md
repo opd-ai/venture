@@ -1,778 +1,480 @@
-# Implementation Gaps — 2026-04-25 (rev 3)
+# Bug and Gap Details — 2026-04-24 (Rev 5)
 
-> **Rev 3 — forward-pass re-audit (2026-04-25).** This file supersedes the
-> `GAPS.md` rev 2 (2026-04-24). All G1–G16 findings from that revision remain
-> resolved. Four new gaps G17–G20 were identified and are documented below.
+> **Rev 5 — deep behavioral-correctness pass (2026-04-24).** This file supersedes
+> `GAPS.md` Rev 3 (2026-04-25). All G1–G31 findings from prior revisions are
+> confirmed resolved. Seven new gaps G32–G38 are documented below.
 >
-> **Rev 2 baseline (2026-04-24)**: All gaps G1–G16 confirmed resolved in code.
->
-> **Legacy ID compatibility**: G1–G14 are preserved below with updated status.
-> The legacy "Gap 1"–"Gap 6" identifiers (from the prior concurrency-safety
-> `GAPS.md`) remain locatable under **G14** sub-items "Prior Gap 1"–"Prior
-> Gap 6" — CI scripts and issue-tracker references to those IDs are still valid.
+> **Legacy ID compatibility**: G1–G31 are preserved in `AUDIT.md` and in the
+> historical `GAPS.md` entries; this file contains only the new Rev 5 findings.
 >
 > **Status legend**: ✅ RESOLVED | ⚠️ PARTIAL | 🔴 OPEN
 
 ---
 
-## G1 — OpenXR Controller / Headset Input Stubbed (Desktop VR)
-**Status**: ✅ RESOLVED
+## G32 — `AdvancedClassSystem` Adds Stat Bonuses Every Frame Without Guard
 
-- **Prior State**: All 11 controller/headset methods returned zero values; both
-  constructors left `connected = false`; 14 `TODO(vr-sdk)` markers covered every
-  required OpenXR call. The runtime selector never activated the OpenXR path
-  even with `-tags vr`.
-- **Resolution**: `pkg/engine/vr_openxr_adapters.go` rewritten — 615 lines of
-  cgo OpenXR implementation (`//go:build vr && !js`). The file now contains
-  `xrCreateInstance`, `xrGetSystem`, `xrCreateSession`, `xrLocateViews`,
-  `xrSyncActions`, `xrGetActionStateFloat/Vector2f/Boolean`, and
-  `xrApplyHapticFeedback` call sites. Zero TODO markers remain in the file
-  (verified: `grep -rn 'TODO\|FIXME\|HACK\|XXX' --include='*.go'
-  --exclude='*_test.go' .` returns 0 hits in the entire non-test codebase).
-  The stub fallback (`vr_stub_adapters.go`) still provides graceful degradation
-  for non-VR builds.
-- **Affected Files**: `pkg/engine/vr_openxr_adapters.go` (fully implemented),
-  `pkg/engine/vr_adapter_factory_openxr.go` (selector now fires under `-tags vr`).
+- **Category**: Per-Frame Mutation
+- **Status**: 🔴 OPEN
+- **Severity**: CRITICAL
 
----
+**Evidence** (`pkg/engine/advanced_class_system.go`):
+```go
+// Update — called every frame (lines 27–48)
+func (acs *AdvancedClassSystem) Update(entities []*Entity, deltaTime float64) {
+    classEntities = acs.world.GetEntitiesWith("advanced_class")
+    for _, entity := range classEntities {
+        playerID := strconv.FormatUint(entity.ID, 10)
+        stats, err := acs.manager.CalculateTotalStats(playerID)
+        if err != nil { continue }
+        acs.applyStatBonuses(entity, stats)   // ← called unconditionally each frame
+    }
+}
 
-## G2 — Eleven Engine Systems Defined But Never Registered
-**Status**: ✅ RESOLVED
+// applyHealthBonuses (line 68)
+health.Max += float64(bonuses.Health)   // no subtraction of prior value
 
-- **Prior State**: 11 systems (~5 672 LOC) had no `world.AddSystem(...)` call
-  in any `cmd/` binary or `pkg/engine/system_init.go`.
-- **Resolution**: All 11 systems are now registered in
-  `pkg/engine/system_init.go`:
-  - `CommerceSystem` — line 1094
-  - `DestructibleObjectSystem` — line 1864
-  - `CarrySystem` — line 1876
-  - `EventCalendarSystem` — line 2077
-  - `EventQuestSystem` — line 2081
-  - `EventDecorationSystem` — line 2085
-  - `EventRewardSystem` — line 2089
-  - `ModCompatibilitySystem` — line 2103
-  - `ModBrowserSystem` — line 2107
-  - `ExtendedAchievementSystem` — lines 2112–2114
-  - `TerrainModificationSystem` — registered server-side in
-    `cmd/server/v4_systems.go:392` and client-side in
-    `cmd/client/handlers.go:2284`
+// applyManaBonuses (line 84)
+mana.Max += bonuses.Mana               // no subtraction of prior value
 
----
+// applyStatsBonuses (lines 100–104)
+stats.Attack     += float64(bonuses.Strength)
+stats.Defense    += float64(bonuses.Defense)
+stats.MagicPower += float64(bonuses.Intelligence)
+stats.CritChance += bonuses.CritChance
+stats.CritDamage += bonuses.CritDamage
+```
 
-## G3 — Mod Browser & FS Repository Unreachable from Any Binary
-**Status**: ✅ RESOLVED
+- **Incorrect Behavior**: For a Warrior with `bonuses.Strength = 10` (attack
+  bonus per strength point), `stats.Attack` grows by 600 per second at 60 FPS.
+  After 10 seconds the player has +6 000 attack on top of the base 10, making
+  the game trivially winnable. `health.Max` and `mana.Max` grow similarly
+  without bound. Values are never clamped.
 
-- **Prior State**: `NewModBrowserSystem` and `NewModRepositoryFS` had no
-  production callers; players could not browse or install mods.
-- **Resolution**: All four layers are now wired:
-  1. `ModBrowserSystem` registered (`system_init.go:2107`).
-  2. Install/uninstall callbacks wired in `cmd/client/init_versions.go:653-744`.
-  3. Modding client-side fully enabled (G5 resolved).
-  4. Repository corrected from `NewInMemoryModRepository()` to
-     `NewFileSystemModRepository(modCfg.ModsDirectory)` at
-     `cmd/client/init_versions.go:722` (G16 resolved). Players now see
-     mods from the `mods/` directory in the in-game mod browser.
-- **Affected Files**: `cmd/client/init_versions.go`, `pkg/engine/system_init.go`.
+- **Root Cause**: The system applies bonuses additively on every Update tick
+  without storing the previously-applied value and subtracting it first. The
+  identical pattern was fixed for `TalentSystem` (G23) by adding
+  `removeTalentBonuses` + `AppliedDeltas` tracking, but `AdvancedClassSystem`
+  received no equivalent fix.
 
----
+- **Impact**: Every player who has an advanced class assigned (all players after
+  calling `InitializePlayerClass` from `cmd/client/handlers.go:3473`) develops
+  unbounded stats within seconds of gameplay, breaking all combat balance.
 
-## G4 — Seasonal Event Subsystem Has No Spawner
-**Status**: ✅ RESOLVED
-
-- **Prior State**: All four event systems were unregistered and no
-  `SeasonalEventComponent` was ever attached to the world entity.
-- **Resolution**: All four systems registered (G2). `SeasonalEventComponent`
-  seeded on the world entity at `pkg/engine/system_init.go:2093` with
-  magic constant `seed ^ 0x53454153` ("SEAS") for deterministic derivation.
-
----
-
-## G5 — Modding System Wired Server-Only
-**Status**: ✅ RESOLVED
-
-- **Prior State**: `cmd/client/` had zero references to `pkg/modding`; local
-  worlds ignored all `mods/*.json` rule overrides.
-- **Resolution**: `cmd/client/init_versions.go:657-700`
-  (`initializeModBrowserWiring`) loads `modding.NewManager()`, calls
-  `mgr.LoadAll()`, and calls
-  `game.World.SetModRules(modding.NewProviderAdapter(sys.modManager))` at
-  line 700. Single-player and host-and-play builds now honour mod rules.
-
----
-
-## G6 — `pkg/engine/vr_webxr_adapters.go` Documented but Missing
-**Status**: ✅ RESOLVED
-
-- **Prior State**: Documentation referenced this file but it did not exist;
-  WASM VR was unreachable.
-- **Resolution**: `pkg/engine/vr_webxr_adapters.go` created — 451 lines,
-  `//go:build js`, full `syscall/js` WebXR implementation covering
-  `navigator.xr.requestSession`, `XRReferenceSpace`, frame callbacks,
-  `XRViewerPose`, and `XRInputSource.gamepad` controller mapping.
-
----
-
-## G7 — Client Has No Observability/Health Endpoint
-**Status**: ✅ RESOLVED
-
-- **Prior State**: `MetricsExporter` was server-only; client had no
-  `/metrics`, `/healthz`, `/readyz`, or `/status` endpoint.
-- **Resolution**: `cmd/client/init_monitoring.go:154-158`
-  (`initObservabilityExporter`) and the `--enable-metrics` flag
-  (`cmd/client/util.go:70-72`) provide opt-in client-side Prometheus/health
-  endpoints. The exporter is started in the host-and-play path when the flag
-  is set.
-
----
-
-## G8 — Dead `Server` Type in `pkg/hostplay`
-**Status**: ✅ RESOLVED
-
-- **Prior State**: `pkg/hostplay/host_and_play.go` defined a `*Server` type
-  with no production callers alongside the used `*ServerManager`.
-- **Resolution**: `pkg/hostplay/host_and_play.go` has been removed. The
-  package now contains only `server_manager.go`, `input_handler.go`,
-  `state_broadcaster.go`, and `doc.go`. `cmd/client/util.go:214` correctly
-  uses `NewServerManager`.
-
----
-
-## G9 — `EnableShadows` Deprecation Not Enforced
-**Status**: ✅ RESOLVED
-
-- **Prior State**: The `// Deprecated:` comment existed but no runtime warning
-  or static-analysis enforcement fired.
-- **Resolution**: `pkg/rendering/lighting/system.go:44-51` emits
-  `logrus.Warn("EnableShadows is deprecated; set AOConfig.Enabled instead")`
-  in the system constructor when the deprecated combination is detected.
-
----
-
-## G10 — `ExtendedAchievementSystem` Shadows Wired Achievement System
-**Status**: ✅ RESOLVED
-
-- **Prior State**: Unregistered parallel system; potential double-fire if both
-  wired; ownership undocumented.
-- **Resolution**: Decision documented at `pkg/engine/system_init.go:2109-2114`.
-  Both systems are registered deliberately: the primary achievement system
-  handles kills/quests/crafting; `ExtendedAchievementSystem` handles
-  expression/social/meta achievements. The comment explicitly states they are
-  complementary and confirms no overlap in event handlers.
-
----
-
-## G11 — Menu "Exit Game" Returns Error Instead of Exiting
-**Status**: ✅ RESOLVED
-
-- **Prior State**: `pkg/engine/menu_system.go:613` returned
-  `fmt.Errorf("exit not implemented")`.
-- **Resolution**: `pkg/engine/menu_system.go:158-162` exposes
-  `SetExitCallback(func() error)`. `cmd/client/handlers.go:3190` injects a
-  callback returning `ebiten.Termination`. Exit now works on all desktop and
-  WASM platforms.
-
----
-
-## G12 — Mobile Portrait Picker Returns Error With No Replacement
-**Status**: ✅ RESOLVED (Option B implemented)
-
-- **Prior State**: `OpenPortraitDialog` returned a plain `fmt.Errorf`; UI
-  still showed the Browse button on mobile.
-- **Resolution**: Two layers of resolution:
-  1. The error is the typed sentinel `ErrPortraitDialogUnsupported`
-     (`pkg/engine/character_creation_mobile.go:30`); the character-creation
-     UI detects this sentinel and hides the Browse button on mobile builds.
-  2. **Option B implemented**: `pkg/engine/character_creation.go` provides
-     a procedural preset-portrait gallery rendered without a file dialog,
-     with the implementation anchored by `portraitPresetButtons`,
-     `portraitPresets`, `handlePortraitPreset`, and the gallery layout
-     logic in that file.  Mobile players select a color-based procedural
-     portrait from the gallery instead of importing a custom image.
-- **Remaining item** (out of scope / won't-fix for now): A native
-  image-picker bridge via `pkg/mobile.OpenImagePicker` (Option A) was not
-  implemented; the preset gallery is the accepted alternative per the
-  zero-asset, procedural-content philosophy.
-- **Affected Files**: `pkg/engine/character_creation_mobile.go`,
-  `pkg/engine/character_creation.go`
-
----
-
-## G13 — `pkg/companion` Namespace Is Undocumented
-**Status**: ✅ RESOLVED
-
-- **Prior State**: No `pkg/companion/doc.go`; namespace purpose unclear.
-- **Resolution**: `pkg/companion/doc.go` created with full namespace map
-  describing the relationship between `pkg/companion/learning/`,
-  `pkg/engine/companion_*.go`, and `pkg/procgen/companion/`.
-
----
-
-## G14 — Carryover: Concurrency-Safety Gaps from Prior Root `GAPS.md`
-**Status**: ✅ All six prior gaps resolved
-
-> **Legacy ID note**: The sub-items below were originally labelled "Gap 1"–"Gap 6"
-> in the concurrency-safety `GAPS.md` that preceded the 2026-04-24 implementation
-> audit. CI scripts and issue-tracker references to those IDs remain valid here.
-
-### Prior Gap 1 — `FederatedMarket.Stop()` lacks `sync.Once`
-**Status**: ✅ RESOLVED — `stopOnce sync.Once` field added at
-`pkg/network/federation/market.go:24`; `Stop()` at line 117 now uses
-`s.stopOnce.Do(...)`.
-
-### Prior Gap 2 — `FederatedMarket.Start()` lacks `sync.Once`
-**Status**: ✅ RESOLVED — `startOnce sync.Once` field added at
-`pkg/network/federation/market.go:23`; `Start()` at line 98 now uses
-`s.startOnce.Do(...)`.
-
-### Prior Gap 3 — `TCPServer.Start()` defer-unlock fragility
-**Status**: ✅ RESOLVED
-
-- **Location**: `pkg/network/server.go:213-254`
-- **Resolution**: `Start()` now uses a closure pattern — Phase 1 (lock
-  acquisition, listener creation, `running = true`) executes inside an
-  anonymous closure with `defer s.clientsMu.Unlock()` so every early return
-  releases the lock automatically.  Phase 2 (goroutine spawning) runs outside
-  the closure with no lock held.  A comment at line 216 references this fix.
-  The fragile manual-lock/manual-unlock/re-lock sequence no longer exists.
-- **Affected Files**: `pkg/network/server.go`
-
-### Prior Gap 4 — Non-`defer` mutex unlock patterns
-**Status**: ✅ RESOLVED
-
-- **Locations** (all now use `defer`):
-  - `pkg/procgen/audit_registry.go` — both `RegisterAuditEntry` and
-    `GetAuditEntries` use `defer auditMu.Unlock()` immediately after `Lock()`.
-  - `pkg/procgen/terrain/async_loader.go` — every goroutine callback wraps
-    its critical section in a closure with `defer l.mu.Unlock()`, isolating
-    the lock scope and guaranteeing release even on panic.
-- **Affected Files**: `pkg/procgen/audit_registry.go`,
-  `pkg/procgen/terrain/async_loader.go`
-
-### Prior Gap 5 — `startLegacyMetricsMonitor` goroutine leaks on shutdown
-**Status**: ✅ RESOLVED
-
-- **Location**: `cmd/client/init_monitoring.go:54-69`
-- **Resolution**: `startLegacyMetricsMonitor` now accepts a
-  `context.Context` parameter (line 56).  The goroutine body uses a
-  `select` with a `<-ctx.Done()` case (line 62) that stops the ticker
-  and returns on context cancellation, matching the clean-shutdown
-  pattern already present in `startStabilityMonitor`.
-- **Affected Files**: `cmd/client/init_monitoring.go`
-
-### Prior Gap 6 — `CleanupTask` stop channel undocumented
-**Status**: ✅ RESOLVED — `pkg/network/projectile_sync.go:441-463`
-now carries doc comment: "Returns a stop channel — send a value to stop
-the cleanup task."
-
----
-
-## G15 — `HotReloadSystem` Defined and Fully Implemented But Never Registered
-**Status**: ✅ RESOLVED
-
-- **Prior State**: `NewHotReloadSystem` had no production callers; the system
-  existed only in the definition file and a demo example.
-- **Resolution**: `cmd/client/init_versions.go:748-816`
-  (`initializeModBrowserWiring`) now:
-  1. Creates a `FileSystemFileWatcher` pointed at `modCfg.ModsDirectory`.
-  2. Calls `engine.NewHotReloadSystem(game.World)` and wires the file
-     watcher, hash callback, reload callback (re-parse + Manager reload),
-     and rollback callback.
-  3. Calls `game.World.AddSystem(hotReload)` to register the system.
-  4. Creates a world-level entity with `HotReloadComponent` and calls
-     `hotReload.StartWatchingMod` for every currently enabled mod so the
-     system begins monitoring immediately at startup.
-  Mod changes in `mods/` are now detected and applied without a game restart.
-- **Affected Files**: `cmd/client/init_versions.go:748-816`
-
----
-
-## G16 — `FileSystemModRepository` Never Used in Production
-**Status**: ✅ RESOLVED
-
-- **Prior State**: `initializeModBrowserWiring` used
-  `engine.NewInMemoryModRepository()` (a testing stub), leaving the mod
-  browser empty for all players.
-- **Resolution**: `cmd/client/init_versions.go:719-722`
-  (`initializeModBrowserWiring`) now calls:
+- **Remediation**: Store the last-applied bonuses on the system or in the
+  `AdvancedClassComponent`. Before applying, subtract the previous bonuses; after
+  applying, cache the new bonuses. Pattern from `talent_system.go:77`:
   ```go
-  // G16 (AUDIT.md): Use the filesystem-backed mod repository …
-  sys.modBrowserSys.SetRepository(engine.NewFileSystemModRepository(modCfg.ModsDirectory))
+  acs.removeBonuses(entity, acs.lastApplied[entity.ID])
+  acs.applyStatBonuses(entity, stats)
+  acs.lastApplied[entity.ID] = stats
   ```
-  `FileSystemModRepository.FetchMods()` scans the `mods/` directory and
-  returns every valid `*.json` mod file as a `ModListing`, so players see
-  their locally installed mods in the browser immediately.
-- **Affected Files**: `cmd/client/init_versions.go:719-722`
+  Alternatively, use the existing `statBonusApplier` helper
+  (`pkg/engine/statmod.go`) which already implements this pattern correctly.
+
+- **Dependencies**: None — standalone fix.
+
+- **Effort**: small
 
 ---
 
-## Severity Summary (rev 2)
+## G33 — `StatusEffectCriticalChanceSystem` Permanently Corrupts `CritChance`
 
-| ID | Title | Status | Severity | Effort |
-|----|-------|--------|----------|--------|
-| G1 | OpenXR Controller / Headset Input Stubbed | ✅ RESOLVED | — | — |
-| G2 | Eleven Engine Systems Never Registered | ✅ RESOLVED | — | — |
-| G3 | Mod Browser Unreachable from Any Binary | ✅ RESOLVED | — | — |
-| G4 | Seasonal Event Subsystem Has No Spawner | ✅ RESOLVED | — | — |
-| G5 | Modding System Wired Server-Only | ✅ RESOLVED | — | — |
-| G6 | `vr_webxr_adapters.go` Documented but Missing | ✅ RESOLVED | — | — |
-| G7 | Client Has No Observability/Health Endpoint | ✅ RESOLVED | — | — |
-| G8 | Dead `Server` Type in `pkg/hostplay` | ✅ RESOLVED | — | — |
-| G9 | `EnableShadows` Deprecation Not Enforced | ✅ RESOLVED | — | — |
-| G10 | `ExtendedAchievementSystem` Shadows Wired System | ✅ RESOLVED | — | — |
-| G11 | Menu "Exit Game" Returns Error | ✅ RESOLVED | — | — |
-| G12 | Mobile Portrait Picker Returns Error (no alternative) | ✅ RESOLVED | — | — |
-| G13 | `pkg/companion` Namespace Undocumented | ✅ RESOLVED | — | — |
-| G14-1 | `FederatedMarket.Stop` lacks `sync.Once` (Prior Gap 1) | ✅ RESOLVED | — | — |
-| G14-2 | `FederatedMarket.Start` lacks `sync.Once` (Prior Gap 2) | ✅ RESOLVED | — | — |
-| G14-3 | `TCPServer.Start` defer-unlock fragility (Prior Gap 3) | ✅ RESOLVED | — | — |
-| G14-4 | Non-defer mutex unlock patterns (Prior Gap 4) | ✅ RESOLVED | — | — |
-| G14-5 | `startLegacyMetricsMonitor` goroutine leaks (Prior Gap 5) | ✅ RESOLVED | — | — |
-| G14-6 | `CleanupTask` stop channel undocumented (Prior Gap 6) | ✅ RESOLVED | — | — |
-| G15 | `HotReloadSystem` never registered | ✅ RESOLVED | — | — |
-| G16 | `FileSystemModRepository` unused in production | ✅ RESOLVED | — | — |
-| G17 | WebRTC browser-to-browser federation is simulated | 🔴 OPEN | — | see below |
-| G18 | `ClassProgressionSystem.Update()` is a no-op | 🔴 OPEN | — | see below |
-| G19 | Companion scout behavior uses hardcoded velocity | 🔴 OPEN | — | see below |
-| G20 | BehaviorTree ambush node uses random position offset | 🔴 OPEN | — | see below |
+- **Category**: Per-Frame Mutation
+- **Status**: 🔴 OPEN
+- **Severity**: CRITICAL
 
----
+**Evidence** (`pkg/engine/status_effect_crit_chance_system.go:60–92`):
+```go
+func (s *StatusEffectCriticalChanceSystem) Update(entities []*Entity, dt float64) {
+    // Clear cache each frame (lines 61–64)
+    for k := range s.critCache {
+        delete(s.critCache, k)
+    }
 
-## G17 — WebRTC Browser-to-Browser Federation is Simulated, Not Real
+    for _, entity := range entities {
+        stats := entity.GetStats()
+        if stats == nil { continue }
 
-**Status**: 🔴 OPEN  
-**Severity**: HIGH
+        modifier := s.calculateCritModifier(entity)
+        if modifier == 0.0 {
+            continue              // expired effect — no subtraction of prior modifier
+        }
 
-- **Finding**: The entire `pkg/network/federation/webrtc/` package is a
-  simulation harness, not a real WebRTC implementation. The package header at
-  `peer.go:4` states: _"This is a stub implementation for testing; real WebRTC
-  integration requires `github.com/pion/webrtc/v3`."_ The `Connect()` method
-  (`peer.go:77`) calls `simulateConnection()` (line 112), which sleeps for a
-  random interval then sets state to `StateConnected` artificially. No ICE
-  candidate gathering, no DTLS handshake, and no data channel creation occur.
-  The signaling server (`signaling.go:76,299`) is also simulated. The WASM
-  initializer `initWebRTCFederation()` (`cmd/client/webrtc_wasm.go:20`) is
-  defined but never called from any build entrypoint. `NewWebRTCTransport()`
-  (`transport_webrtc.go:31`) is never instantiated in production code — only in
-  `_test.go` files. `github.com/pion/webrtc/v3` does not appear in `go.mod`.
+        s.critCache[entity.ID] = modifier
+        stats.CritChance += modifier   // unconditional ADD every frame (line 82)
 
-- **Impact**: Browser-to-browser (WASM) federation — where two browser tabs
-  connect to each other without a dedicated TCP relay server — is listed as a
-  feature in `README.md` (line 60: "federation/WebRTC, portals") but is
-  non-functional. Desktop server federation over TCP works correctly and is
-  unaffected by this gap.
+        if stats.CritChance < 0.0 { stats.CritChance = 0.0 }
+        else if stats.CritChance > 1.0 { stats.CritChance = 1.0 }
+    }
+}
+```
+Because `critCache` is cleared at lines 61–64, `calculateCritModifier` always
+recomputes from scratch and never returns a cached value. The modifier is then
+added to `stats.CritChance` on **every frame** without subtracting the
+contribution from the previous frame.
 
-- **Affected Files**:
-  - `pkg/network/federation/webrtc/peer.go:4,69,77,112`
-  - `pkg/network/federation/webrtc/signaling.go:76,299`
-  - `pkg/network/federation/webrtc/nat_traversal.go:188`
-  - `pkg/network/federation/transport_webrtc.go:31` (never called in production)
-  - `cmd/client/webrtc_wasm.go:20` (initializer never invoked)
-  - `go.mod` (missing `github.com/pion/webrtc/v3`)
+- **Incorrect Behavior (positive modifier, e.g. "blessed" = +0.10)**:
+  - Frame 1: CritChance = 0.05 + 0.10 = 0.15
+  - Frame 10: CritChance = 0.95 + 0.10 = 1.05 → clamped to 1.0
+  - Blessed expires: `modifier = 0.0`, entity skipped via `continue`
+  - CritChance stays permanently at 1.0 (100% crit forever)
 
-- **Remediation Path**:
-  1. Add `github.com/pion/webrtc/v3` to `go.mod` (`go get
-     github.com/pion/webrtc/v3`). The pion library is WASM-safe and requires no
-     CGo.
-  2. Replace `simulateConnection()` in `peer.go` with `pion.NewPeerConnection`,
-     data-channel setup, and SDP offer/answer exchange via the existing signaling
-     transport interface.
-  3. Call `initWebRTCFederation(clientID)` from `cmd/client/main.go`'s WASM
-     startup path and wire the returned `*Peer` into the federation protocol via
-     `NewWebRTCTransport`.
-  4. Update README to clarify the feature is experimental / in progress until
-     implementation is complete.
+- **Incorrect Behavior (negative modifier, e.g. "cursed" = −0.10)**:
+  - Frame 1: CritChance = 0.05 − 0.10 = −0.05 → clamped to 0.0
+  - All frames: CritChance stays at 0.0 (clamped each frame)
+  - Cursed expires: entity skipped via `continue`
+  - CritChance stays permanently at 0.0 (0% crit forever)
 
----
+- **Root Cause**: The `critCache` serves as a "what modifier did we store for
+  combat lookup" cache, but it was repurposed without adding a "what was the last
+  crit delta applied to stats" cache. Without knowing the previous delta, it is
+  impossible to undo it. The `continue` on `modifier == 0.0` skips undo.
 
-## G18 — `ClassProgressionSystem.Update()` is a No-op
+- **Impact**: Any player or enemy briefly affected by a crit-modifier status
+  effect will have their CritChance permanently locked at 0 or 1 after the
+  effect expires. All PvP and PvE combat balance is affected.
 
-**Status**: 🔴 OPEN  
-**Severity**: LOW
-
-- **Finding**: The `Update` method body of `ClassProgressionSystem` at
-  `pkg/engine/class_progression_system.go:18–20` contains only a comment:
-  _"Currently a stub - progression happens through LevelUp() calls / This
-  system could be extended to apply passive effects."_ The system is registered
-  in the ECS world at `cmd/client/handlers.go:2170` and
-  `cmd/server/v4_systems.go:99`, runs every frame, and consumes a scheduler
-  slot while producing zero output.
-
-- **Impact**: Time-based passive class effects (per-second stamina modifiers,
-  class-specific buff tick-downs, passive aura reapplication) cannot be
-  expressed declaratively via the system. Core progression (XP, level-up
-  events, stat bonuses) is unaffected.
-
-- **Affected Files**:
-  - `pkg/engine/class_progression_system.go:18–20`
-  - `cmd/client/handlers.go:2170` (registration)
-  - `cmd/server/v4_systems.go:99` (registration)
-
-- **Remediation**: If passive effects are intentionally deferred, add a
-  `// Passive-effect processing is deferred to LevelUp() calls; see GAPS.md
-  G18` comment and note in ROADMAP.md. If passive effects are desired, iterate
-  entities with the `class_progression` component and apply class-specific regen
-  ticks per frame using the component's current class/level state.
-
----
-
-## G19 — Companion Scout Behavior Uses Hardcoded Diagonal Velocity
-
-**Status**: 🔴 OPEN  
-**Severity**: MEDIUM
-
-- **Finding**: `CompanionSystem.executeScout()` at
-  `pkg/engine/companion_system.go:494–502` contains the comment _"This is a
-  stub - full implementation would use pathfinding"_ and unconditionally sets
-  `velocityComp.VX = 80.0`, `velocityComp.VY = 80.0`. A companion placed in
-  Scout mode will always move diagonally north-east at maximum speed, ignoring
-  walls, owner position, visibility radius, and exploration targets.
-
-- **Impact**: Any companion assigned `BehaviorScout` mode exhibits broken
-  movement. The Companion system is wired and registered; the damage is
-  isolated to the scout behavior path.
-
-- **Affected Files**:
-  - `pkg/engine/companion_system.go:494–502` (stub body)
-  - `pkg/engine/companion_system.go:160` (caller: `executeBehavior` switch case)
-
-- **Remediation**: Minimum fix — add angular variation so scouts cycle through
-  cardinal directions using a per-companion step counter. Full fix — query
-  `SpatialPartition` for walkable cells at increasing radii from the owner,
-  drive the companion toward the least-recently-visited cell, and return it to
-  the owner when the radius is exhausted.
-
----
-
-## G20 — BehaviorTree Ambush Node Uses Random Position Offset
-
-**Status**: 🔴 OPEN  
-**Severity**: LOW
-
-- **Finding**: The ambush action node in
-  `pkg/engine/behavior_tree_advanced_nodes.go:391–396` contains the comment
-  _"In a full implementation, this would use pathfinding data."_ The ambush
-  position is computed as the entity's current position plus a random
-  `(rng.Float64()-0.5)*100` X/Y offset. No cover detection, line-of-sight
-  check, or walkability validation is performed; enemies may target positions
-  inside solid terrain or in full view of the player.
-
-- **Impact**: Enemy AI for stealth/ambush archetypes (assassins, hunters, traps)
-  is degraded. The node evaluates to `NodeRunning` and enemies move to a
-  semi-random nearby location rather than seeking genuine cover.
-
-- **Affected Files**:
-  - `pkg/engine/behavior_tree_advanced_nodes.go:385–397` (ambush node action)
-
-- **Remediation**: Replace the random offset with a query to
-  `SpatialPartition.Query()` filtering for passable tiles with low
-  `VisibilityComponent.Visibility` score (populated by the lighting system).
-  Fall back to the random offset if no low-visibility tiles are found nearby.
-
----
-
-> **Rev 4 additions — 2026-04-25.** Gaps G21–G31 found by tracing live
-> data-flow through the ECS update loop, HUD rendering path, combat
-> callbacks, and the mobile input pipeline. G1–G20 statuses unchanged.
-
----
-
-## G21 — Mobile Input Completely Non-Functional
-
-**Status**: 🔴 OPEN  
-**Severity**: CRITICAL
-
-- **Finding**: `MobileInputAdapter.Type()` returns `"input"` — the same key
-  as `EbitenInput.Type()` (`pkg/engine/input_system.go:159`). When
-  `cmd/mobile/mobile.go:309` calls `playerEntity.AddComponent(mobileInput)`,
-  `Entity.AddComponent` stores by type key (`e.Components[c.Type()] = c`,
-  `ecs.go:71`), overwriting the existing `*EbitenInput`. In
-  `InputSystem.processEntityInputs` (`input_system.go:1033–1041`):
+- **Remediation**: Add a `prevApplied map[uint64]float64` field tracking the
+  last delta written to each entity's `stats.CritChance`. Each frame:
   ```go
-  input, ok := inputComp.(*EbitenInput)
-  if !ok { continue }
+  // Undo previous contribution
+  stats.CritChance -= s.prevApplied[entity.ID]
+
+  // Compute and apply new contribution
+  modifier = s.calculateCritModifier(entity)
+  stats.CritChance += modifier
+  s.prevApplied[entity.ID] = modifier
+
+  // Clamp
   ```
-  The assertion fails for `*MobileInputAdapter`; the entity is silently
-  skipped and `applyInputToVelocity` is never called. The mobile player
-  cannot move, attack, or interact. Additionally, `MobileInputAdapter.Update()`
-  — which reads live touch positions from `DualJoystickLayout` — is never
-  called during the game loop, so joystick state is always stale.
+  On entity removal or effect expiry, ensure `delete(s.prevApplied, id)`.
 
-- **Impact**: Complete loss of player control on iOS and Android.
+  This is the same delta-tracking pattern correctly implemented in
+  `TerrainAmbushCritSystem` (lines 127–148, which tracks `s.critBonuses` and
+  subtracts `currentBonus` before adding `newBonus`).
 
-- **Affected Files**:
-  - `pkg/engine/input_system.go:1033–1041` (type assertion skip)
-  - `pkg/mobile/input_adapter.go:49–52` (type key collision with `EbitenInput`)
-  - `cmd/mobile/mobile.go:308–309` (overwrites EbitenInput component)
+- **Dependencies**: None.
 
-- **Remediation**:
-  1. Extend `processEntityInputs` to handle `InputProvider` interface when
-     `*EbitenInput` assertion fails:
-     ```go
-     if provider, ok := inputComp.(InputProvider); ok {
-         s.processInputProvider(entity, provider, deltaTime)
-     }
-     ```
-  2. Call `mobileInput.Update()` each frame — either register a pre-process
-     hook in `InputSystem.Update()`, or give `MobileInputAdapter` a unique
-     type key `"input_mobile"` so both components coexist and the
-     `*EbitenInput` assertion still succeeds for the desktop component.
+- **Effort**: small
 
 ---
 
-## G22 — XP Double-Award on Every Kill
+## G34 — `EquipmentSetBonusSystem` Output Never Consumed
 
-**Status**: 🔴 OPEN  
-**Severity**: HIGH
+- **Category**: System Output Never Used (Dangling Integration)
+- **Status**: 🔴 OPEN
+- **Severity**: HIGH
 
-- **Finding**: Two independent callbacks both call `AwardXP` for the same kill.
-  `SetKillCallback` at `pkg/engine/system_init.go:918–931` calls
-  `progressionSystem.AwardXP(attacker, xp)` at line 931 for every combat kill.
-  Separately, `configureDeathCallback` at `cmd/client/handlers.go:3585`
-  wires `createDeathCallback` which calls
-  `(*progressionSystem).AwardXP(*playerEntity, xpAmount)` at
-  `cmd/client/client_loot.go:512`. Both fire on the same entity death.
-  The two XP formulae (`CalculateXPReward` vs `calculateEnemyXP`) yield
-  different amounts; the player receives both every kill.
+**Evidence** (`pkg/engine/equipment_set_bonus_system.go:207–299`,
+`pkg/engine/equipment_set_bonus_component.go:83–110`):
 
-- **Impact**: XP gain is roughly doubled every kill. Players level up twice
-  as fast as designed; combat balance and progression pacing are broken.
+The system correctly detects equipment changes (via `currentHash !=
+setBonus.LastEquipmentHash`), recalculates which sets are active, and
+populates `EquipmentSetBonusComponent.ActiveSets` and `CombinedBonus`. It
+exposes these bonus values through the following methods:
+- `GetTotalDamageBonus() int`
+- `GetTotalDefenseBonus() int`
+- `GetTotalHealthBonus() int`
+- `GetTotalAttackSpeed() float64`
+- `GetTotalCritBonus() float64`
 
-- **Affected Files**:
-  - `pkg/engine/system_init.go:931` (kill callback — primary AwardXP call)
-  - `cmd/client/client_loot.go:512` (death callback — duplicate AwardXP call)
-  - `cmd/client/handlers.go:3585`
+A grep of all non-test Go files in `pkg/` and `cmd/` for any of these method
+names returns **zero results** outside of the component file itself and test
+files. Neither `CombatSystem.calculateDamage` nor `InventorySystem` nor any
+other system reads from `EquipmentSetBonusComponent`.
 
-- **Remediation**: Remove `AwardXP` from the kill callback in `system_init.go`
-  and retain the death-callback path which handles loot, animation, and
-  `DeadComponent` attachment in one transaction. Or merge both XP paths
-  into a single calculation shared by the kill callback.
+```bash
+grep -rn "GetTotalDamageBonus\|GetTotalDefenseBonus\|GetTotalHealthBonus\|GetTotalAttackSpeed\|GetTotalCritBonus" \
+  pkg/ cmd/ --include="*.go" | grep -v "_test.go" | grep -v "equipment_set_bonus"
+# Returns no output
+```
 
----
+- **Incorrect Behavior**: Wearing any combination of set items (e.g. the
+  "Inferno" 2-piece or 4-piece set) grants no stat benefit whatsoever. The
+  system faithfully tracks set membership but the computed bonuses are stored
+  in a component that nothing ever reads.
 
-## G23 — TalentSystem Stat Accumulation — Old Bonuses Never Removed
+- **Root Cause**: Integration step 5 of the six-link chain ("Output → Consumer")
+  is missing. The system's output is computed correctly; no downstream consumer
+  exists.
 
-**Status**: 🔴 OPEN  
-**Severity**: HIGH
+- **Impact**: The entire equipment set system is non-functional. Players who
+  collect set items for their bonuses receive no reward.
 
-- **Finding**: `TalentSystem.applyStatsBonuses` at
-  `pkg/engine/talent_system.go:183–212` directly adds flat bonuses to
-  `StatsComponent` fields (`stats.Attack += bonuses.FlatDamage`, etc.)
-  without first subtracting previously applied values. When `talent.Dirty`
-  is re-triggered (reset via `ResetAll()` or reallocation),
-  `applyStatsBonuses` is called again — adding the new bonuses on top of
-  the already-baked-in old ones. `AttributeAllocationSystem` correctly calls
-  `removeAppliedBonuses` at `attribute_allocation_system.go:204` before
-  reapplying; `TalentSystem` has no equivalent.
+- **Remediation**: Options (in order of invasiveness):
+  1. **In `CombatSystem.calculateDamage`**: retrieve
+     `EquipmentSetBonusComponent` from the attacker entity and add
+     `GetTotalDamageBonus()` to `baseDamage`.
+  2. **New applicator system**: Register an `EquipmentSetBonusApplicatorSystem`
+     after `EquipmentSetBonusSystem` in the update order. When the component's
+     `Dirty` flag is set, subtract old bonuses from stats and apply new ones.
+  3. **Inline in `InventorySystem`**: When equipment changes fire,
+     read set bonuses and propagate to `StatsComponent`.
 
-- **Impact**: Talent reset and reallocation yield permanent unbounded stat
-  growth. Combat balance is broken for any player who uses the respec flow.
+  Option 2 is recommended for clean separation of concerns.
 
-- **Affected Files**:
-  - `pkg/engine/talent_system.go:183–212`
-  - `pkg/engine/talent_component.go` (no `AppliedBonuses` field — needs adding)
+- **Dependencies**: None.
 
-- **Remediation**: Add `AppliedBonuses TalentBonus` to `TalentComponent`.
-  Before each `applyStatsBonuses` call, subtract `c.AppliedBonuses` from
-  stats, then apply new bonuses and update `c.AppliedBonuses`.
-
----
-
-## G24 — Desktop HUD Has No Mana Bar
-
-**Status**: 🔴 OPEN  
-**Severity**: HIGH
-
-- **Finding**: `HUDSystem.Draw()` at `pkg/engine/hud_system.go:71–99` calls
-  `drawHealthBar()`, `drawStatsPanel()`, `drawExperienceBar()`,
-  `drawNetworkStatus()`, and `drawTerritoryBonuses()` — no `drawManaBar()`.
-  Mana is a primary resource consumed by all spells (100+ mana-related
-  systems in `system_init.go`); `ManaComponent` is attached to every player
-  entity. The mobile HUD (`pkg/mobile/ui.go`) includes and renders a
-  `ManaBar ProgressBar` correctly.
-
-- **Impact**: Desktop players have zero mana feedback. Spell failures occur
-  silently; players cannot manage mana economy or gauge regen rate.
-
-- **Affected Files**:
-  - `pkg/engine/hud_system.go:71–99`
-
-- **Remediation**: Implement `drawManaBar(screen *ebiten.Image, entity *Entity)`
-  modeled on `drawHealthBar`. Read `ManaComponent.Current`/`.Max`, draw a
-  blue fill bar below the health bar, and clamp fill fraction to `[0, 1]`.
+- **Effort**: medium
 
 ---
 
-## G25 — Server `consumeItem` Heals Player by `item.Stats.Defense`
+## G35 — Minimum Damage Floor Applied Before Shield Absorption
 
-**Status**: 🔴 OPEN  
-**Severity**: HIGH
+- **Category**: Combat Formula Bug
+- **Status**: 🔴 OPEN
+- **Severity**: MEDIUM
 
-- **Finding**: `cmd/server/player_management.go:298`:
+**Evidence** (`pkg/engine/combat_system.go:569–574`):
+```go
+finalDamage := damageAfterResist
+if finalDamage < 1.0 {
+    finalDamage = 1.0          // floor at lines 570–572
+}
+finalDamage = s.applyShieldAbsorption(target, finalDamage)  // line 574
+```
+The 1.0 floor at lines 570–572 fires **before** shield absorption at line 574.
+`applyShieldAbsorption` subtracts up to `shield.AbsorbAmount` from
+`finalDamage` and can return 0.0. However, because `finalDamage` was already
+floored to 1.0, a shield that fully absorbs ≤ 1 damage still leaks 1 point per
+hit.
+
+- **Incorrect Behavior**: A target with a charged shield (`AbsorbAmount = 5`,
+  incoming `damageAfterResist = 0.3`) should take 0 damage (shield absorbs all).
+  Instead: `0.3 → floored to 1.0 → shield absorbs 1.0 → finalDamage = 0`.
+  If `AbsorbAmount = 0.8` then: `0.3 → floored to 1.0 → shield absorbs 0.8 →
+  finalDamage = 0.2 → target takes 0.2 damage`. In both cases more damage leaks
+  through than the attacker's raw damage warrants.
+
+  More practically: any attack that deals 0.x damage after resistance
+  (resistances > ~0.9 and moderate defense) will always deal 1 damage regardless
+  of shield because the floor clamps before shield can act.
+
+- **Root Cause**: The 1.0 floor is placed two lines before the shield call. This
+  ordering made sense before shields were added but was not re-evaluated when
+  `applyShieldAbsorption` was introduced.
+
+- **Impact**: Shield mechanics do not function as intended against highly-resisted
+  attacks. Affects any target that both has resistances and equips a shield.
+
+- **Remediation**: Move the floor after shield absorption, or apply it only to
+  `damageAfterResist` values that are positive but below 1.0 (which guards
+  against floating-point underflow, not intentional full blocks):
   ```go
-  healAmount := float64(item.Stats.Defense)
+  finalDamage = s.applyShieldAbsorption(target, damageAfterResist)
+  if finalDamage > 0 && finalDamage < 1.0 {
+      finalDamage = 1.0
+  }
   ```
-  Healing potions carry no `Defense` value; that field stores armor
-  contribution. All standard consumables heal for 0 HP server-side.
 
-- **Impact**: In dedicated-server mode all potion heals are no-ops.
-  In solo play, client-side prediction shows a heal but the server
-  corrects to 0 HP, causing a visible snap.
+- **Dependencies**: None.
 
-- **Affected Files**:
-  - `cmd/server/player_management.go:298`
-
-- **Remediation**: Use `item.Stats.Healing` (add to `ItemStats` if absent)
-  or `item.Value` as the heal amount.
+- **Effort**: small
 
 ---
 
-## G26 — `AttributeEffects` Fields Defined But Never Applied
+## G36 — `CancelCast` Does Not Apply Cooldown to Interrupted Slot
 
-**Status**: 🔴 OPEN  
-**Severity**: MEDIUM
+- **Category**: Spell/Mana Bug
+- **Status**: 🔴 OPEN
+- **Severity**: MEDIUM
 
-- **Finding**: `DefaultAttributeEffects()` at
-  `pkg/engine/attribute_allocation_component.go:93` returns non-zero values
-  for `CarryCapPerStr` (5.0), `SpeedBonusPerAgi` (0.5), `ManaRegenPerInt`
-  (0.1), `HealthRegenPerVit` (0.05), `StaminaPerEnd` (10.0). The function
-  `applyAttributeBonuses` at `attribute_allocation_system.go:113` reads
-  these into local variables but never writes them to any component.
+**Evidence** (`pkg/engine/spell_casting.go:2697–2741`):
+```go
+func (s *SpellCastingSystem) CancelCast(entity *Entity) {
+    ...
+    if slots.IsCasting() {
+        // Only records the cancel, no cooldown applied
+        slots.Casting    = -1
+        slots.CastingBar = 0
+        // slots.Cooldowns[slotIdx] is never written
+    }
+}
+```
+In `completeCast` (the success path), the cooldown is set:
+```go
+slots.Cooldowns[slots.Casting] = spell.Stats.Cooldown
+```
+`CancelCast` does not reproduce this write.
 
-- **Impact**: Five advertised per-attribute effects are silently zero.
-  Players who invest in STR for carry capacity, AGI for speed, INT for mana
-  regen, VIT for health regen, or END for stamina receive no benefit.
+- **Incorrect Behavior**: A player initiates a 3-second cast, advances the bar
+  to 2.9 seconds (97% progress), and then cancels. `slots.Cooldowns[slotIndex]`
+  remains 0. The player can immediately start the same cast again. This cycle
+  can be repeated indefinitely, creating 100% cast uptime and allowing
+  continuous cast-animation pressure without any spell economy cost.
 
-- **Affected Files**:
-  - `pkg/engine/attribute_allocation_system.go:113–200`
-  - `pkg/engine/attribute_allocation_component.go:93–108`
+- **Root Cause**: Cooldown assignment is only in the success path
+  (`completeCast`). The cancel path was not updated to apply a proportional
+  penalty.
 
-- **Remediation**: Write derived values to the appropriate components
-  (`InventoryComponent.MaxCarryWeight`, `VelocityComponent.MaxSpeed`,
-  `ManaComponent.Regen`, `HealthComponent.RegenRate`, `StaminaComponent.Max`)
-  inside `applyAttributeBonuses`.
-
----
-
-## G27 — HUD Health Bar Overflows on Overheal
-
-**Status**: 🔴 OPEN  
-**Severity**: MEDIUM
-
-- **Finding**: `pkg/engine/hud_system.go:126`:
-  ```go
-  healthPct := float32(health.Current / health.Max)
-  fillWidth  := int(float32(barWidth) * healthPct)
-  ```
-  No clamping. If `health.Current > health.Max` (overheal from spell/buff),
-  `fillWidth > barWidth` and the fill rect is drawn past the background
-  boundary, overwriting adjacent HUD elements. `pkg/mobile/ui.go:620`
-  correctly clamps to `[0, 1]`.
-
-- **Affected Files**:
-  - `pkg/engine/hud_system.go:124–130`
+- **Impact**: Spell economy is broken. Spells with long cast times and high
+  cooldowns are effectively free to "attempt" repeatedly, removing the
+  risk/reward trade-off of slow-cast spells.
 
 - **Remediation**:
   ```go
-  healthPct := float32(health.Current) / float32(health.Max)
-  if healthPct > 1.0 { healthPct = 1.0 }
-  if healthPct < 0.0 { healthPct = 0.0 }
+  if slots.IsCasting() {
+      slotIdx := slots.Casting
+      spell   := slots.GetSlot(slotIdx)
+      if spell != nil && slots.CastingBar > 0 {
+          // Partial cooldown proportional to how far the cast progressed
+          slots.Cooldowns[slotIdx] = spell.Stats.Cooldown * slots.CastingBar
+      }
+      slots.Casting    = -1
+      slots.CastingBar = 0
+  }
   ```
+  A simpler alternative: apply a fixed interrupt penalty (e.g. 25% of full
+  cooldown) regardless of progress to avoid encouraging fast-cancel optimisation.
+
+- **Dependencies**: None.
+
+- **Effort**: small
 
 ---
 
-## G28 — Entity Death Callback Fires Every Frame Until Entity Removed
+## G37 — `ClassAffinitySystem` Mana Regen Removal Uses Stale `mana.Max`
 
-**Status**: 🔴 OPEN  
-**Severity**: MEDIUM
+- **Category**: Stat Removal Precision Bug
+- **Status**: 🔴 OPEN
+- **Severity**: MEDIUM
 
-- **Finding**: `combat_system.go:218` (`handleEntityDeath`) calls
-  `s.onDeathCallback(entity, attacker)` when `health.Current <= 0` but does
-  NOT add `DeadComponent`. On subsequent frames the entity still exists,
-  health is still ≤ 0, and the callback fires again every frame.
-  The client-side `createDeathCallback` (`client_loot.go:490`) guards with
-  `if enemy.HasComponent("dead") { return }` and then adds `NewDeadComponent`,
-  but this only protects the one client-side callback — not server-side
-  callbacks or any future callbacks added without their own guard.
+**Evidence** (`pkg/engine/class_affinity_system.go:157–163`):
+```go
+if oldLevel, exists := comp.BonusesApplied[affinityType]; exists {
+    oldBonuses := GetAffinityBonuses(affinityType, oldLevel)
+    // Removal uses CURRENT mana.Max (line 160)
+    mana.Regen -= oldBonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
+}
+// Application also uses CURRENT mana.Max (line 163)
+mana.Regen += bonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
+```
 
-- **Impact**: Any death callback without an explicit guard processes N times
-  per death, where N = frames from death detection to entity removal.
-  Duplicated loot, XP, achievements, and analytics events are possible.
+Both the removal and the new application use the same current `mana.Max`. If
+`mana.Max` at removal equals `mana.Max` at the original application, the
+arithmetic is correct. But `mana.Max` is modified by many other systems
+(talents, items, buffs) and will routinely differ.
 
-- **Affected Files**:
-  - `pkg/engine/combat_system.go:218–250`
+**Worked example:**
+- T1: `mana.Max = 100`, mana affinity level 1 applied:
+  `mana.Regen += 0.05 × 100 × 1.0 = 5.0`
+- T2: Talent increases `mana.Max` to 150.
+- T3: Affinity level 1 → level 2 upgrade fires:
+  - Removal: `mana.Regen -= 0.05 × 150 × 1.0 = 7.5` (only 5.0 was added at T1)
+  - Net removal: −7.5 instead of −5.0 → permanent −2.5 mana regen drain
+  - Application: `mana.Regen += 0.08 × 150 × 1.0 = 12.0`
+  - Expected net (if removal was correct): +7.0; actual: +4.5
 
-- **Remediation**: Add `entity.AddComponent(NewDeadComponent())` inside
-  `handleEntityDeath` before invoking `onDeathCallback`. Update
-  `processEntity` entry guard to skip entities with `DeadComponent`.
+- **Incorrect Behavior**: Any affinity level-up that occurs after `mana.Max`
+  increased causes a permanent mana regen shortfall (drain). If `mana.Max`
+  decreased, the shortfall is inverted (regen bonus is overstated).
 
----
+- **Root Cause**: The contribution of the bonus was computed relative to
+  `mana.Max` at application time, but the removal computation uses the current
+  `mana.Max`, which may differ. The absolute regen value added was never stored.
 
-## G29 — `ClassAffinitySystem.decayStreaks` Uses Hardcoded `currentTime = 0`
+- **Impact**: Mana regeneration drifts from the intended value every time a
+  player levels up an affinity after gaining or losing max mana from any source.
+  In a typical session (multiple affinity upgrades, multiple talent purchases)
+  the cumulative drift can render mana regen negligible or extremely overpowered.
 
-**Status**: 🔴 OPEN  
-**Severity**: MEDIUM
-
-- **Finding**: `pkg/engine/class_affinity_system.go:103`:
+- **Remediation**: Store the absolute regen value that was applied in
+  `ClassAffinityComponent.AppliedManaRegen map[AffinityType]float64`. Replace
+  the current removal formula with a lookup into this map:
   ```go
-  currentTime := 0.0 // Would be game time in real implementation
+  mana.Regen -= comp.AppliedManaRegen[affinityType]  // exact previously-applied value
+  newRegen := bonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
+  mana.Regen += newRegen
+  comp.AppliedManaRegen[affinityType] = newRegen
   ```
-  `timeSinceActivity := currentTime - data.LastActivityTime` is always
-  negative, so `timeSinceActivity > s.streakDecayTime` is never true.
-  Streaks never decay regardless of elapsed time.
 
-- **Impact**: Class affinity streaks are permanent once built. The
-  time-based risk/reward design of the streak system is non-functional.
+- **Dependencies**: `ClassAffinityComponent` needs a new `AppliedManaRegen`
+  map field. Existing save-files may not have this field; zero-value on load
+  is safe (first level-up will apply correctly, subsequent level-ups will
+  track correctly).
 
-- **Affected Files**:
-  - `pkg/engine/class_affinity_system.go:100–113`
-
-- **Remediation**: Accumulate `s.elapsedTime += deltaTime` in `Update()`
-  and use it as `currentTime`.
+- **Effort**: small
 
 ---
 
-## G30 — No Self-Damage Guard in `validateAttackEntities`
+## G38 — Render Interpolation Guard False-Positive at World Origin
 
-**Status**: 🔴 OPEN  
-**Severity**: LOW
+- **Category**: Render Bug
+- **Status**: 🔴 OPEN
+- **Severity**: LOW
 
-- **Finding**: `pkg/engine/combat_system.go:278` does not check
-  `attacker.ID == target.ID`. Entities can be set as their own target
-  (via AOE, reflection spells, or target-selection bugs), triggering the
-  full damage pipeline against themselves.
+**Evidence** (`pkg/engine/render_system.go:331`):
+```go
+func (r *EbitenRenderSystem) interpolatePosition(pos *PositionComponent) (float64, float64) {
+    if r.renderAlpha >= 1.0 || (pos.PrevX == 0 && pos.PrevY == 0 && (pos.X != 0 || pos.Y != 0)) {
+        return r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+    }
+    interpX := pos.PrevX + (pos.X-pos.PrevX)*r.renderAlpha
+    interpY := pos.PrevY + (pos.Y-pos.PrevY)*r.renderAlpha
+    return r.cameraSystem.WorldToScreenInterpolated(interpX, interpY, r.renderAlpha)
+}
+```
+The guard `(pos.PrevX == 0 && pos.PrevY == 0 && (pos.X != 0 || pos.Y != 0))`
+is designed to skip interpolation when `PrevX`/`PrevY` are uninitialized
+(default zero) so that a newly spawned entity does not blend from the world
+origin to its real position. However it also fires for entities that are
+genuinely located at pixel position (0,0) — i.e., the top-left tile of the
+world — and begin moving in their first rendered frame.
 
-- **Impact**: Combinable with G22 (XP double-award) for self-kill XP exploit.
-  Low severity in normal gameplay.
+`MovementSystem.Update` stores `pos.PrevX = pos.X; pos.PrevY = pos.Y` before
+applying velocity. For a fresh entity at (0,0) in the same frame as its first
+velocity tick: `PrevX = 0, PrevY = 0, X = newX`. The guard triggers, skipping
+interpolation and snapping the entity directly to `newX, newY`.
 
-- **Affected Files**:
-  - `pkg/engine/combat_system.go:278–310`
+- **Incorrect Behavior**: An entity spawned at world origin (0,0) that moves in
+  its first simulated frame renders without position interpolation for exactly
+  one frame, causing a single-frame visual snap from (0,0) to the new position
+  instead of a smooth blend.
 
-- **Remediation**:
+- **Root Cause**: The "uninitialized" state is inferred from a zero-value check
+  rather than an explicit flag. The world origin is a legitimate position, not
+  the same thing as "never had a physics tick."
+
+- **Impact**: Low — visually observable only when entities spawn at or near
+  (0,0), which is the world origin. Starting room spawns (first room, first
+  corridor intersection) at `(room.X + room.Width/2) * 32` are almost never at
+  literal pixel (0,0). The issue surfaces primarily in server test harnesses
+  that spawn entities without a terrain context (default `spawnX = 400.0`,
+  `spawnY = 300.0` — not affected).
+
+- **Remediation**: Add `Initialized bool` to `PositionComponent`. Set it to
+  `true` in `MovementSystem.Update` on first tick (or in `AddComponent`). Guard
+  becomes:
   ```go
-  if attacker.ID == target.ID { return false }
+  if r.renderAlpha >= 1.0 || !pos.Initialized {
+      return r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+  }
   ```
-  Add at the top of `validateAttackEntities`.
+
+- **Dependencies**: `PositionComponent` struct change; `MovementSystem.Update`
+  must set `Initialized = true` before copying `PrevX`/`PrevY`.
+
+- **Effort**: small
 
 ---
 
-## G31 — `CarryOverSystem` Not Registered in `system_init.go`
+## Prior Gap Compatibility Table
 
-**Status**: 🔴 OPEN  
-**Severity**: LOW
-
-- **Finding**: `CarryOverSystem` is instantiated and registered only in
-  `cmd/client/init_versions.go:259`. It is absent from
-  `pkg/engine/system_init.go`. The Rev-3 integration chain table in
-  AUDIT.md listed it as verified (erroneously: it was only verified in
-  the client path, not the shared engine path).
-
-- **Impact**: Server builds and headless integration tests cannot exercise
-  the prestige carry-over path. No player-facing regression in desktop solo.
-
-- **Affected Files**:
-  - `pkg/engine/system_init.go` (absent)
-  - `cmd/client/init_versions.go:259` (client-only registration)
-
-- **Remediation**: Move registration to `system_init.go` behind a
-  `config.EnablePrestige` guard, or add a comment documenting intentional
-  client-only placement.
+| Prior ID | Title | Current Status |
+|----------|-------|---------------|
+| G1–G16   | Various (see Rev 2 GAPS.md) | ✅ All resolved |
+| G17      | WebRTC federation simulated | ✅ Resolved (pion/webrtc WASM) |
+| G18      | ClassProgressionSystem no-op | ⚠️ By design; documented |
+| G19      | Companion scout velocity | ⚠️ Partial (4-dir cycle, not pathfinding) |
+| G20      | Ambush node random offset | ⚠️ Partial (fallback, not cover-based) |
+| G21      | Mobile input Type() collision | Verify separately |
+| G22      | XP double-award on kill | ✅ Resolved |
+| G23      | TalentSystem stat accumulation | ✅ Resolved |
+| G24      | HUD no mana bar | ✅ Resolved |
+| G25      | consumeItem heals by Defense | ✅ Resolved |
+| G26      | AttributeEffects not applied | ✅ Resolved |
+| G27      | HUD health bar overflow | ✅ Resolved |
+| G28      | Death callback fires every frame | ✅ Resolved |
+| G29      | Streak decay hardcoded time=0 | ✅ Resolved |
+| G30      | Self-damage guard missing | ✅ Resolved |
+| G31      | CarryOverSystem not in system_init | ⚠️ By design (client-only) |

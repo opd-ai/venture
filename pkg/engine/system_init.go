@@ -931,8 +931,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 			classAffinitySystem.OnKill(attacker, "power_strike")
 		}
 		// G22 fix: XP is awarded exclusively by the death callback in
-		// cmd/client/client_loot.go (createDeathCallback), which also handles
-		// loot drops and DeadComponent attachment in one transaction.
+		// cmd/client/client_loot.go (createDeathCallback), which is the
+		// authoritative single transaction for loot, XP, and DeadComponent
+		// attachment.  CombatSystem.handleEntityDeath invokes that callback
+		// BEFORE attaching DeadComponent, so createDeathCallback's own
+		// HasComponent("dead") guard works correctly (callback runs once,
+		// adds DeadComponent, subsequent frames exit via HasComponent guard).
 		// Awarding XP here as well caused every kill to grant XP twice.
 	})
 

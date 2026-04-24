@@ -1060,21 +1060,50 @@ func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64)
 
 // processInputProvider handles input processing for entities whose input component
 // implements InputProvider but is not a *EbitenInput (e.g. MobileInputAdapter).
+// It synthesizes a temporary EbitenInput from all InputProvider methods and then
+// passes it through the same downstream pipeline used by the EbitenInput path,
+// ensuring actions, spells, aim, and menu navigation all work correctly (G21 fix
+// / review comment: full InputProvider coverage).
 func (s *InputSystem) processInputProvider(entity *Entity, provider InputProvider) {
 	s.detectInputMethod()
-	velComp, ok := entity.GetComponent("velocity")
-	if !ok {
-		return
-	}
-	velocity, ok := velComp.(*VelocityComponent)
-	if !ok {
-		return
+
+	// Synthesise a temporary EbitenInput so we can reuse the full downstream pipeline.
+	input := &EbitenInput{}
+
+	// Movement
+	input.MoveX, input.MoveY = provider.GetMovement()
+
+	// Combat actions
+	if s.currentState.AllowsCombat() {
+		input.ActionPressed = provider.IsActionPressed()
+		input.ActionJustPressed = provider.IsActionJustPressed()
+		input.UseItemPressed = provider.IsUseItemPressed()
+		input.UseItemJustPressed = provider.IsUseItemJustPressed()
+		for slot := 1; slot <= 5; slot++ {
+			if provider.IsSpellPressed(slot) {
+				s.setSpellPressed(input, slot)
+			}
+		}
 	}
 
-	moveX, moveY := provider.GetMovement()
-	velocity.VX = moveX * s.MoveSpeed
-	velocity.VY = moveY * s.MoveSpeed
-	s.updateMovementAnimation(entity, velocity)
+	// Mouse / touch pointer position and delta
+	input.MouseX, input.MouseY = provider.GetMousePosition()
+	input.MouseDeltaX, input.MouseDeltaY = provider.GetMouseDelta()
+	input.MousePressed = provider.IsMousePressed()
+
+	// Any-key flag
+	input.AnyKeyPressed = provider.IsAnyKeyPressed()
+
+	// Menu navigation
+	input.MenuUpJustPressed = provider.IsMenuUpJustPressed()
+	input.MenuDownJustPressed = provider.IsMenuDownJustPressed()
+	input.MenuConfirmJustPressed = provider.IsMenuConfirmJustPressed()
+	input.MenuBackJustPressed = provider.IsMenuBackJustPressed()
+	input.MenuTabJustPressed = provider.IsMenuTabJustPressed()
+
+	// Aim and velocity through the same path as *EbitenInput
+	s.updateEntityAim(entity, input)
+	s.applyInputToVelocity(entity, input)
 }
 
 // processInput handles input processing for a single entity.
@@ -1524,8 +1553,16 @@ func (s *InputSystem) applyInputToVelocity(entity *Entity, input *EbitenInput) {
 		return
 	}
 
-	velocity.VX = input.MoveX * s.MoveSpeed
-	velocity.VY = input.MoveY * s.MoveSpeed
+	// Apply AGI SpeedBonus from AttributeAllocationSystem (G26 review fix).
+	moveSpeed := s.MoveSpeed
+	if statsComp, ok := entity.GetComponent("stats"); ok {
+		if stats, ok := statsComp.(*StatsComponent); ok && stats.SpeedBonus > 0 {
+			moveSpeed += stats.SpeedBonus
+		}
+	}
+
+	velocity.VX = input.MoveX * moveSpeed
+	velocity.VY = input.MoveY * moveSpeed
 
 	s.updateMovementAnimation(entity, velocity)
 }

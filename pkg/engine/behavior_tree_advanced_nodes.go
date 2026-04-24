@@ -396,15 +396,14 @@ func (n *AmbushNode) Tick(entity aitypes.EntityContext, blackboard *Blackboard, 
 		angle := rng.Float64() * 2 * math.Pi
 
 		// If a target entity is on the blackboard, pick the direction opposite to it.
-		if targetVal, hasTarget := blackboard.Get("target"); hasTarget && targetVal != nil {
-			if target, ok := targetVal.(*Entity); ok {
-				if tPosComp, ok2 := target.GetComponent("position"); ok2 {
-					if tPos, ok3 := tPosComp.(*PositionComponent); ok3 {
-						dx := pos.X - tPos.X
-						dy := pos.Y - tPos.Y
-						if dx != 0 || dy != 0 {
-							angle = math.Atan2(dy, dx) + (rng.Float64()-0.5)*math.Pi/2
-						}
+		// Use GetEntityFromBlackboard (canonical helper) instead of a raw type assertion.
+		if target, hasTarget := GetEntityFromBlackboard(blackboard, "target"); hasTarget && target != nil {
+			if tPosComp, ok2 := target.GetComponent("position"); ok2 {
+				if tPos, ok3 := tPosComp.(*PositionComponent); ok3 {
+					dx := pos.X - tPos.X
+					dy := pos.Y - tPos.Y
+					if dx != 0 || dy != 0 {
+						angle = math.Atan2(dy, dx) + (rng.Float64()-0.5)*math.Pi/2
 					}
 				}
 			}

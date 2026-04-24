@@ -144,8 +144,14 @@ func (s *TalentSystem) applyBonuses(entity *Entity, bonuses TalentBonus) {
 }
 
 // applyBonusesTracked applies bonuses and returns the absolute deltas that were
-// added to each stat.  Using absolute deltas (not ratios) ensures that removal
-// is exact even when other systems also modified the stats concurrently (G23).
+// added to each stat.  Using absolute deltas (not ratios) avoids the sign-flip
+// error in the previous division-based removal approach.
+//
+// Known limitation: deltas are computed against the stat values at apply-time.
+// If another system applies multiplicative modifiers to the same fields after
+// this call (e.g. StatusEffectDamageBoostSystem), subtracting the delta later
+// will not restore the correct pre-talent value under those modifiers.
+// A full fix requires a non-compounding stat aggregation layer (see GAPS.md G32).
 func (s *TalentSystem) applyBonusesTracked(entity *Entity, bonuses TalentBonus) map[string]float64 {
 	deltas := make(map[string]float64)
 
@@ -209,12 +215,20 @@ func (s *TalentSystem) removeTalentBonuses(entity *Entity, deltas map[string]flo
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		if health, ok := healthComp.(*HealthComponent); ok {
 			health.Max -= deltas["healthMax"]
+			// Clamp Current to new Max so overheal or stale values don't persist.
+			if health.Current > health.Max {
+				health.Current = health.Max
+			}
 		}
 	}
 
 	if manaComp, ok := entity.GetComponent("mana"); ok {
 		if mana, ok := manaComp.(*ManaComponent); ok {
 			mana.Max -= int(deltas["manaMax"])
+			// Clamp Current to new Max so mana stays consistent after talent reset.
+			if mana.Current > mana.Max {
+				mana.Current = mana.Max
+			}
 		}
 	}
 }

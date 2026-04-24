@@ -35,6 +35,9 @@ func NewCompanionSystem(world *World) *CompanionSystem {
 func (s *CompanionSystem) Update(deltaTime float64) {
 	companions := s.world.GetEntitiesWith("companion")
 
+	// Build the set of live companion IDs so we can purge stale scout entries.
+	liveIDs := make(map[uint64]struct{}, len(companions))
+
 	for _, companion := range companions {
 		comp, ok := companion.GetComponent("companion")
 		if !ok {
@@ -44,6 +47,12 @@ func (s *CompanionSystem) Update(deltaTime float64) {
 		if !ok {
 			continue
 		}
+
+		// Skip dead companions but still track ID so we clean up below.
+		if companion.HasComponent("dead") {
+			continue
+		}
+		liveIDs[companion.ID] = struct{}{}
 
 		// Get owner entity
 		owner, _ := s.world.GetEntity(companionComp.OwnerID)
@@ -60,6 +69,21 @@ func (s *CompanionSystem) Update(deltaTime float64) {
 
 		// Apply bonding perks
 		s.applyBondingPerks(companion, companionComp)
+	}
+
+	// Purge scout state for companions that are no longer alive.
+	// This prevents unbounded map growth over long sessions (review comment).
+	s.cleanupScoutMaps(liveIDs)
+}
+
+// cleanupScoutMaps removes scout timer/direction entries for companions that are
+// no longer in the live set (dead, removed, or despawned).
+func (s *CompanionSystem) cleanupScoutMaps(liveIDs map[uint64]struct{}) {
+	for id := range s.scoutTimers {
+		if _, alive := liveIDs[id]; !alive {
+			delete(s.scoutTimers, id)
+			delete(s.scoutDirections, id)
+		}
 	}
 }
 

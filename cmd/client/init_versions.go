@@ -44,6 +44,9 @@ import (
 	"github.com/opd-ai/venture/pkg/world/housing"
 	"github.com/opd-ai/venture/pkg/world/territory"
 	"github.com/sirupsen/logrus"
+
+	// G3 (AUDIT.md): mod browser install/uninstall callbacks
+	"github.com/opd-ai/venture/pkg/modding"
 )
 
 // initializeV4Systems initializes Version 4.0 systems (Phase 21-27).
@@ -645,4 +648,49 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	if *verbose {
 		clientLogger.Info("Phase 3 systems initialized (guild federation with cross-server sync, territory control)")
 	}
+}
+
+// initializeModBrowserWiring wires the ModBrowserSystem (already registered in
+// the World by system_init.go / scheduleLazyInit) to a modding.Manager so that
+// install/uninstall actions bridge into the sandboxed JSON mod loader.
+//
+// Satisfies AUDIT.md G3: "Mod browser & repository unreachable from any binary."
+func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+log := logging.ComponentLogger(clientLogger.Logger, "mod_browser")
+
+// Create the sandboxed mod manager.
+sys.modManager = modding.NewManager()
+
+// Create and register the ModBrowserSystem.
+sys.modBrowserSys = engine.NewModBrowserSystem(game.World)
+
+// Provide a default in-memory repository.  A network-backed repository can be
+// injected here in the future (e.g. HTTPModRepository pointing at a mod CDN).
+sys.modBrowserSys.SetRepository(engine.NewInMemoryModRepository())
+
+// Install callback: parse raw JSON bytes into a Mod and add it to the manager.
+sys.modBrowserSys.SetInstallCallback(func(modID string, modData []byte) error {
+mod, err := modding.ParseModFromBytes(modData)
+if err != nil {
+return fmt.Errorf("mod_browser: parse %s: %w", modID, err)
+}
+if err := sys.modManager.AddMod(mod); err != nil {
+return fmt.Errorf("mod_browser: install %s: %w", modID, err)
+}
+log.WithField("mod_id", modID).Info("mod installed via ModBrowserSystem")
+return nil
+})
+
+// Uninstall callback: delegate removal to the manager.
+sys.modBrowserSys.SetUninstallCallback(func(modID string) error {
+if err := sys.modManager.RemoveMod(modID); err != nil {
+return fmt.Errorf("mod_browser: uninstall %s: %w", modID, err)
+}
+log.WithField("mod_id", modID).Info("mod uninstalled via ModBrowserSystem")
+return nil
+})
+
+game.World.AddSystem(sys.modBrowserSys)
+
+log.Debug("ModBrowserSystem wired with modding.Manager callbacks")
 }

@@ -303,3 +303,12 @@ func (l *Loader) marshalModToJSON(mod *Mod) ([]byte, error) {
 func (l *Loader) GetModPath(modID string) string {
 	return filepath.Join(l.config.ModsDirectory, modID+".json")
 }
+
+// ParseModFromBytes unmarshals raw JSON bytes into a Mod, validates it, and
+// returns it ready for use with Manager.AddMod.  It is a package-level
+// convenience wrapper around Loader.parseModJSON without file-system access,
+// intended for use by the ModBrowserSystem install callback.
+func ParseModFromBytes(data []byte) (*Mod, error) {
+l := NewLoader()
+return l.parseModJSON("<bytes>", data)
+}

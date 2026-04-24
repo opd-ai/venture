@@ -147,7 +147,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
 
 ### MEDIUM
 
-- [ ] **G3 — Mod browser & repository unreachable from any binary** —
+- [x] **G3 — Mod browser & repository unreachable from any binary** —
   `pkg/engine/mod_browser_system.go:37` (`NewModBrowserSystem`) and
   `pkg/engine/mod_repository_fs.go` (`NewModRepositoryFS` — confirmed via grep) are
   referenced only by their own tests, `pkg/engine/mod_browser_integration_test.go`,

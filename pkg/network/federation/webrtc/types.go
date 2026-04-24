@@ -6,6 +6,8 @@ package webrtc
 import (
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ConnectionState represents the current state of a WebRTC peer connection.
@@ -248,10 +250,22 @@ func (p *Peer) closeTransportHandles() {
 	p.mu.Unlock()
 
 	if c, ok := dc.(webrtcCloseable); ok && c != nil {
-		_ = c.Close()
+		if err := c.Close(); err != nil {
+			log.WithFields(log.Fields{
+				"peer_id":  p.ID,
+				"handle":   "dataChannel",
+				"error":    err,
+			}).Debug("WebRTC data channel close returned error")
+		}
 	}
 	if c, ok := pc.(webrtcCloseable); ok && c != nil {
-		_ = c.Close()
+		if err := c.Close(); err != nil {
+			log.WithFields(log.Fields{
+				"peer_id":  p.ID,
+				"handle":   "peerConn",
+				"error":    err,
+			}).Debug("WebRTC peer connection close returned error")
+		}
 	}
 }
 

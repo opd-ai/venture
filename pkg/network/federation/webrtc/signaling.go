@@ -42,9 +42,13 @@ type SignalingClient struct {
 	// wsConn holds the browser WebSocket object on WASM builds (syscall/js.Value), nil on native.
 	wsConn interface{}
 
-	// wsOnMsgFunc holds the js.Func callback registered on the WebSocket on WASM, nil on native.
+	// wsOnMsgFunc holds the js.Func callback registered for onmessage on WASM, nil on native.
 	// Must be released on Close() to avoid memory leaks.
 	wsOnMsgFunc interface{}
+
+	// wsOnCloseFunc holds the js.Func callback registered for onclose on WASM, nil on native.
+	// Must be released on Close() to avoid memory leaks.
+	wsOnCloseFunc interface{}
 }
 
 // DefaultSignalingChannelCapacity is the default capacity for signaling message channels.

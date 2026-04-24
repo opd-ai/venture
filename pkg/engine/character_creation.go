@@ -412,33 +412,35 @@ var portraitPresets = []portraitPresetEntry{
 // for the preset gallery on mobile/WASM (G12).
 const portraitPresetSize = 64
 
-// generatePresetPortraitImage creates a portraitPresetSize×portraitPresetSize
-// solid-colour portrait image.
-// Called from button callbacks inside the Ebiten game loop, so ebiten.NewImage is safe.
-func generatePresetPortraitImage(c color.RGBA) *ebiten.Image {
-	img := ebiten.NewImage(portraitPresetSize, portraitPresetSize)
-	img.Fill(c)
-	return img
-}
-
 // generatePortraitPresetButtons creates touch buttons for the portrait preset gallery
 // shown on mobile/WASM in the portrait-selection step (G12).
+// It also pre-allocates the *ebiten.Image for each preset so tap callbacks reuse
+// cached GPU textures instead of allocating on every press.
 func (cc *EbitenCharacterCreation) generatePortraitPresetButtons() {
 	cc.portraitPresetButtons = make([]*mobile.TouchButton, len(portraitPresets))
 	for i, p := range portraitPresets {
 		capturedPreset := p
+		// Pre-allocate and cache the portrait image.  This must run inside the
+		// Ebiten game loop (Update/Draw goroutine) where the graphics context is
+		// ready, which is true because generatePortraitPresetButtons is called
+		// from SetDefaultNameFromSeed → triggered after the first Update.
+		cachedImg := ebiten.NewImage(portraitPresetSize, portraitPresetSize)
+		cachedImg.Fill(capturedPreset.color)
 		cc.portraitPresetButtons[i] = mobile.NewTouchButton(
 			0, 0,
 			80, 36,
 			capturedPreset.name,
-			func() { cc.handlePortraitPreset(capturedPreset) },
+			func() { cc.handlePortraitPreset(capturedPreset, cachedImg) },
 		)
 	}
 }
 
 // handlePortraitPreset applies a preset colour portrait when a gallery swatch is tapped.
-func (cc *EbitenCharacterCreation) handlePortraitPreset(p portraitPresetEntry) {
-	cc.characterData.Portrait = generatePresetPortraitImage(p.color)
+// It assigns the pre-allocated cachedImg directly; this is safe because portrait images
+// are only ever read (via screen.DrawImage) — they are never drawn onto or modified after
+// creation, so sharing the cached reference across taps cannot cause visual artifacts.
+func (cc *EbitenCharacterCreation) handlePortraitPreset(p portraitPresetEntry, cachedImg *ebiten.Image) {
+	cc.characterData.Portrait = cachedImg
 	cc.characterData.PortraitPath = "preset:" + p.name
 }
 // GetDefaults returns the current default values
@@ -486,8 +488,10 @@ func (cc *EbitenCharacterCreation) updateTouchControls() {
 		}
 	}
 
-	// G12 (AUDIT.md): update portrait preset gallery buttons on mobile/WASM.
-	if cc.currentStep == stepPortraitSelection {
+	// G12: update portrait preset gallery buttons on mobile/WASM only.
+	// On desktop the gallery is hidden, so buttons must not intercept clicks.
+	if cc.currentStep == stepPortraitSelection &&
+		(mobile.IsWASM() || mobile.IsMobilePlatform()) {
 		for _, btn := range cc.portraitPresetButtons {
 			if btn != nil {
 				btn.Update()
@@ -564,7 +568,10 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 	}
 
 	// G12: Position portrait preset gallery buttons below the portrait preview area.
-	if cc.currentStep == stepPortraitSelection && len(cc.portraitPresetButtons) > 0 {
+	// Only done on mobile/WASM where the gallery is actually visible.
+	if cc.currentStep == stepPortraitSelection &&
+		(mobile.IsWASM() || mobile.IsMobilePlatform()) &&
+		len(cc.portraitPresetButtons) > 0 {
 		buttonSpacing := 8
 		buttonWidth := 80
 		totalWidth := len(cc.portraitPresetButtons)*buttonWidth + (len(cc.portraitPresetButtons)-1)*buttonSpacing
@@ -1605,12 +1612,13 @@ func (cc *EbitenCharacterCreation) drawPresetNameButtons(screen *ebiten.Image) {
 // drawPortraitPresetGallery renders the procedural portrait-colour gallery on
 // mobile/WASM (G12, AUDIT.md).  It draws a hint label and delegates button
 // rendering to the TouchButton instances owned by portraitPresetButtons.
-func (cc *EbitenCharacterCreation) drawPortraitPresetGallery(screen *ebiten.Image, x, y, _ int) {
+// x is the left edge of the button area and w is its total width.
+func (cc *EbitenCharacterCreation) drawPortraitPresetGallery(screen *ebiten.Image, x, y, w int) {
 	hintText := "Choose a portrait colour:"
-	// basicfont.Face7x13 has 7px-wide glyphs; halved (≈3) for centering is the
-	// same approximation used throughout this file for text layout.
+	// Centre the hint over the button area using the same half-glyph-width
+	// approximation (7px face / 2 ≈ 3) used elsewhere in this file.
 	const halfGlyphWidth = 3
-	hintX := x - len(hintText)*halfGlyphWidth
+	hintX := x + w/2 - len(hintText)*halfGlyphWidth
 	text.Draw(screen, hintText, basicfont.Face7x13, hintX, y+13,
 		color.RGBA{100, 200, 100, 255})
 	for _, btn := range cc.portraitPresetButtons {

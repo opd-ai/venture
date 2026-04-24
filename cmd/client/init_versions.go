@@ -662,11 +662,12 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	log := logging.ComponentLogger(clientLogger.Logger, "mod_browser")
 
-	modCfg := modding.ModConfig{
-		EnableSandbox:       true,
-		MaxMods:             50,
-		RuleChangeRateLimit: 10.0,
-	}
+	// Start from DefaultConfig so ModsDirectory defaults to "mods" and all
+	// other defaults are correct; override only the fields we need to customise.
+	modCfg := modding.DefaultConfig()
+	modCfg.EnableSandbox = true
+	modCfg.MaxMods = 50
+	modCfg.RuleChangeRateLimit = 10.0
 	loader := modding.NewLoaderWithConfig(modCfg)
 	sys.modManager = modding.NewManagerWithConfig(modCfg)
 
@@ -747,21 +748,43 @@ func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, 
 	// G15 (AUDIT.md): Register HotReloadSystem for live mod reloading.
 	// The system monitors the mods directory for changes and applies updates
 	// without requiring a game restart, fulfilling the Modding System goal.
+	watcher := engine.NewFileSystemFileWatcher(modCfg.ModsDirectory)
 	hotReload := engine.NewHotReloadSystem(game.World)
-	hotReload.SetFileWatcher(engine.NewFileSystemFileWatcher(modCfg.ModsDirectory))
+	hotReload.SetFileWatcher(watcher)
+
+	// Hash callback delegates to the watcher, which auto-detects file changes
+	// via modtime comparison — no manual cache invalidation needed.
+	hotReload.SetHashCallback(func(modID string) (string, error) {
+		return watcher.GetFileHash(modID)
+	})
+
+	// Reload callback: parse fresh mod data; use the JSON's own ID as the
+	// authoritative key to avoid mismatches between filename and "id" field.
 	hotReload.SetReloadCallback(func(modID string, modData []byte) error {
 		mod, err := modding.ParseModFromBytes(modData)
 		if err != nil {
 			return fmt.Errorf("hot_reload: parse %s: %w", modID, err)
 		}
-		_ = sys.modManager.RemoveMod(modID)
+		// Normalise: the JSON "id" field is the authoritative mod identifier used
+		// by Manager.  The watcher-provided modID is derived from the filename
+		// (stem of the .json file).  If they differ we use the JSON id and log a
+		// warning so operators can fix the naming inconsistency.  All downstream
+		// calls (Remove/Add/Enable) use the same canonicalID for consistency.
+		if mod.ID != modID {
+			log.WithFields(logrus.Fields{
+				"filename_id": modID,
+				"json_id":     mod.ID,
+			}).Warn("hot_reload: mod JSON id differs from filename — using JSON id")
+		}
+		canonicalID := mod.ID
+		_ = sys.modManager.RemoveMod(canonicalID)
 		if err := sys.modManager.AddMod(mod); err != nil {
-			return fmt.Errorf("hot_reload: add %s: %w", modID, err)
+			return fmt.Errorf("hot_reload: add %s: %w", canonicalID, err)
 		}
-		if err := sys.modManager.EnableMod(modID); err != nil {
-			return fmt.Errorf("hot_reload: enable %s: %w", modID, err)
+		if err := sys.modManager.EnableMod(canonicalID); err != nil {
+			return fmt.Errorf("hot_reload: enable %s: %w", canonicalID, err)
 		}
-		log.WithField("mod_id", modID).Info("mod reloaded via HotReloadSystem")
+		log.WithField("mod_id", canonicalID).Info("mod reloaded via HotReloadSystem")
 		return nil
 	})
 	hotReload.SetRollbackCallback(func(modID string, state *engine.ModState) error {
@@ -772,5 +795,22 @@ func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, 
 		return fmt.Errorf("hot_reload: rollback not configured for mod %s", modID)
 	})
 	game.World.AddSystem(hotReload)
-	log.Debug("HotReloadSystem registered for live mod reloading")
+
+	// Seed a world-level entity with HotReloadComponent and start watching all
+	// currently enabled mods so the system has something to monitor immediately.
+	hotReloadEntity := game.World.CreateEntity()
+	hotReloadComp := engine.NewHotReloadComponent()
+	hotReloadEntity.AddComponent(hotReloadComp)
+	for _, mod := range sys.modManager.ListMods() {
+		if !mod.Enabled {
+			continue
+		}
+		if err := hotReload.StartWatchingMod(hotReloadComp, mod.ID); err != nil {
+			log.WithFields(logrus.Fields{
+				"mod_id": mod.ID,
+				"error":  err.Error(),
+			}).Warn("hot_reload: failed to start watching mod")
+		}
+	}
+	log.WithField("count", len(hotReloadComp.GetWatchedModIDs())).Debug("HotReloadSystem registered for live mod reloading")
 }

@@ -170,7 +170,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   a `SeasonalEventComponent` on the world entity from `pkg/procgen/`, or (b) move
   these files behind a `//go:build seasonal_events` tag and document the deferral.
 
-- [ ] **G5 — Modding system not wired into the client** —
+- [x] **G5 — Modding system not wired into the client** —
   `cmd/server/main.go:120-121` calls `world.SetModRules(modding.NewProviderAdapter(modManager))`,
   but `cmd/client/` never imports `pkg/modding` (verified by `grep -rn 'modding\.' cmd/client/`
   returning zero hits) and never calls `SetModRules`. In single-player / host-and-play

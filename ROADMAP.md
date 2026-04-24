@@ -210,8 +210,8 @@ While not a stated goal violation, some functions have high cyclomatic complexit
 | Goals fully achieved | ≥24/26 | 25/26 ✅ | This assessment |
 | Test coverage | ≥40% per package | ✅ All pass | `go test -cover ./pkg/...` |
 | `go vet` clean | 0 errors | ✅ Clean | `go vet ./...` |
-| FPS CI gate | Fail on >20% regression | ❌ Not implemented | CI workflow |
-| Memory CI gate | Fail on >500MB | ❌ Not implemented | CI workflow |
+| FPS CI gate | Fail on >20% regression | ✅ Implemented | CI workflow |
+| Memory CI gate | Fail on >500MB | ✅ Implemented | CI workflow |
 | Health endpoints | `/healthz`, `/readyz` | ✅ Implemented | `curl localhost:9090/healthz` |
 | Signal handling | Graceful on SIGTERM | ✅ Implemented | `signal.NotifyContext` in main.go |
 | Configuration docs | 100% flag coverage | ✅ Complete | `docs/CONFIGURATION.md` |

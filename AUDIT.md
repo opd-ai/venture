@@ -244,7 +244,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
 
 ### LOW
 
-- [ ] **G11 — Menu "Exit Game" returns an error rather than exiting** —
+- [x] **G11 — Menu "Exit Game" returns an error rather than exiting** —
   `pkg/engine/menu_system.go:613` returns `fmt.Errorf("exit not implemented (close window manually)")`.
   This is the lone TODO-equivalent in the engine outside `vr_openxr_adapters.go`. The
   surrounding code closes the menu and bubbles the error — the user must Alt-F4 to

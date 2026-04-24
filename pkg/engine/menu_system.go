@@ -68,6 +68,12 @@ type EbitenMenuSystem struct {
 	settingsManager *SettingsManager
 	onApplySettings func(GameSettings) error
 
+	// exitCallback is called when the player confirms "Exit to Desktop".
+	// If nil, the menu falls back to returning an informative error.
+	// Callers should inject os.Exit(0) or ebiten.Termination as appropriate
+	// for their platform.
+	exitCallback func() error
+
 	// Menu component reference (stored on a dedicated menu entity)
 	menuEntity *Entity
 
@@ -147,6 +153,14 @@ func (ms *EbitenMenuSystem) SetApplySettingsCallback(callback func(GameSettings)
 		ms.logger.WithField("callback_set", callback != nil).Debug("Setting apply settings callback")
 	}
 	ms.onApplySettings = callback
+}
+
+// SetExitCallback registers the function called when the player confirms "Exit to
+// Desktop" in the menu.  Callers should supply os.Exit(0) or ebiten.Termination
+// wrapped in a func()-returning adapter appropriate for their platform.
+// If not set, exiting falls back to returning an error that the game loop surfaces.
+func (ms *EbitenMenuSystem) SetExitCallback(cb func() error) {
+	ms.exitCallback = cb
 }
 
 // Toggle opens or closes the main menu.
@@ -607,10 +621,12 @@ func (ms *EbitenMenuSystem) buildMainMenu(menu *MenuComponent) {
 				// Confirm before exiting
 				menu.ConfirmMessage = "Exit game? Unsaved progress will be lost."
 				menu.ConfirmAction = func() error {
-					// Note: Actual exit requires Game integration
-					// For now, just close menu
 					menu.Active = false
-					return fmt.Errorf("exit not implemented (close window manually)")
+					if ms.exitCallback != nil {
+						return ms.exitCallback()
+					}
+					// Fallback: no exit callback injected — surface actionable message.
+					return fmt.Errorf("exit callback not set — close the window to exit")
 				}
 				menu.MenuStack = append(menu.MenuStack, menu.CurrentMenu)
 				menu.CurrentMenu = MenuTypeConfirm

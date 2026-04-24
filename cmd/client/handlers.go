@@ -3185,6 +3185,12 @@ func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generat
 	game.MenuSystem.SetSaveCallback(saveCallback)
 	game.MenuSystem.SetLoadCallback(loadCallback)
 
+	// G11 (AUDIT.md): inject ebiten.Termination as the exit callback so
+	// "Exit to Desktop" actually terminates the game loop on all platforms.
+	game.MenuSystem.SetExitCallback(func() error {
+		return ebiten.Termination
+	})
+
 	if *verbose {
 		clientLogger.Info("save/load callbacks connected to menu system")
 	}

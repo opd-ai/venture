@@ -525,8 +525,8 @@ the cleanup task."
 **Severity**: HIGH
 
 - **Finding**: Two independent callbacks both call `AwardXP` for the same kill.
-  `SetKillCallback` at `pkg/engine/system_init.go:918` calls
-  `progressionSystem.AwardXP(attacker, xp)` (line 931) for every combat kill.
+  `SetKillCallback` at `pkg/engine/system_init.go:918–931` calls
+  `progressionSystem.AwardXP(attacker, xp)` at line 931 for every combat kill.
   Separately, `configureDeathCallback` at `cmd/client/handlers.go:3585`
   wires `createDeathCallback` which calls
   `(*progressionSystem).AwardXP(*playerEntity, xpAmount)` at
@@ -538,8 +538,8 @@ the cleanup task."
   as fast as designed; combat balance and progression pacing are broken.
 
 - **Affected Files**:
-  - `pkg/engine/system_init.go:918–936`
-  - `cmd/client/client_loot.go:511–513`
+  - `pkg/engine/system_init.go:931` (kill callback — primary AwardXP call)
+  - `cmd/client/client_loot.go:512` (death callback — duplicate AwardXP call)
   - `cmd/client/handlers.go:3585`
 
 - **Remediation**: Remove `AwardXP` from the kill callback in `system_init.go`

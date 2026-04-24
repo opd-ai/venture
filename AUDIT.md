@@ -242,11 +242,11 @@ analysis in this audit is based on source-level inspection.
 ### HIGH (Rev 4)
 
 - [ ] **[G22] XP Double-Award on Every Kill**
-  — `pkg/engine/system_init.go:929–933`, `cmd/client/client_loot.go:511–513` —
+  — `pkg/engine/system_init.go:931`, `cmd/client/client_loot.go:512` —
   Two independent callbacks both call `AwardXP` for the same kill event.
-  The `SetKillCallback` registered at `system_init.go:929` calls
+  The `SetKillCallback` registered at `system_init.go:918` calls
   `progressionSystem.CalculateXPReward(target)` then
-  `progressionSystem.AwardXP(attacker, xp)` for every combat kill.
+  `progressionSystem.AwardXP(attacker, xp)` at line 931 for every combat kill.
   Separately, `configureDeathCallback` (wired at `cmd/client/handlers.go:3585`)
   calls `createDeathCallback` which calls `calculateEnemyXP(enemy)` then
   `(*progressionSystem).AwardXP(*playerEntity, xpAmount)` at `client_loot.go:512`.
@@ -258,15 +258,15 @@ analysis in this audit is based on source-level inspection.
   twice as fast as designed. Exploitable by farming low-level enemies.
 
   **Remediation**: Remove the `AwardXP` call from one site. The recommended
-  approach is to remove it from `system_init.go:929–933` (the kill callback)
+  approach is to remove it from `system_init.go:931` (the kill callback)
   and retain the richer `createDeathCallback` path which also handles loot
   drops, death animation, and `DeadComponent` attachment in one transaction.
   Alternatively, remove it from `client_loot.go` and extend the system_init
   kill callback to cover loot logic.
 
   **Affected Files**:
-  - `pkg/engine/system_init.go:918–936` (kill callback XP award)
-  - `cmd/client/client_loot.go:511–513` (death callback XP award)
+  - `pkg/engine/system_init.go:931` (kill callback — duplicate AwardXP)
+  - `cmd/client/client_loot.go:512` (death callback — duplicate AwardXP)
   - `cmd/client/handlers.go:3585` (wires death callback)
 
   **Validation**: Kill one enemy; verify `ProgressionComponent.XP` increases
@@ -625,6 +625,6 @@ cross-references.
 | CommerceSystem | `system_init.go:1094` | `system_init.go:1095` | ✅ | Commerce events |
 | TradeRouteManager (client) | `init_versions.go:635` | `Start()` goroutine | ✅ | Route updates via goroutine |
 | TradeRouteManager (server) | `v4_systems.go:~280` | `AddSystem` wrapper | ✅ | ECS update |
-| MobileInputAdapter | `mobile.go:308` | entity attachment | 🔴 BROKEN — `processEntityInputs` skips via `*EbitenInput` assertion (G21) |
+| MobileInputAdapter | `mobile.go:308` | entity attachment | 🔴 BROKEN (G21) |
 | EbitenHUDSystem | `game.go:188` | `game.go:363` | ✅ | `game.go:1616` Draw |
 | WebRTCTransport | — **never instantiated** — | 🔴 N/A | 🔴 | 🔴 |

@@ -65,7 +65,7 @@
 
 - **Prior State**: `NewModBrowserSystem` and `NewModRepositoryFS` had no
   production callers; players could not browse or install mods.
-- **Resolution**: All three layers are now wired:
+- **Resolution**: All four layers are now wired:
   1. `ModBrowserSystem` registered (`system_init.go:2107`).
   2. Install/uninstall callbacks wired in `cmd/client/init_versions.go:653-744`.
   3. Modding client-side fully enabled (G5 resolved).
@@ -184,11 +184,11 @@
      (`pkg/engine/character_creation_mobile.go:30`); the character-creation
      UI detects this sentinel and hides the Browse button on mobile builds.
   2. **Option B implemented**: `pkg/engine/character_creation.go` provides
-     a procedural preset-portrait gallery rendered without a file dialog
-     (line 250: `portraitPresetButtons`, line 401: `portraitPresets`,
-     line 438: `handlePortraitPreset`, line 570: gallery layout).  Mobile
-     players select a color-based procedural portrait from the gallery
-     instead of importing a custom image.
+     a procedural preset-portrait gallery rendered without a file dialog,
+     with the implementation anchored by `portraitPresetButtons`,
+     `portraitPresets`, `handlePortraitPreset`, and the gallery layout
+     logic in that file.  Mobile players select a color-based procedural
+     portrait from the gallery instead of importing a custom image.
 - **Remaining item** (out of scope / won't-fix for now): A native
   image-picker bridge via `pkg/mobile.OpenImagePicker` (Option A) was not
   implemented; the preset gallery is the accepted alternative per the
@@ -209,7 +209,7 @@
 ---
 
 ## G14 — Carryover: Concurrency-Safety Gaps from Prior Root `GAPS.md`
-**Status**: Mixed — Prior Gaps 1, 2, 6 ✅ RESOLVED; Prior Gaps 3, 4, 5 🔴 OPEN
+**Status**: ✅ All six prior gaps resolved
 
 > **Legacy ID note**: The sub-items below were originally labelled "Gap 1"–"Gap 6"
 > in the concurrency-safety `GAPS.md` that preceded the 2026-04-24 implementation

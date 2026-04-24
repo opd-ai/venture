@@ -266,7 +266,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   documented preset-only flow and update the character-creation UI to hide the import
   button on mobile.
 
-- [ ] **G13 — `pkg/companion` namespace contains only `learning` subpackage** —
+- [x] **G13 — `pkg/companion` namespace contains only `learning` subpackage** —
   Per the audit prompt's expectation of a separate companion package distinct from
   `pkg/engine/companion_*.go`, `pkg/companion/` ships a single subdirectory
   `pkg/companion/learning/`. `pkg/engine/companion_*.go` plus `pkg/procgen/companion/`
@@ -276,7 +276,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   **Remediation**: Add `pkg/companion/doc.go` describing the namespace and its
   relationship to `pkg/engine/companion_*.go` + `pkg/procgen/companion/`.
 
-- [ ] **G14 — Stop / Start idempotency gaps in federation (carried from prior GAPS.md)** —
+- [x] **G14 — Stop / Start idempotency gaps in federation (carried from prior GAPS.md)** —
   `pkg/network/federation/market.go:92-112` (`FederatedMarket.Start/Stop`) still
   lacks `sync.Once` guards (concurrency Gaps 1 & 2 in the prior root `GAPS.md`).
   These remain LOW for the implementation-gap perspective (no missing feature) but

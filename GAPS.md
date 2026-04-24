@@ -469,3 +469,310 @@ the cleanup task."
   Fall back to the random offset if no low-visibility tiles are found nearby.
 
 ---
+
+> **Rev 4 additions — 2026-04-25.** Gaps G21–G31 found by tracing live
+> data-flow through the ECS update loop, HUD rendering path, combat
+> callbacks, and the mobile input pipeline. G1–G20 statuses unchanged.
+
+---
+
+## G21 — Mobile Input Completely Non-Functional
+
+**Status**: 🔴 OPEN  
+**Severity**: CRITICAL
+
+- **Finding**: `MobileInputAdapter.Type()` returns `"input"` — the same key
+  as `EbitenInput.Type()` (`pkg/engine/input_system.go:159`). When
+  `cmd/mobile/mobile.go:309` calls `playerEntity.AddComponent(mobileInput)`,
+  `Entity.AddComponent` stores by type key (`e.Components[c.Type()] = c`,
+  `ecs.go:71`), overwriting the existing `*EbitenInput`. In
+  `InputSystem.processEntityInputs` (`input_system.go:1033–1041`):
+  ```go
+  input, ok := inputComp.(*EbitenInput)
+  if !ok { continue }
+  ```
+  The assertion fails for `*MobileInputAdapter`; the entity is silently
+  skipped and `applyInputToVelocity` is never called. The mobile player
+  cannot move, attack, or interact. Additionally, `MobileInputAdapter.Update()`
+  — which reads live touch positions from `DualJoystickLayout` — is never
+  called during the game loop, so joystick state is always stale.
+
+- **Impact**: Complete loss of player control on iOS and Android.
+
+- **Affected Files**:
+  - `pkg/engine/input_system.go:1033–1041` (type assertion skip)
+  - `pkg/mobile/input_adapter.go:49–52` (type key collision with `EbitenInput`)
+  - `cmd/mobile/mobile.go:308–309` (overwrites EbitenInput component)
+
+- **Remediation**:
+  1. Extend `processEntityInputs` to handle `InputProvider` interface when
+     `*EbitenInput` assertion fails:
+     ```go
+     if provider, ok := inputComp.(InputProvider); ok {
+         s.processInputProvider(entity, provider, deltaTime)
+     }
+     ```
+  2. Call `mobileInput.Update()` each frame — either register a pre-process
+     hook in `InputSystem.Update()`, or give `MobileInputAdapter` a unique
+     type key `"input_mobile"` so both components coexist and the
+     `*EbitenInput` assertion still succeeds for the desktop component.
+
+---
+
+## G22 — XP Double-Award on Every Kill
+
+**Status**: 🔴 OPEN  
+**Severity**: HIGH
+
+- **Finding**: Two independent callbacks both call `AwardXP` for the same kill.
+  `SetKillCallback` at `pkg/engine/system_init.go:918–931` calls
+  `progressionSystem.AwardXP(attacker, xp)` at line 931 for every combat kill.
+  Separately, `configureDeathCallback` at `cmd/client/handlers.go:3585`
+  wires `createDeathCallback` which calls
+  `(*progressionSystem).AwardXP(*playerEntity, xpAmount)` at
+  `cmd/client/client_loot.go:512`. Both fire on the same entity death.
+  The two XP formulae (`CalculateXPReward` vs `calculateEnemyXP`) yield
+  different amounts; the player receives both every kill.
+
+- **Impact**: XP gain is roughly doubled every kill. Players level up twice
+  as fast as designed; combat balance and progression pacing are broken.
+
+- **Affected Files**:
+  - `pkg/engine/system_init.go:931` (kill callback — primary AwardXP call)
+  - `cmd/client/client_loot.go:512` (death callback — duplicate AwardXP call)
+  - `cmd/client/handlers.go:3585`
+
+- **Remediation**: Remove `AwardXP` from the kill callback in `system_init.go`
+  and retain the death-callback path which handles loot, animation, and
+  `DeadComponent` attachment in one transaction. Or merge both XP paths
+  into a single calculation shared by the kill callback.
+
+---
+
+## G23 — TalentSystem Stat Accumulation — Old Bonuses Never Removed
+
+**Status**: 🔴 OPEN  
+**Severity**: HIGH
+
+- **Finding**: `TalentSystem.applyStatsBonuses` at
+  `pkg/engine/talent_system.go:183–212` directly adds flat bonuses to
+  `StatsComponent` fields (`stats.Attack += bonuses.FlatDamage`, etc.)
+  without first subtracting previously applied values. When `talent.Dirty`
+  is re-triggered (reset via `ResetAll()` or reallocation),
+  `applyStatsBonuses` is called again — adding the new bonuses on top of
+  the already-baked-in old ones. `AttributeAllocationSystem` correctly calls
+  `removeAppliedBonuses` at `attribute_allocation_system.go:204` before
+  reapplying; `TalentSystem` has no equivalent.
+
+- **Impact**: Talent reset and reallocation yield permanent unbounded stat
+  growth. Combat balance is broken for any player who uses the respec flow.
+
+- **Affected Files**:
+  - `pkg/engine/talent_system.go:183–212`
+  - `pkg/engine/talent_component.go` (no `AppliedBonuses` field — needs adding)
+
+- **Remediation**: Add `AppliedBonuses TalentBonus` to `TalentComponent`.
+  Before each `applyStatsBonuses` call, subtract `c.AppliedBonuses` from
+  stats, then apply new bonuses and update `c.AppliedBonuses`.
+
+---
+
+## G24 — Desktop HUD Has No Mana Bar
+
+**Status**: 🔴 OPEN  
+**Severity**: HIGH
+
+- **Finding**: `HUDSystem.Draw()` at `pkg/engine/hud_system.go:71–99` calls
+  `drawHealthBar()`, `drawStatsPanel()`, `drawExperienceBar()`,
+  `drawNetworkStatus()`, and `drawTerritoryBonuses()` — no `drawManaBar()`.
+  Mana is a primary resource consumed by all spells (100+ mana-related
+  systems in `system_init.go`); `ManaComponent` is attached to every player
+  entity. The mobile HUD (`pkg/mobile/ui.go`) includes and renders a
+  `ManaBar ProgressBar` correctly.
+
+- **Impact**: Desktop players have zero mana feedback. Spell failures occur
+  silently; players cannot manage mana economy or gauge regen rate.
+
+- **Affected Files**:
+  - `pkg/engine/hud_system.go:71–99`
+
+- **Remediation**: Implement `drawManaBar(screen *ebiten.Image, entity *Entity)`
+  modeled on `drawHealthBar`. Read `ManaComponent.Current`/`.Max`, draw a
+  blue fill bar below the health bar, and clamp fill fraction to `[0, 1]`.
+
+---
+
+## G25 — Server `consumeItem` Heals Player by `item.Stats.Defense`
+
+**Status**: 🔴 OPEN  
+**Severity**: HIGH
+
+- **Finding**: `cmd/server/player_management.go:298`:
+  ```go
+  healAmount := float64(item.Stats.Defense)
+  ```
+  Healing potions carry no `Defense` value; that field stores armor
+  contribution. All standard consumables heal for 0 HP server-side.
+
+- **Impact**: In dedicated-server mode all potion heals are no-ops.
+  In solo play, client-side prediction shows a heal but the server
+  corrects to 0 HP, causing a visible snap.
+
+- **Affected Files**:
+  - `cmd/server/player_management.go:298`
+
+- **Remediation**: Use `item.Stats.Healing` (add to `ItemStats` if absent)
+  or `item.Value` as the heal amount.
+
+---
+
+## G26 — `AttributeEffects` Fields Defined But Never Applied
+
+**Status**: 🔴 OPEN  
+**Severity**: MEDIUM
+
+- **Finding**: `DefaultAttributeEffects()` at
+  `pkg/engine/attribute_allocation_component.go:93` returns non-zero values
+  for `CarryCapPerStr` (5.0), `SpeedBonusPerAgi` (0.5), `ManaRegenPerInt`
+  (0.1), `HealthRegenPerVit` (0.05), `StaminaPerEnd` (10.0). The function
+  `applyAttributeBonuses` at `attribute_allocation_system.go:113` reads
+  these into local variables but never writes them to any component.
+
+- **Impact**: Five advertised per-attribute effects are silently zero.
+  Players who invest in STR for carry capacity, AGI for speed, INT for mana
+  regen, VIT for health regen, or END for stamina receive no benefit.
+
+- **Affected Files**:
+  - `pkg/engine/attribute_allocation_system.go:113–200`
+  - `pkg/engine/attribute_allocation_component.go:93–108`
+
+- **Remediation**: Write derived values to the appropriate components
+  (`InventoryComponent.MaxCarryWeight`, `VelocityComponent.MaxSpeed`,
+  `ManaComponent.Regen`, `HealthComponent.RegenRate`, `StaminaComponent.Max`)
+  inside `applyAttributeBonuses`.
+
+---
+
+## G27 — HUD Health Bar Overflows on Overheal
+
+**Status**: 🔴 OPEN  
+**Severity**: MEDIUM
+
+- **Finding**: `pkg/engine/hud_system.go:126`:
+  ```go
+  healthPct := float32(health.Current / health.Max)
+  fillWidth  := int(float32(barWidth) * healthPct)
+  ```
+  No clamping. If `health.Current > health.Max` (overheal from spell/buff),
+  `fillWidth > barWidth` and the fill rect is drawn past the background
+  boundary, overwriting adjacent HUD elements. `pkg/mobile/ui.go:620`
+  correctly clamps to `[0, 1]`.
+
+- **Affected Files**:
+  - `pkg/engine/hud_system.go:124–130`
+
+- **Remediation**:
+  ```go
+  healthPct := float32(health.Current) / float32(health.Max)
+  if healthPct > 1.0 { healthPct = 1.0 }
+  if healthPct < 0.0 { healthPct = 0.0 }
+  ```
+
+---
+
+## G28 — Entity Death Callback Fires Every Frame Until Entity Removed
+
+**Status**: 🔴 OPEN  
+**Severity**: MEDIUM
+
+- **Finding**: `combat_system.go:218` (`handleEntityDeath`) calls
+  `s.onDeathCallback(entity, attacker)` when `health.Current <= 0` but does
+  NOT add `DeadComponent`. On subsequent frames the entity still exists,
+  health is still ≤ 0, and the callback fires again every frame.
+  The client-side `createDeathCallback` (`client_loot.go:490`) guards with
+  `if enemy.HasComponent("dead") { return }` and then adds `NewDeadComponent`,
+  but this only protects the one client-side callback — not server-side
+  callbacks or any future callbacks added without their own guard.
+
+- **Impact**: Any death callback without an explicit guard processes N times
+  per death, where N = frames from death detection to entity removal.
+  Duplicated loot, XP, achievements, and analytics events are possible.
+
+- **Affected Files**:
+  - `pkg/engine/combat_system.go:218–250`
+
+- **Remediation**: Add `entity.AddComponent(NewDeadComponent())` inside
+  `handleEntityDeath` before invoking `onDeathCallback`. Update
+  `processEntity` entry guard to skip entities with `DeadComponent`.
+
+---
+
+## G29 — `ClassAffinitySystem.decayStreaks` Uses Hardcoded `currentTime = 0`
+
+**Status**: 🔴 OPEN  
+**Severity**: MEDIUM
+
+- **Finding**: `pkg/engine/class_affinity_system.go:103`:
+  ```go
+  currentTime := 0.0 // Would be game time in real implementation
+  ```
+  `timeSinceActivity := currentTime - data.LastActivityTime` is always
+  negative, so `timeSinceActivity > s.streakDecayTime` is never true.
+  Streaks never decay regardless of elapsed time.
+
+- **Impact**: Class affinity streaks are permanent once built. The
+  time-based risk/reward design of the streak system is non-functional.
+
+- **Affected Files**:
+  - `pkg/engine/class_affinity_system.go:100–113`
+
+- **Remediation**: Accumulate `s.elapsedTime += deltaTime` in `Update()`
+  and use it as `currentTime`.
+
+---
+
+## G30 — No Self-Damage Guard in `validateAttackEntities`
+
+**Status**: 🔴 OPEN  
+**Severity**: LOW
+
+- **Finding**: `pkg/engine/combat_system.go:278` does not check
+  `attacker.ID == target.ID`. Entities can be set as their own target
+  (via AOE, reflection spells, or target-selection bugs), triggering the
+  full damage pipeline against themselves.
+
+- **Impact**: Combinable with G22 (XP double-award) for self-kill XP exploit.
+  Low severity in normal gameplay.
+
+- **Affected Files**:
+  - `pkg/engine/combat_system.go:278–310`
+
+- **Remediation**:
+  ```go
+  if attacker.ID == target.ID { return false }
+  ```
+  Add at the top of `validateAttackEntities`.
+
+---
+
+## G31 — `CarryOverSystem` Not Registered in `system_init.go`
+
+**Status**: 🔴 OPEN  
+**Severity**: LOW
+
+- **Finding**: `CarryOverSystem` is instantiated and registered only in
+  `cmd/client/init_versions.go:259`. It is absent from
+  `pkg/engine/system_init.go`. The Rev-3 integration chain table in
+  AUDIT.md listed it as verified (erroneously: it was only verified in
+  the client path, not the shared engine path).
+
+- **Impact**: Server builds and headless integration tests cannot exercise
+  the prestige carry-over path. No player-facing regression in desktop solo.
+
+- **Affected Files**:
+  - `pkg/engine/system_init.go` (absent)
+  - `cmd/client/init_versions.go:259` (client-only registration)
+
+- **Remediation**: Move registration to `system_init.go` behind a
+  `config.EnablePrestige` guard, or add a comment documenting intentional
+  client-only placement.

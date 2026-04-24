@@ -158,7 +158,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `SetInstallCallback`/`SetUninstallCallback` to bridge into `modding.Manager`. Add a
   smoke test that lists then installs a mod via the system.
 
-- [ ] **G4 — Seasonal-event subsystem is internally complete but un-instantiated** —
+- [x] **G4 — Seasonal-event subsystem is internally complete but un-instantiated** —
   `EventCalendarSystem` + `EventQuestSystem` + `EventDecorationSystem` +
   `EventRewardSystem` + the matching components (`EventQuestComponent`,
   `EventDecorationComponent`, `EventRewardComponent`) form a cohesive feature cluster

@@ -2065,9 +2065,10 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.AvailabilitySystem = availabilitySystem
 	game.World.AddSystem(availabilitySystem)
 
-	// Seasonal-event cluster (G2 / G4): all four systems are registered so their
-	// Update loops run; a SeasonalEventComponent must be attached to the world
-	// entity (at procgen time) before they produce output.
+	// Seasonal-event cluster (G2 / G4): all four systems are registered and the
+	// SeasonalEventComponent is seeded on a dedicated world entity so the cluster
+	// is fully active from the start.  The seed is derived deterministically so
+	// different worlds produce different event calendars.
 	eventCalendarSystem := NewEventCalendarSystem(game.World, game.World.Clock)
 	result.EventCalendarSystem = eventCalendarSystem
 	game.World.AddSystem(eventCalendarSystem)
@@ -2083,6 +2084,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	eventRewardSystem := NewEventRewardSystem(game.World, game.World.Clock)
 	result.EventRewardSystem = eventRewardSystem
 	game.World.AddSystem(eventRewardSystem)
+
+	// G4: Seed the SeasonalEventComponent on a world-level entity so the event
+	// calendar systems have something to act on.  useRealTime=true so events
+	// align with wall-clock dates (festivals, holidays) rather than game ticks.
+	const seasonalSeedMagic = int64(0x53454153) // "SEAS"
+	seasonalWorldEntity := game.World.CreateEntity()
+	seasonalWorldEntity.AddComponent(NewSeasonalEventComponent(config.Seed^seasonalSeedMagic, true))
+	game.World.AddEntity(seasonalWorldEntity)
 
 	// Mod systems (G2 / G3): ModCompatibilitySystem runs conflict detection;
 	// ModBrowserSystem is wired with its repository by cmd/client after init.

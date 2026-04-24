@@ -1,379 +1,397 @@
-# Implementation Gaps — 2026-04-24
+# Implementation Gaps — 2026-04-24 (rev 2)
 
-> Replaces the prior root `GAPS.md` (concurrency-safety gaps + legacy 2026-04-23
-> implementation gaps). Concurrency Gaps 1–6 from the prior file are still open
-> and remain authoritative in their original form; they are summarised under **G14**
-> below so that downstream references (CI scripts, issue tracker IDs `Gap 1` …
-> `Gap 6`) remain locatable. Findings G1, G6 carry forward (re-verified) the
-> 2026-04-23 entries "OpenXR Adapter Logic Is Stubbed" and "WebXR Adapter File Is
-> Documented but Missing"; the 2026-04-23 "OpenXR Runtime Path Never Selected" entry
-> is folded into G1 (single root cause); the 2026-04-23 "EnableShadows Is a No-Op"
-> entry is partially closed (now wired) and replaced by **G9** (deprecation
-> enforcement).
+> **Rev 2 — forward-pass re-audit.** This file supersedes the prior `GAPS.md`
+> (2026-04-24 implementation gaps, IDs G1–G14). All prior findings have been
+> re-verified against the current tree.
+>
+> **Legacy ID compatibility**: G1–G14 are preserved below with updated status.
+> The legacy "Gap 1"–"Gap 6" identifiers (from the prior concurrency-safety
+> `GAPS.md`) remain locatable under **G14** sub-items "Prior Gap 1"–"Prior
+> Gap 6" — CI scripts and issue-tracker references to those IDs are still valid.
+>
+> **Status legend**: ✅ RESOLVED | ⚠️ PARTIAL | 🔴 OPEN
 
 ---
 
 ## G1 — OpenXR Controller / Headset Input Stubbed (Desktop VR)
-- **Intended Behavior**: Under `-tags vr` builds, `OpenXRHeadsetAdapter` and
-  `OpenXRControllerAdapter` should bind to a live OpenXR runtime/session and report
-  real pose, axis, button, and haptic state. The runtime adapter selector
-  (`pkg/engine/vr_adapter_factory_openxr.go:8-22`) should activate the OpenXR path
-  when hardware is present.
-- **Current State**: All 11 controller/headset methods return zero values; both
-  constructors leave `connected = false`; 11 `TODO(vr-sdk)` markers cover every
-  required `xrCreateInstance` / `xrGetSystem` / `xrCreateSession` /
-  `xrLocateViews` / `xrSyncActions` / `xrGetActionState*` / `xrApplyHapticFeedback`
-  call. The runtime selector therefore never escapes the stub branch even with
-  `-tags vr`. **The entire non-test codebase contains 14 TODOs and all 14 are in
-  this single file** (verified with `grep -rn 'TODO\|FIXME\|HACK\|XXX'
-  --include='*.go' --exclude='*_test.go' .`).
-- **Affected Files**: `pkg/engine/vr_openxr_adapters.go:91-230` (constructors +
-  every method); `pkg/engine/vr_adapter_factory_openxr.go:8-22` (selector that
-  cannot succeed).
-- **Blocked Goal**: ROADMAP Priority 4 §157-162 — real head tracking adapter, real
-  controller input adapter, removal of "experimental" label.
-- **Implementation Path**:
-  1. Add cgo block including `<openxr/openxr.h>` with platform-specific
-     `LDFLAGS: -lopenxr_loader`.
-  2. In `NewOpenXRHeadsetAdapter`: call `xrCreateInstance` →
-     `xrGetSystem(XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY)` →
-     `xrCreateSession`; on success store the handles and set `connected = true`.
-  3. In `GetHeadOrientation`/`GetHeadPosition`: call `xrLocateViews` against the
-     `XR_REFERENCE_SPACE_TYPE_LOCAL` reference space; convert `XrPosef.orientation`
-     quaternion to Euler.
-  4. In `NewOpenXRControllerAdapter`: build an `XrActionSet` with `XrAction` entries
-     for trigger / grip / thumbstick / thumbstick-click / face-buttons;
-     `xrSuggestInteractionProfileBindings` for `khr/simple_controller`,
-     `valve/index_controller`, `oculus/touch_controller`,
-     `microsoft/motion_controller`.
-  5. In `IsConnected/GetTrigger/GetGrip/GetThumbstick/IsThumbstickPressed/GetButton`:
-     call `xrSyncActions` once per frame (cache in adapter), then
-     `xrGetActionStateFloat/Vector2f/Boolean`.
-  6. In `SetHaptic`: call `xrApplyHapticFeedback` with `XrHapticVibration{
-     amplitude: intensity, duration: ns, frequency: 0 }`.
-- **Dependencies**: Khronos OpenXR loader installed in CI/dev; cgo enabled in the
-  `vr` build flavour; OpenXR runtime (Monado on Linux CI / SteamVR on dev) for
-  `-tags vr` integration tests.
-- **Effort**: large
+**Status**: ✅ RESOLVED
 
-## G2 — Eleven Engine Systems Defined But Never Registered
-- **Intended Behavior**: Per the project's own "Zero Dangling Features" rule, every
-  `*System` whose `Update(entities, dt)` exists must be passed to
-  `world.AddSystem(...)` exactly once during initialization, otherwise its logic
-  never runs.
-- **Current State**: The following 11 systems (~5 672 LOC total) are constructed
-  *only* in their own test files. `grep -rn 'New<Sys>' pkg/ cmd/ --include='*.go'`
-  excluding `*_test.go` returns hits **only inside the system's own definition file**:
-  - `pkg/engine/event_calendar_system.go:34` — `EventCalendarSystem.Update`
-  - `pkg/engine/event_quest_system.go` — `EventQuestSystem.Update`
-  - `pkg/engine/event_decoration_system.go` — `EventDecorationSystem.Update`
-  - `pkg/engine/event_reward_system.go` — `EventRewardSystem.Update`
-  - `pkg/engine/destructible_object_system.go:99` — `DestructibleObjectSystem.Update`
-    *(distinct from `pkg/engine/physics/destruction/`)*
-  - `pkg/engine/carry_system.go:59` — `CarrySystem.Update`
-  - `pkg/engine/commerce_system.go:811` — `CommerceSystem.Update`
-  - `pkg/engine/extended_achievement_system.go:502` — `ExtendedAchievementSystem.Update`
-  - `pkg/engine/mod_compatibility_system.go` — `ModCompatibilitySystem.Update`
-  - `pkg/engine/mod_browser_system.go:37` — `ModBrowserSystem`
-  - `pkg/engine/terrain_modification_system.go:67` — `TerrainModificationSystem.Update`
-- **Affected Files**: see list above, plus `pkg/engine/system_init.go`,
-  `cmd/client/handlers.go`, `cmd/client/init_versions.go`, `cmd/server/main.go`,
-  `cmd/server/v8_systems.go` — none of which currently register them.
-- **Blocked Goal**: Internal "Zero Dangling Features" rule + implied features
-  (events / commerce / destructible terrain / mod browsing / mod conflicts).
-- **Implementation Path**: For each system decide owner:
-  - Server-authoritative (commerce, terrain modification, destructible objects,
-    event reward, mod compatibility) → `cmd/server/main.go` after world init.
-  - Client/UI (mod browser, extended achievements UI, event decoration) →
-    `cmd/client/handlers.go` or `pkg/engine/system_init.go`.
-  - Shared (event calendar, event quest, carry) → `pkg/engine/system_init.go`
-    inside a feature-flag gate so single-binary builds opt in.
-  Add `world.AddSystem(...)` calls and the corresponding component spawners (e.g.
-  attach `SeasonalEventComponent` to the world entity from `pkg/procgen/`).
-- **Dependencies**: G4 (seasonal-event spawning), G3 (mod browser repo wiring),
-  G10 (extended-achievement vs achievement deduplication).
-- **Effort**: large (LOC) but mechanically simple per-system.
-
-## G3 — Mod Browser & FS Repository Unreachable from Any Binary
-- **Intended Behavior**: Players should be able to browse and install mods in-game
-  via `ModBrowserSystem` backed by `ModRepositoryFS`, integrated with
-  `modding.Manager` for sandboxed loading.
-- **Current State**: `pkg/engine/mod_browser_system.go:37` `NewModBrowserSystem`
-  and `pkg/engine/mod_repository_fs.go` `NewModRepositoryFS` are referenced only
-  by their own tests, `pkg/engine/mod_browser_integration_test.go`, and the demo
-  `examples/mod_repository_fs_integration/main.go`. No `cmd/client/*.go` or
-  `cmd/server/*.go` instantiates either type.
-- **Affected Files**: `pkg/engine/mod_browser_system.go`,
-  `pkg/engine/mod_repository_fs.go`, `cmd/client/handlers.go` (missing wiring).
-- **Blocked Goal**: README "Modding System (JSON-based, sandboxed)" — installation
-  flow and in-game browser are unreachable.
-- **Implementation Path**:
-  1. In `cmd/client/handlers.go` after `modManager` creation, add:
-     `repo := engine.NewModRepositoryFS(modsDir, logger)`,
-     `browser := engine.NewModBrowserSystem(world)`,
-     `browser.SetRepository(repo)`,
-     `browser.SetInstallCallback(...)`, `browser.SetUninstallCallback(...)`,
-     `world.AddSystem(browser)`.
-  2. Wire install/uninstall callbacks into `modding.Manager.LoadFromFile` and a
-     mirror of `os.Remove` for uninstall.
-  3. Add a smoke test that lists, installs, and uninstalls a fixture mod.
-- **Dependencies**: G2 (registration), G5 (client-side mod manager existence).
-- **Effort**: medium
-
-## G4 — Seasonal Event Subsystem Has No Spawner
-- **Intended Behavior**: A seasonal-event feature consisting of
-  `EventCalendarSystem` + `EventQuestSystem` + `EventDecorationSystem` +
-  `EventRewardSystem` should manage upcoming/active/ending phases driven by a
-  `SeasonalEventComponent` attached to the world entity.
-- **Current State**: All four systems (~1 565 LOC) are well-formed but
-  unregistered (G2). Additionally, no procgen path attaches a
-  `SeasonalEventComponent` to the world entity, so even after registration the
-  systems would no-op. `grep -rn SeasonalEventComponent` returns hits only inside
-  the engine system files themselves.
-- **Affected Files**: `pkg/engine/event_*_system.go`, `pkg/engine/event_*_component.go`,
-  `pkg/procgen/` (missing seeder).
-- **Blocked Goal**: feature implied by 4 systems' presence; not on current
-  ROADMAP; qualifies as scaffolded feature awaiting decision.
-- **Implementation Path**:
-  Either (a) implement a `pkg/procgen/event/` generator that produces seasonal
-  events from `(seed, calendar_date)`, attach `SeasonalEventComponent` to the
-  world entity in `cmd/server/main.go`, register the four systems; or
-  (b) gate all four files behind `//go:build seasonal_events` and document the
-  deferral in `pkg/engine/AUDIT.md`.
-- **Dependencies**: G2.
-- **Effort**: large (path a) / small (path b)
-
-## G5 — Modding System Wired Server-Only
-- **Intended Behavior**: All play modes — dedicated server, embedded host-and-play,
-  pure single-player — should respect rule overrides defined in `mods/*.json`.
-- **Current State**: `cmd/server/main.go:120-121` calls
-  `world.SetModRules(modding.NewProviderAdapter(modManager))`, but
-  `cmd/client/` contains zero references to `pkg/modding`. In single-player or
-  host-and-play, `world.ModRules` is `nil` and `world.GetModRuleFloat64` returns
-  the default at every call site.
-- **Affected Files**: `cmd/client/handlers.go`, `cmd/client/util.go` (host-and-play
-  init), `pkg/engine/ecs.go:520-1053` (consumers).
-- **Blocked Goal**: README "Modding System" — single-player and host-and-play
-  honour neither rule overrides nor mod events.
-- **Implementation Path**: In `cmd/client/handlers.go` after world creation, add:
-  ```go
-  if !connectingToRemoteServer {
-      mgr := modding.NewManager()
-      _, _ = mgr.LoadAll() // tolerate empty mods dir
-      world.SetModRules(modding.NewProviderAdapter(mgr))
-  }
-  ```
-  When host-and-play spawns an embedded server (`cmd/client/util.go:210`), have
-  the embedded server own the manager and let the client read overrides through
-  its handle to the same world (already the case). Add a unit test asserting
-  `world.GetModRules() != nil` after single-player init.
-- **Dependencies**: none.
-- **Effort**: small
-
-## G6 — `pkg/engine/vr_webxr_adapters.go` Documented but Missing
-- **Intended Behavior**: WASM (`//go:build js`) builds should provide WebXR-backed
-  `VRHeadsetAdapter` + `VRControllerAdapter` implementations using `navigator.xr`.
-- **Current State**: `pkg/vr/doc.go:79,84` and
-  `pkg/engine/vr_openxr_adapters.go:9,31-35` reference a future
-  `pkg/engine/vr_webxr_adapters.go` with `//go:build js` constraints. The file
-  does not exist (`ls pkg/engine/vr_*.go` confirms only `vr_openxr_adapters.go`,
-  `vr_stub_adapters.go`, the factory, controller, UI files). WASM VR is therefore
-  unreachable.
-- **Affected Files**: `pkg/engine/vr_webxr_adapters.go` (does not exist),
-  `pkg/vr/doc.go:79`, `pkg/engine/vr_openxr_adapters.go:9`.
-- **Blocked Goal**: ROADMAP Priority 4 §160 marked complete in documentation but
-  only the *research* note is in place — no implementation.
-- **Implementation Path**:
-  1. Create `pkg/engine/vr_webxr_adapters.go` with `//go:build js`.
-  2. Implement `WebXRHeadsetAdapter` using `syscall/js` to call
-     `navigator.xr.requestSession("immersive-vr")`, hold an `XRSession`, register
-     a frame callback, read `XRViewerPose`.
-  3. Implement `WebXRControllerAdapter` reading `XRInputSource.gamepad` axes and
-     buttons each frame; map standard XR Controller mapping to trigger / grip /
-     thumbstick / buttons.
-  4. Update `pkg/engine/vr_adapter_factory.go` (default factory) to select
-     WebXR variants under `//go:build js`.
-  5. Add a `//go:build js` smoke test in `pkg/engine/`.
-- **Dependencies**: none structural.
-- **Effort**: medium
-
-## G7 — Client Has No Observability/Health Endpoint
-- **Intended Behavior**: `pkg/observability.MetricsExporter` provides `/metrics`,
-  `/health`, `/healthz`, `/ready`, `/readyz`, `/status` endpoints. ROADMAP §64
-  records this as ✅ Achieved.
-- **Current State**: The exporter is instantiated only in
-  `cmd/server/main.go:1270` (`initializeMetricsExporter`). The desktop / WASM /
-  mobile client process exposes none of these endpoints, so host-and-play and
-  single-player runs cannot be probed even though the same `MetricsExporter`
-  would work.
-- **Affected Files**: `cmd/client/handlers.go` (missing); `cmd/client/init_versions.go`
-  (missing); `pkg/observability/metrics.go:170-175` (endpoint registration).
-- **Blocked Goal**: Stated goal is partially met (server-side); not strictly broken.
-- **Implementation Path**: Add an opt-in `--metrics-port int` flag (default `0` =
-  disabled). When > 0, start a `MetricsExporter` from `cmd/client/handlers.go`
-  bound to `localhost:<port>`. Register a client `PerformanceMonitor` and (in
-  host-and-play mode) the embedded server.
-- **Dependencies**: none.
-- **Effort**: small
-
-## G8 — Dead `Server` Type in `pkg/hostplay`
-- **Intended Behavior**: `pkg/hostplay` exposes a single canonical entry point
-  for host-and-play.
-- **Current State**: `pkg/hostplay/host_and_play.go:36-104` defines `Server` +
-  `New` + `FindAvailablePort` + `Shutdown`. The live integration in
-  `cmd/client/util.go:210` uses `pkg/hostplay/server_manager.go`'s
-  `NewServerManager`. The `*Server` API has no production caller (verified by
-  grep) — only its own test file. Two parallel APIs invite future regressions.
-- **Affected Files**: `pkg/hostplay/host_and_play.go`,
-  `pkg/hostplay/host_and_play_test.go`, `pkg/hostplay/server_manager.go`.
-- **Blocked Goal**: none — pure tech debt / API clarity.
-- **Implementation Path**: Either delete `host_and_play.go` (and its test) since
-  `server_manager.go` covers all production needs, or document `*Server` as the
-  low-level primitive and `*ServerManager` as the high-level wrapper, plus add
-  `pkg/hostplay/doc.go` clarifying the layering.
-- **Dependencies**: none.
-- **Effort**: small
-
-## G9 — `EnableShadows` Deprecation Not Enforced
-- **Intended Behavior**: Deprecated config fields should generate compile-time or
-  load-time warnings so callers can migrate before removal.
-- **Current State**: `pkg/rendering/lighting/types.go:116-123` carries a
-  `// Deprecated:` comment, and the field is now wired (no longer a no-op — see
-  `pkg/rendering/lighting/system.go:341-349` where it forces base AO on). However
-  no `staticcheck.conf` rule and no runtime warning fires when callers set
-  `EnableShadows = true && AOConfig.Enabled == false`.
-- **Affected Files**: `pkg/rendering/lighting/types.go:116`,
-  `pkg/rendering/lighting/system.go:341`, no `staticcheck.conf`.
-- **Blocked Goal**: API contract clarity; latent risk that callers continue to
-  rely on the legacy toggle past its removal.
-- **Implementation Path**: Add a one-shot `logrus.Warn` in the lighting system
-  constructor when the deprecated combination is detected. Optionally add a
-  `staticcheck.conf` SA1019 enforcement rule.
-- **Dependencies**: none.
-- **Effort**: small
-
-## G10 — `ExtendedAchievementSystem` Shadows the Wired Achievement System
-- **Intended Behavior**: A single, well-defined achievement system tracks unlocks
-  and rewards.
-- **Current State**: `pkg/engine/extended_achievement_system.go` (815 LOC) defines
-  a parallel system never registered (G2). Whether it should *replace*, *augment*,
-  or *be deleted* relative to the wired achievement system is undocumented. If
-  ever both are registered, achievement events would double-fire.
-- **Affected Files**: `pkg/engine/extended_achievement_system.go`,
-  `pkg/engine/achievement_*` (the wired system), `pkg/engine/system_init.go`.
-- **Blocked Goal**: Feature ambiguity; data-corruption risk if both wired.
-- **Implementation Path**: Decide ownership (most likely merge "extended"
-  features into the primary system or gate behind a `//go:build extended_achievements`
-  tag), delete the loser, add an integration test asserting only one
-  achievement system instance exists in `world.systems` after init.
-- **Dependencies**: G2.
-- **Effort**: medium
-
-## G11 — Menu "Exit Game" Returns Error Instead of Exiting
-- **Intended Behavior**: Selecting "Exit Game" → "Yes" in the in-game menu should
-  cleanly terminate the process.
-- **Current State**: `pkg/engine/menu_system.go:613` returns
-  `fmt.Errorf("exit not implemented (close window manually)")`. Confirm action
-  closes the menu but the error is swallowed by the menu dispatcher; the user must
-  Alt-F4 (desktop) or task-kill (mobile) to actually quit. Documented as
-  acceptable in `pkg/engine/AUDIT.md:40` but still a user-facing rough edge.
-- **Affected Files**: `pkg/engine/menu_system.go:606-619`,
-  `pkg/engine/game.go` (would own the exit callback).
-- **Blocked Goal**: UX completeness only.
-- **Implementation Path**: Add a `func() error` exit callback field on
-  `MenuSystem`, set it from `cmd/client/handlers.go` to a function that calls
-  `ebiten.Termination` (desktop / WASM) or platform-appropriate shutdown
-  (mobile). Replace the `fmt.Errorf` with the callback invocation.
-- **Dependencies**: none.
-- **Effort**: small
-
-## G12 — Mobile Portrait Picker Returns Error With No Replacement
-- **Intended Behavior**: Mobile players should be able to choose a portrait
-  during character creation (preset gallery, system image picker, or camera roll).
-- **Current State**: `pkg/engine/character_creation_mobile.go:15-17`
-  `OpenPortraitDialog` returns
-  `fmt.Errorf("file dialogs are not supported on mobile/WASM platforms")` and no
-  alternative flow is wired into the character-creation UI. The desktop
-  counterpart at `pkg/engine/character_creation_desktop.go:17-41` uses zenity
-  successfully. Build-tag pair is structurally complete; UX is not.
-- **Affected Files**: `pkg/engine/character_creation_mobile.go`, `pkg/mobile/`
-  (would own a native bridge), character-creation UI in `pkg/engine/`.
-- **Blocked Goal**: README mobile-support coverage of character-creation parity.
-- **Implementation Path**: Either (a) add `pkg/mobile.OpenImagePicker(ctx)` with
-  `//go:build android` calling `Intent.ACTION_PICK` via gomobile and
-  `//go:build ios` calling `UIImagePickerController`; or (b) replace the error
-  with a documented preset-gallery flow and hide the import button on mobile in
-  the character-creation UI. Update the call sites of `OpenPortraitDialog` to
-  surface the platform-appropriate flow.
-- **Dependencies**: none.
-- **Effort**: medium
-
-## G13 — `pkg/companion` Namespace Is Undocumented
-- **Intended Behavior**: A top-level `pkg/companion/` namespace should document
-  its purpose and relationship to `pkg/engine/companion_*.go` and
-  `pkg/procgen/companion/`.
-- **Current State**: `pkg/companion/` contains a single subpackage `learning/`
-  (companion learning manager). No `pkg/companion/doc.go` exists. New contributors
-  cannot tell from the namespace what belongs there vs in `pkg/engine`.
-- **Affected Files**: `pkg/companion/` (missing `doc.go`).
-- **Blocked Goal**: Documentation completeness.
-- **Implementation Path**: Add `pkg/companion/doc.go` with a `// Package
-  companion` block describing the namespace as the home of cross-cutting
-  companion subsystems decoupled from ECS, listing `learning` and any planned
-  subpackages, and explicitly noting that ECS-specific companion code lives in
-  `pkg/engine/companion_*.go`.
-- **Dependencies**: none.
-- **Effort**: small
-
-## G14 — Carryover: Concurrency-Safety Gaps from Prior Root `GAPS.md`
-- **Intended Behavior**: Federation `Start`/`Stop` lifecycle should be idempotent;
-  long-lived background goroutines should accept cancellation; mutex unlocks
-  should be deferred for panic safety.
-- **Current State**: All six gaps from the prior 2026-04-24 root `GAPS.md`
-  (concurrency-safety audit) remain open at the time of this audit:
-  - **Prior Gap 1** — `FederatedMarket.Stop()` lacks `sync.Once`
-    (`pkg/network/federation/market.go:112`)
-  - **Prior Gap 2** — `FederatedMarket.Start()` lacks `sync.Once`
-    (`pkg/network/federation/market.go:92-106`)
-  - **Prior Gap 3** — `TCPServer.Start()` defer-unlock fragility
-    (`pkg/network/server.go:213-248`)
-  - **Prior Gap 4** — Non-`defer` mutex unlock patterns
-    (`pkg/procgen/audit_registry.go:22,29`,
-    `pkg/companion/learning/manager.go:112,155`,
-    `pkg/procgen/legendary/manager.go:104,143,395,406,431,439,478`,
-    `pkg/world/territory.go:195-206`,
-    `pkg/procgen/terrain/async_loader.go:54,67,81`)
-  - **Prior Gap 5** — `startLegacyMetricsMonitor` goroutine has no cancellation
-    (`cmd/client/init_monitoring.go:52-63`)
-  - **Prior Gap 6** — `ProjectileNetworkSync.CleanupTask()` stop channel
-    undocumented (`pkg/network/projectile_sync.go:441-463`)
-- **Affected Files**: see list above.
-- **Blocked Goal**: Concurrency robustness; not blocking any stated feature.
-- **Implementation Path**: Per the prior root `GAPS.md` Gaps 1–6 — add
-  `sync.Once` guards (Gaps 1–2), refactor mixed defer/manual lock pattern
-  (Gap 3), convert manual `Lock`/`Unlock` to `defer` (Gap 4), thread
-  `context.Context` into `startLegacyMetricsMonitor` and
-  `ProjectileNetworkSync.CleanupTask` (Gaps 5–6).
-- **Dependencies**: none cross-gap.
-- **Effort**: small per gap, medium aggregate.
+- **Prior State**: All 11 controller/headset methods returned zero values; both
+  constructors left `connected = false`; 14 `TODO(vr-sdk)` markers covered every
+  required OpenXR call. The runtime selector never activated the OpenXR path
+  even with `-tags vr`.
+- **Resolution**: `pkg/engine/vr_openxr_adapters.go` rewritten — 615 lines of
+  cgo OpenXR implementation (`//go:build vr && !js`). The file now contains
+  `xrCreateInstance`, `xrGetSystem`, `xrCreateSession`, `xrLocateViews`,
+  `xrSyncActions`, `xrGetActionStateFloat/Vector2f/Boolean`, and
+  `xrApplyHapticFeedback` call sites. Zero TODO markers remain in the file
+  (verified: `grep -rn 'TODO\|FIXME\|HACK\|XXX' --include='*.go'
+  --exclude='*_test.go' .` returns 0 hits in the entire non-test codebase).
+  The stub fallback (`vr_stub_adapters.go`) still provides graceful degradation
+  for non-VR builds.
+- **Affected Files**: `pkg/engine/vr_openxr_adapters.go` (fully implemented),
+  `pkg/engine/vr_adapter_factory_openxr.go` (selector now fires under `-tags vr`).
 
 ---
 
-## Severity Summary
+## G2 — Eleven Engine Systems Defined But Never Registered
+**Status**: ✅ RESOLVED
 
-| ID | Title | Severity | Effort |
-|----|-------|----------|--------|
-| G1 | OpenXR Controller / Headset Input Stubbed | HIGH | large |
-| G2 | Eleven Engine Systems Defined But Never Registered | HIGH | large |
-| G3 | Mod Browser & FS Repository Unreachable | MEDIUM | medium |
-| G4 | Seasonal Event Subsystem Has No Spawner | MEDIUM | large / small |
-| G5 | Modding System Wired Server-Only | MEDIUM | small |
-| G6 | `vr_webxr_adapters.go` Documented but Missing | MEDIUM | medium |
-| G7 | Client Has No Observability/Health Endpoint | MEDIUM | small |
-| G8 | Dead `Server` Type in `pkg/hostplay` | MEDIUM | small |
-| G9 | `EnableShadows` Deprecation Not Enforced | MEDIUM | small |
-| G10 | `ExtendedAchievementSystem` Shadows Wired System | MEDIUM | medium |
-| G11 | Menu "Exit Game" Returns Error | LOW | small |
-| G12 | Mobile Portrait Picker Returns Error | LOW | medium |
-| G13 | `pkg/companion` Namespace Undocumented | LOW | small |
-| G14 | Concurrency-Safety Gaps Carryover (6 sub-items) | LOW–HIGH | small each |
+- **Prior State**: 11 systems (~5 672 LOC) had no `world.AddSystem(...)` call
+  in any `cmd/` binary or `pkg/engine/system_init.go`.
+- **Resolution**: All 11 systems are now registered in
+  `pkg/engine/system_init.go`:
+  - `CommerceSystem` — line 1094
+  - `DestructibleObjectSystem` — line 1864
+  - `CarrySystem` — line 1876
+  - `EventCalendarSystem` — line 2077
+  - `EventQuestSystem` — line 2081
+  - `EventDecorationSystem` — line 2085
+  - `EventRewardSystem` — line 2089
+  - `ModCompatibilitySystem` — line 2103
+  - `ModBrowserSystem` — line 2107
+  - `ExtendedAchievementSystem` — lines 2112–2114
+  - `TerrainModificationSystem` — registered server-side in
+    `cmd/server/v4_systems.go:392` and client-side in
+    `cmd/client/handlers.go:2284`
+
+---
+
+## G3 — Mod Browser & FS Repository Unreachable from Any Binary
+**Status**: ⚠️ PARTIAL
+
+- **Prior State**: `NewModBrowserSystem` and `NewModRepositoryFS` had no
+  production callers; players could not browse or install mods.
+- **Partial Resolution**: `ModBrowserSystem` is now registered
+  (`system_init.go:2107`); install/uninstall callbacks are wired in
+  `cmd/client/init_versions.go:653-744`; modding client-side is fully enabled
+  (G5 resolved).
+- **Remaining Gap**: The production wiring at
+  `cmd/client/init_versions.go:720` sets the repository to
+  `engine.NewInMemoryModRepository()` — documented in
+  `pkg/engine/mod_browser_system.go:424` as "provides a simple in-memory mod
+  repository **for testing**". The filesystem-backed implementation
+  (`pkg/engine/mod_repository_fs.go`) is used only in
+  `examples/mod_repository_fs_integration/main.go:62`.
+  Players therefore browse an empty mod list rather than the `mods/` directory.
+  See **G16** for the remaining gap.
+- **Affected Files**: `cmd/client/init_versions.go:720` (wrong repository type).
+
+---
+
+## G4 — Seasonal Event Subsystem Has No Spawner
+**Status**: ✅ RESOLVED
+
+- **Prior State**: All four event systems were unregistered and no
+  `SeasonalEventComponent` was ever attached to the world entity.
+- **Resolution**: All four systems registered (G2). `SeasonalEventComponent`
+  seeded on the world entity at `pkg/engine/system_init.go:2093` with
+  magic constant `seed ^ 0x53454153` ("SEAS") for deterministic derivation.
+
+---
+
+## G5 — Modding System Wired Server-Only
+**Status**: ✅ RESOLVED
+
+- **Prior State**: `cmd/client/` had zero references to `pkg/modding`; local
+  worlds ignored all `mods/*.json` rule overrides.
+- **Resolution**: `cmd/client/init_versions.go:657-700`
+  (`initializeModBrowserWiring`) loads `modding.NewManager()`, calls
+  `mgr.LoadAll()`, and calls
+  `game.World.SetModRules(modding.NewProviderAdapter(sys.modManager))` at
+  line 700. Single-player and host-and-play builds now honour mod rules.
+
+---
+
+## G6 — `pkg/engine/vr_webxr_adapters.go` Documented but Missing
+**Status**: ✅ RESOLVED
+
+- **Prior State**: Documentation referenced this file but it did not exist;
+  WASM VR was unreachable.
+- **Resolution**: `pkg/engine/vr_webxr_adapters.go` created — 451 lines,
+  `//go:build js`, full `syscall/js` WebXR implementation covering
+  `navigator.xr.requestSession`, `XRReferenceSpace`, frame callbacks,
+  `XRViewerPose`, and `XRInputSource.gamepad` controller mapping.
+
+---
+
+## G7 — Client Has No Observability/Health Endpoint
+**Status**: ✅ RESOLVED
+
+- **Prior State**: `MetricsExporter` was server-only; client had no
+  `/metrics`, `/healthz`, `/readyz`, or `/status` endpoint.
+- **Resolution**: `cmd/client/init_monitoring.go:154-158`
+  (`initObservabilityExporter`) and the `--enable-metrics` flag
+  (`cmd/client/util.go:70-72`) provide opt-in client-side Prometheus/health
+  endpoints. The exporter is started in the host-and-play path when the flag
+  is set.
+
+---
+
+## G8 — Dead `Server` Type in `pkg/hostplay`
+**Status**: ✅ RESOLVED
+
+- **Prior State**: `pkg/hostplay/host_and_play.go` defined a `*Server` type
+  with no production callers alongside the used `*ServerManager`.
+- **Resolution**: `pkg/hostplay/host_and_play.go` has been removed. The
+  package now contains only `server_manager.go`, `input_handler.go`,
+  `state_broadcaster.go`, and `doc.go`. `cmd/client/util.go:214` correctly
+  uses `NewServerManager`.
+
+---
+
+## G9 — `EnableShadows` Deprecation Not Enforced
+**Status**: ✅ RESOLVED
+
+- **Prior State**: The `// Deprecated:` comment existed but no runtime warning
+  or static-analysis enforcement fired.
+- **Resolution**: `pkg/rendering/lighting/system.go:44-51` emits
+  `logrus.Warn("EnableShadows is deprecated; set AOConfig.Enabled instead")`
+  in the system constructor when the deprecated combination is detected.
+
+---
+
+## G10 — `ExtendedAchievementSystem` Shadows Wired Achievement System
+**Status**: ✅ RESOLVED
+
+- **Prior State**: Unregistered parallel system; potential double-fire if both
+  wired; ownership undocumented.
+- **Resolution**: Decision documented at `pkg/engine/system_init.go:2109-2114`.
+  Both systems are registered deliberately: the primary achievement system
+  handles kills/quests/crafting; `ExtendedAchievementSystem` handles
+  expression/social/meta achievements. The comment explicitly states they are
+  complementary and confirms no overlap in event handlers.
+
+---
+
+## G11 — Menu "Exit Game" Returns Error Instead of Exiting
+**Status**: ✅ RESOLVED
+
+- **Prior State**: `pkg/engine/menu_system.go:613` returned
+  `fmt.Errorf("exit not implemented")`.
+- **Resolution**: `pkg/engine/menu_system.go:158-162` exposes
+  `SetExitCallback(func() error)`. `cmd/client/handlers.go:3190` injects a
+  callback returning `ebiten.Termination`. Exit now works on all desktop and
+  WASM platforms.
+
+---
+
+## G12 — Mobile Portrait Picker Returns Error With No Replacement
+**Status**: ⚠️ PARTIAL
+
+- **Prior State**: `OpenPortraitDialog` returned a plain `fmt.Errorf`; UI
+  still showed the Browse button on mobile.
+- **Partial Resolution**: The error is now the typed sentinel
+  `ErrPortraitDialogUnsupported` (`pkg/engine/character_creation_mobile.go:30`);
+  the character-creation UI detects this sentinel and hides the Browse button
+  on mobile builds.
+- **Remaining Gap**: No alternative portrait selection path (preset gallery or
+  native image picker) is wired in. Mobile players cannot set any custom
+  portrait.
+- **Implementation Path**:
+  - Option A: Implement `pkg/mobile.OpenImagePicker(ctx)` with
+    `//go:build android` (gomobile `Intent.ACTION_PICK`) and `//go:build ios`
+    (`UIImagePickerController`).
+  - Option B: Add a procedural preset-portrait gallery rendered without a file
+    dialog.
+- **Effort**: medium
+- **Affected Files**: `pkg/engine/character_creation_mobile.go`,
+  `pkg/mobile/` (Option A), character-creation UI code.
+
+---
+
+## G13 — `pkg/companion` Namespace Is Undocumented
+**Status**: ✅ RESOLVED
+
+- **Prior State**: No `pkg/companion/doc.go`; namespace purpose unclear.
+- **Resolution**: `pkg/companion/doc.go` created with full namespace map
+  describing the relationship between `pkg/companion/learning/`,
+  `pkg/engine/companion_*.go`, and `pkg/procgen/companion/`.
+
+---
+
+## G14 — Carryover: Concurrency-Safety Gaps from Prior Root `GAPS.md`
+**Status**: Mixed — Prior Gaps 1, 2, 6 ✅ RESOLVED; Prior Gaps 3, 4, 5 🔴 OPEN
+
+> **Legacy ID note**: The sub-items below were originally labelled "Gap 1"–"Gap 6"
+> in the concurrency-safety `GAPS.md` that preceded the 2026-04-24 implementation
+> audit. CI scripts and issue-tracker references to those IDs remain valid here.
+
+### Prior Gap 1 — `FederatedMarket.Stop()` lacks `sync.Once`
+**Status**: ✅ RESOLVED — `stopOnce sync.Once` field added at
+`pkg/network/federation/market.go:24`; `Stop()` at line 117 now uses
+`s.stopOnce.Do(...)`.
+
+### Prior Gap 2 — `FederatedMarket.Start()` lacks `sync.Once`
+**Status**: ✅ RESOLVED — `startOnce sync.Once` field added at
+`pkg/network/federation/market.go:23`; `Start()` at line 98 now uses
+`s.startOnce.Do(...)`.
+
+### Prior Gap 3 — `TCPServer.Start()` defer-unlock fragility
+**Status**: 🔴 OPEN
+
+- **Location**: `pkg/network/server.go:213-248`
+- **Issue**: `Start()` calls `s.clientsMu.Lock()` then immediately
+  `defer s.clientsMu.Unlock()`. Mid-function, it manually calls
+  `s.clientsMu.Unlock()` (to avoid holding the lock while starting goroutines)
+  followed by `s.clientsMu.Lock()` again. A future early `return` path added
+  between the manual unlock and the manual re-lock would cause the deferred
+  unlock to fire on an already-unlocked mutex (double-unlock panic).
+- **Remediation**: Remove the `defer` and document the explicit lock/unlock
+  sequence with a warning comment, or restructure to hold the mutex only for
+  the slice modification scope using a helper function.
+- **Effort**: small
+
+### Prior Gap 4 — Non-`defer` mutex unlock patterns
+**Status**: 🔴 OPEN
+
+- **Locations**:
+  - `pkg/procgen/audit_registry.go:22,24,29,32` — package-level mutex
+    with explicit `Lock()`/`Unlock()` (no defer)
+  - `pkg/procgen/terrain/async_loader.go:54,57,67,70,81,84,142,144` —
+    manual lock/unlock inside goroutine callbacks; a panic in the loop
+    body would leave the mutex permanently locked
+- **Remediation**: Convert each critical section to use
+  `defer s.mu.Unlock()` immediately after `s.mu.Lock()`, or add
+  `defer recover()` guards in the goroutine callbacks.
+- **Effort**: small
+
+### Prior Gap 5 — `startLegacyMetricsMonitor` goroutine leaks on shutdown
+**Status**: 🔴 OPEN
+
+- **Location**: `cmd/client/init_monitoring.go:52-63`
+- **Issue**: Goroutine uses `for range ticker.C` with no `select` on a
+  cancellation channel or `context.Context`. On clean game exit or signal,
+  the goroutine runs until process termination. The companion
+  `startStabilityMonitor` at line 98 correctly accepts and uses a context.
+- **Remediation**: Add a `context.Context` parameter to
+  `startLegacyMetricsMonitor`; change the loop to:
+  ```go
+  for {
+      select {
+      case <-ctx.Done():
+          ticker.Stop()
+          return
+      case <-ticker.C:
+          // existing metric collection
+      }
+  }
+  ```
+- **Effort**: small
+
+### Prior Gap 6 — `CleanupTask` stop channel undocumented
+**Status**: ✅ RESOLVED — `pkg/network/projectile_sync.go:441-463`
+now carries doc comment: "Returns a stop channel — send a value to stop
+the cleanup task."
+
+---
+
+## G15 — `HotReloadSystem` Defined and Fully Implemented But Never Registered
+**Status**: 🔴 OPEN — **HIGH**
+
+- **Intended Behavior**: `HotReloadSystem` watches the `mods/` directory for
+  JSON changes and hot-reloads mod rules without restarting the game. The
+  system has full ECS wiring (`Update(entities []*Entity, dt float64)`),
+  reload/rollback/hash callbacks, and a `FileWatcher` injection point.
+- **Current State**: `pkg/engine/hot_reload_system.go:45`
+  (`NewHotReloadSystem`) is never called in any production binary.
+  `grep -rn 'NewHotReloadSystem\|HotReloadSystem' --include='*.go'
+  --exclude='*_test.go' .` returns hits only in:
+  - `pkg/engine/hot_reload_system.go` (definition)
+  - `examples/file_watcher_demo/main.go:142-144` (demo only)
+  The companion `HotReloadComponent` (`hot_reload_component.go`) is
+  similarly never attached in production.
+- **Affected Files**:
+  - `pkg/engine/hot_reload_system.go:45` (constructor)
+  - `pkg/engine/hot_reload_component.go` (component, never attached)
+  - `cmd/client/init_versions.go` (missing registration)
+  - `pkg/engine/system_init.go` (alternatively: missing registration)
+- **Blocked Goal**: README "Modding System" live hot-reload feature;
+  mod changes require game restart without this system.
+- **Implementation Path**:
+  1. In `cmd/client/init_versions.go` after mod manager creation:
+     ```go
+     modsDir := // resolved mods/ path
+     hotReload := engine.NewHotReloadSystem(game.World)
+     hotReload.SetReloadCallback(func(modID string) error {
+         return sys.modManager.ReloadMod(modID)
+     })
+     hotReload.SetRollbackCallback(func(modID string) error {
+         return sys.modManager.RollbackMod(modID)
+     })
+     hotReload.SetFileWatcher(engine.NewFileWatcherFS(modsDir, logger))
+     game.World.AddSystem(hotReload)
+     ```
+  2. Validate: `make feature-audit` should no longer list `HotReloadSystem`
+     as dangling; add an integration test asserting the system is present in
+     `world.GetSystems()` after init.
+- **Dependencies**: G5 (resolved — modManager already in client).
+- **Effort**: small
+
+---
+
+## G16 — `FileSystemModRepository` Never Used in Production
+**Status**: 🔴 OPEN — **MEDIUM**
+
+- **Intended Behavior**: The in-game mod browser should list mods from the
+  local `mods/` directory, enabling players to discover and install mods from
+  the filesystem.
+- **Current State**: `pkg/engine/mod_repository_fs.go` implements
+  `FileSystemModRepository` (described as "production mod repository backed by
+  local directory"). At `cmd/client/init_versions.go:720`, the mod browser's
+  repository is set to `engine.NewInMemoryModRepository()`, which is
+  documented at `pkg/engine/mod_browser_system.go:424` as "simple in-memory
+  mod repository **for testing**". A code comment at line 721 reads:
+  "A network-backed repository can be injected here in the future."
+  `FileSystemModRepository` is used only in
+  `examples/mod_repository_fs_integration/main.go:62`.
+  Players therefore browse an empty list instead of their `mods/` directory.
+- **Affected Files**:
+  - `cmd/client/init_versions.go:720` (wrong repository)
+  - `pkg/engine/mod_repository_fs.go` (unused in production)
+- **Blocked Goal**: "Browse and install mods in-game" — the ModBrowserSystem's
+  core use case. Install/uninstall callbacks are correctly wired; only the
+  listing source is wrong.
+- **Implementation Path**: In `initializeModBrowserWiring`
+  (`cmd/client/init_versions.go:720`), replace:
+  ```go
+  sys.modBrowserSys.SetRepository(engine.NewInMemoryModRepository())
+  ```
+  with:
+  ```go
+  sys.modBrowserSys.SetRepository(engine.NewFileSystemModRepository(modsDir))
+  ```
+  where `modsDir` is the already-resolved mods directory path used by
+  `loader.LoadAll()`. Add a test asserting `FetchMods()` returns at least one
+  entry when `mods/` contains a valid JSON mod file.
+- **Dependencies**: G3 (partially resolved — ModBrowserSystem registered and
+  callbacks wired).
+- **Effort**: small
+
+---
+
+## Severity Summary (rev 2)
+
+| ID | Title | Status | Severity | Effort |
+|----|-------|--------|----------|--------|
+| G1 | OpenXR Controller / Headset Input Stubbed | ✅ RESOLVED | — | — |
+| G2 | Eleven Engine Systems Never Registered | ✅ RESOLVED | — | — |
+| G3 | Mod Browser Unreachable from Any Binary | ⚠️ PARTIAL | — | — |
+| G4 | Seasonal Event Subsystem Has No Spawner | ✅ RESOLVED | — | — |
+| G5 | Modding System Wired Server-Only | ✅ RESOLVED | — | — |
+| G6 | `vr_webxr_adapters.go` Documented but Missing | ✅ RESOLVED | — | — |
+| G7 | Client Has No Observability/Health Endpoint | ✅ RESOLVED | — | — |
+| G8 | Dead `Server` Type in `pkg/hostplay` | ✅ RESOLVED | — | — |
+| G9 | `EnableShadows` Deprecation Not Enforced | ✅ RESOLVED | — | — |
+| G10 | `ExtendedAchievementSystem` Shadows Wired System | ✅ RESOLVED | — | — |
+| G11 | Menu "Exit Game" Returns Error | ✅ RESOLVED | — | — |
+| G12 | Mobile Portrait Picker Returns Error (no alternative) | ⚠️ PARTIAL | MEDIUM | medium |
+| G13 | `pkg/companion` Namespace Undocumented | ✅ RESOLVED | — | — |
+| G14-1 | `FederatedMarket.Stop` lacks `sync.Once` (Prior Gap 1) | ✅ RESOLVED | — | — |
+| G14-2 | `FederatedMarket.Start` lacks `sync.Once` (Prior Gap 2) | ✅ RESOLVED | — | — |
+| G14-3 | `TCPServer.Start` defer-unlock fragility (Prior Gap 3) | 🔴 OPEN | MEDIUM | small |
+| G14-4 | Non-defer mutex unlock patterns (Prior Gap 4) | 🔴 OPEN | MEDIUM | small |
+| G14-5 | `startLegacyMetricsMonitor` goroutine leaks (Prior Gap 5) | 🔴 OPEN | LOW | small |
+| G14-6 | `CleanupTask` stop channel undocumented (Prior Gap 6) | ✅ RESOLVED | — | — |
+| G15 | `HotReloadSystem` never registered | 🔴 OPEN | HIGH | small |
+| G16 | `FileSystemModRepository` unused in production | 🔴 OPEN | MEDIUM | small |

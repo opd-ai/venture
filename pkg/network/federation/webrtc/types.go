@@ -6,6 +6,8 @@ package webrtc
 import (
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ConnectionState represents the current state of a WebRTC peer connection.
@@ -221,15 +223,50 @@ type Peer struct {
 	// timeProvider abstracts time access for deterministic testing.
 	timeProvider TimeProvider
 
-	// This is a stub implementation. In a real WebRTC implementation,
-	// this struct would also hold:
-	// - *webrtc.PeerConnection (from github.com/pion/webrtc/v3)
-	// - *webrtc.DataChannel
-	// - signaling connection (WebSocket)
-	// - ICE candidate queues
-	//
-	// For testing purposes, we simulate WebRTC behavior without the
-	// external dependency, following Venture's minimal dependency principle.
+	// peerConn holds the underlying WebRTC peer connection.
+	// Value is *webrtc.PeerConnection (WASM builds via pion) or nil (native builds).
+	peerConn interface{}
+
+	// dataChannel holds the WebRTC data channel used for game federation messages.
+	// Value is *webrtc.DataChannel (WASM builds via pion) or nil (native builds).
+	dataChannel interface{}
+}
+
+// webrtcCloseable is implemented by underlying WebRTC handles that require
+// explicit shutdown, such as peer connections and data channels.
+type webrtcCloseable interface {
+	Close() error
+}
+
+// closeTransportHandles releases any stored underlying WebRTC transport handles.
+// It type-asserts peerConn/dataChannel to webrtcCloseable under the mutex and
+// nils the fields so repeated shutdown paths are idempotent.
+func (p *Peer) closeTransportHandles() {
+	p.mu.Lock()
+	dc := p.dataChannel
+	pc := p.peerConn
+	p.dataChannel = nil
+	p.peerConn = nil
+	p.mu.Unlock()
+
+	if c, ok := dc.(webrtcCloseable); ok && c != nil {
+		if err := c.Close(); err != nil {
+			log.WithFields(log.Fields{
+				"peer_id":  p.ID,
+				"handle":   "dataChannel",
+				"error":    err,
+			}).Debug("WebRTC data channel close returned error")
+		}
+	}
+	if c, ok := pc.(webrtcCloseable); ok && c != nil {
+		if err := c.Close(); err != nil {
+			log.WithFields(log.Fields{
+				"peer_id":  p.ID,
+				"handle":   "peerConn",
+				"error":    err,
+			}).Debug("WebRTC peer connection close returned error")
+		}
+	}
 }
 
 // ConnectionMetrics holds aggregated metrics for all peer connections.

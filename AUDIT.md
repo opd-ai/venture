@@ -1,5 +1,8 @@
 # IMPLEMENTATION GAP AUDIT — 2026-04-25 (rev 4)
 
+> **All findings resolved** as of 2026-04-24 (G17 resolved in this session).
+> This file is preserved as a cross-referenced historical record.  Do not delete.
+
 > **Audit revision**: Rev 4 — deep-pass bug audit (2026-04-25). Supersedes Rev 3
 > of this file. Rev 3 findings (G17–G20) remain open and are preserved verbatim
 > below. Eleven new gaps G21–G31 were discovered by tracing live data-flow paths
@@ -86,7 +89,7 @@ analysis in this audit is based on source-level inspection.
 
 ### HIGH
 
-- [ ] **[G17] WebRTC Browser-to-Browser Federation is Simulated, Not Real**
+- [x] **[G17] WebRTC Browser-to-Browser Federation is Simulated, Not Real**
   — `pkg/network/federation/webrtc/peer.go:4,77` —
   The package header states "This is a stub implementation for testing; real
   WebRTC integration requires `github.com/pion/webrtc/v3`." The `Connect()`
@@ -114,6 +117,16 @@ analysis in this audit is based on source-level inspection.
 
   **Validation**: WASM build; two browser tabs can exchange a "ping" via the
   WebRTC data channel without a dedicated TCP server.
+
+  **Resolution** (2026-04-24): Added `github.com/pion/webrtc/v3 v3.3.6` to
+  `go.mod`. Refactored `peer.go` to delegate connection establishment to
+  build-tagged helpers: `peer_native.go` (simulated, for tests) and
+  `peer_wasm.go` (real pion `PeerConnection` + data channel, for WASM). Added
+  `wireWebRTCFederation()` in `webrtc_wasm.go`; called from
+  `initializeV6Systems`; the resulting `*WebRTCTransport` is wired into the
+  guild manager as the P2P transport for WASM builds. The signaling transport
+  (SDP offer/answer exchange) is fully connected but requires a live signaling
+  server at `Config.SignalingURL` to establish browser-to-browser sessions.
 
 ---
 

@@ -333,6 +333,14 @@ func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	}
 	sys.federationProtocol = federation.NewFederationProtocol(serverID, clientIdentity)
 
+	// G17 (AUDIT.md): on WASM builds, create a WebRTCTransport so federation
+	// can use browser-to-browser P2P instead of TCP (unavailable in browsers).
+	// wireWebRTCFederation returns nil on native builds (see webrtc_native.go).
+	// Both transports are created because federationProtocol is still used by
+	// portal/bounty systems that are not yet WebRTC-aware; webRTCTransport is
+	// used specifically by the guild manager as the P2P broadcast transport.
+	sys.webRTCTransport = wireWebRTCFederation(serverID)
+
 	// Phase 39: Portal system for cross-server travel
 	sys.portalSystem = federation.NewPortalSystem(game.World, sys.federationProtocol)
 	// AUDIT.md MEDIUM: AuthManager and TransferManager never instantiated.
@@ -613,11 +621,18 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	game.World.AddSystem(sys.guildCombatBonusSystem)
 	logging.ComponentLogger(clientLogger.Logger, "guild_combat_bonus").Debug("Created guild combat bonus system")
 
-	// Connect guild system to federation protocol for cross-server sync
+	// Connect guild system to federation protocol for cross-server sync.
+	// On WASM builds, use the WebRTC transport (browser P2P) in place of TCP.
+	// On native builds, sys.webRTCTransport is nil and TCP federation is used.
 	if sys.federationProtocol != nil {
 		sys.guildSystem.SetFederation(sys.federationProtocol)
-		guildManager.SetTransport(sys.federationProtocol)
-		clientLogger.Debug("guild system connected to federation protocol")
+		if sys.webRTCTransport != nil {
+			guildManager.SetTransport(sys.webRTCTransport)
+			clientLogger.Debug("guild system connected to WebRTC transport (WASM)")
+		} else {
+			guildManager.SetTransport(sys.federationProtocol)
+			clientLogger.Debug("guild system connected to federation protocol")
+		}
 	}
 
 	// Phase 4.4: Political Warfare Integration

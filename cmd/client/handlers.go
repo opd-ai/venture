@@ -426,6 +426,9 @@ type systemsContainer struct {
 	rankingManager     *world.RankingManager
 	eventManager       *world.EventManager
 	federationProtocol *federation.FederationProtocol
+	// webRTCTransport replaces federationProtocol as the guild transport on WASM builds,
+	// enabling browser-to-browser P2P federation via pion/webrtc (G17 AUDIT.md).
+	webRTCTransport *federation.WebRTCTransport
 
 	// INTEGRATION FIX [Category A]: Missing Systems (Phase 14+)
 	// Gap: Systems implemented but never instantiated or registered in game loop

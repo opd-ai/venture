@@ -50,6 +50,8 @@ typedef struct {
     XrAction      buttonXAction;
     XrAction      buttonYAction;
     XrAction      menuAction;
+    // dedicated haptic vibration output action (XR_ACTION_TYPE_VIBRATION_OUTPUT)
+    XrAction      vibrationAction;
     XrPath        leftHandPath;
     XrPath        rightHandPath;
     int           initialized;
@@ -121,6 +123,8 @@ static void xr_suggest_simple_bindings(XrInstance instance) {
     BIND(menuAction,           "/user/hand/left/input/menu/click")
     BIND(triggerAction,        "/user/hand/right/input/select/click")
     BIND(gripAction,           "/user/hand/right/input/squeeze/click")
+    BIND(vibrationAction,      "/user/hand/left/output/haptic")
+    BIND(vibrationAction,      "/user/hand/right/output/haptic")
 #undef BIND
 
     XrInteractionProfileSuggestedBinding sug;
@@ -231,6 +235,10 @@ static int xr_init(void) {
     xr_create_action(gState.actionSet, "button_x",        "Button X",        XR_ACTION_TYPE_BOOLEAN_INPUT,   1, &gState.leftHandPath,  &gState.buttonXAction);
     xr_create_action(gState.actionSet, "button_y",        "Button Y",        XR_ACTION_TYPE_BOOLEAN_INPUT,   1, &gState.leftHandPath,  &gState.buttonYAction);
     xr_create_action(gState.actionSet, "menu",            "Menu",            XR_ACTION_TYPE_BOOLEAN_INPUT,   1, &gState.leftHandPath,  &gState.menuAction);
+    // Dedicated vibration output action (XR_ACTION_TYPE_VIBRATION_OUTPUT).
+    // OpenXR requires a separate output action for xrApplyHapticFeedback; reusing
+    // an input action handle returns XR_ERROR_ACTION_TYPE_MISMATCH at runtime.
+    xr_create_action(gState.actionSet, "vibrate",         "Vibrate",         XR_ACTION_TYPE_VIBRATION_OUTPUT,2, hands, &gState.vibrationAction);
 
     // Suggest bindings for the KHR simple profile
     xr_suggest_simple_bindings(gState.instance);
@@ -363,7 +371,9 @@ static void xr_apply_haptic(XrPath handPath, float intensity, float durationSec)
     XrHapticActionInfo info;
     memset(&info, 0, sizeof(info));
     info.type          = XR_TYPE_HAPTIC_ACTION_INFO;
-    info.action        = gState.triggerAction; // haptic reuses trigger action slot
+    // vibrationAction is XR_ACTION_TYPE_VIBRATION_OUTPUT — the correct type for
+    // xrApplyHapticFeedback (OpenXR spec §11.3).
+    info.action        = gState.vibrationAction;
     info.subactionPath = handPath;
     xrApplyHapticFeedback(gState.session, &info, (XrHapticBaseHeader *)&vib);
 }
@@ -414,6 +424,8 @@ static void xr_haptic(const char *hand, float intensity, float durationSec) {
 import "C"
 
 import (
+	"unsafe"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -541,7 +553,9 @@ func (a *OpenXRControllerAdapter) GetTrigger(hand string) float64 {
 	if !a.connected {
 		return 0
 	}
-	return float64(C.xr_trigger(C.CString(hand)))
+	cs := C.CString(hand)
+	defer C.free(unsafe.Pointer(cs))
+	return float64(C.xr_trigger(cs))
 }
 
 // GetGrip returns the grip axis value [0,1] for the given hand.
@@ -549,7 +563,9 @@ func (a *OpenXRControllerAdapter) GetGrip(hand string) float64 {
 	if !a.connected {
 		return 0
 	}
-	return float64(C.xr_grip(C.CString(hand)))
+	cs := C.CString(hand)
+	defer C.free(unsafe.Pointer(cs))
+	return float64(C.xr_grip(cs))
 }
 
 // GetThumbstick returns thumbstick position [-1,1]×[-1,1] for the given hand.
@@ -557,8 +573,10 @@ func (a *OpenXRControllerAdapter) GetThumbstick(hand string) (x, y float64) {
 	if !a.connected {
 		return 0, 0
 	}
+	cs := C.CString(hand)
+	defer C.free(unsafe.Pointer(cs))
 	var cx, cy C.float
-	C.xr_thumbstick(C.CString(hand), &cx, &cy)
+	C.xr_thumbstick(cs, &cx, &cy)
 	return float64(cx), float64(cy)
 }
 
@@ -567,7 +585,9 @@ func (a *OpenXRControllerAdapter) IsThumbstickPressed(hand string) bool {
 	if !a.connected {
 		return false
 	}
-	return C.xr_thumbstick_click(C.CString(hand)) != 0
+	cs := C.CString(hand)
+	defer C.free(unsafe.Pointer(cs))
+	return C.xr_thumbstick_click(cs) != 0
 }
 
 // GetButton returns whether the named face button is pressed.
@@ -576,7 +596,11 @@ func (a *OpenXRControllerAdapter) GetButton(hand, button string) bool {
 	if !a.connected {
 		return false
 	}
-	return C.xr_button(C.CString(hand), C.CString(button)) != 0
+	chand := C.CString(hand)
+	defer C.free(unsafe.Pointer(chand))
+	cbtn := C.CString(button)
+	defer C.free(unsafe.Pointer(cbtn))
+	return C.xr_button(chand, cbtn) != 0
 }
 
 // SetHaptic triggers haptic feedback on the given controller.
@@ -585,5 +609,7 @@ func (a *OpenXRControllerAdapter) SetHaptic(hand string, intensity, duration flo
 	if !a.connected {
 		return
 	}
-	C.xr_haptic(C.CString(hand), C.float(intensity), C.float(duration))
+	cs := C.CString(hand)
+	defer C.free(unsafe.Pointer(cs))
+	C.xr_haptic(cs, C.float(intensity), C.float(duration))
 }

@@ -701,8 +701,19 @@ func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, 
 		log.Debug("mod rules applied to world (single-player / host-and-play)")
 	}
 
-	// Create and register the ModBrowserSystem.
-	sys.modBrowserSys = engine.NewModBrowserSystem(game.World)
+	// Reuse the ModBrowserSystem already registered by InitializeGameSystems (if
+	// called, e.g. in cmd/mobile). If none is present yet, create and register one
+	// now. This prevents a duplicate system being added to the World.
+	for _, s := range game.World.GetSystems() {
+		if mbs, ok := s.(*engine.ModBrowserSystem); ok {
+			sys.modBrowserSys = mbs
+			break
+		}
+	}
+	if sys.modBrowserSys == nil {
+		sys.modBrowserSys = engine.NewModBrowserSystem(game.World)
+		game.World.AddSystem(sys.modBrowserSys)
+	}
 
 	// Provide a default in-memory repository.  A network-backed repository can be
 	// injected here in the future (e.g. HTTPModRepository pointing at a mod CDN).
@@ -729,8 +740,6 @@ func initializeModBrowserWiring(game *engine.EbitenGame, sys *systemsContainer, 
 		log.WithField("mod_id", modID).Info("mod uninstalled via ModBrowserSystem")
 		return nil
 	})
-
-	game.World.AddSystem(sys.modBrowserSys)
 
 	log.Debug("ModBrowserSystem wired with modding.Manager callbacks")
 }

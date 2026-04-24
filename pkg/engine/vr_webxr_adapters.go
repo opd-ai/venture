@@ -50,6 +50,10 @@ type WebXRHeadsetAdapter struct {
 	connected bool
 	cache     *webxrPoseCache
 	session   js.Value
+	// refSpace is the viewer XRReferenceSpace resolved once after session start.
+	// Cached here because requestReferenceSpace returns a Promise and must not
+	// be called per-frame.
+	refSpace js.Value
 }
 
 // NewWebXRHeadsetAdapter creates a WebXR headset adapter.
@@ -123,12 +127,38 @@ func NewWebXRHeadsetAdapter() *WebXRHeadsetAdapter {
 	return a
 }
 
-// startFrameLoop registers the XRSession frame callback and calls
-// session.requestAnimationFrame to begin receiving pose data.
+// startFrameLoop resolves the viewer XRReferenceSpace and then registers the
+// XRSession frame callback.  The reference space is cached on the adapter so
+// that updatePoseFromFrame never needs to call requestReferenceSpace (which
+// returns a Promise and is not safe to call per-frame).
 func (a *WebXRHeadsetAdapter) startFrameLoop() {
 	if a.session.IsUndefined() || a.session.IsNull() {
 		return
 	}
+
+	// Resolve the "viewer" reference space via its Promise before starting the
+	// frame loop.  We wait on the channel before wiring requestAnimationFrame.
+	refSpaceCh := make(chan js.Value, 1)
+	a.session.Call("requestReferenceSpace", "viewer").Call("then",
+		js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+			if len(args) > 0 {
+				refSpaceCh <- args[0]
+			} else {
+				close(refSpaceCh)
+			}
+			return nil
+		}),
+		js.FuncOf(func(_ js.Value, _ []js.Value) interface{} {
+			close(refSpaceCh)
+			return nil
+		}),
+	)
+	refSpace, ok := <-refSpaceCh
+	if !ok || refSpace.IsUndefined() || refSpace.IsNull() {
+		logrus.WithField("adapter", "webxr_headset").Warn("WebXR: could not obtain viewer reference space; head pose unavailable")
+		return
+	}
+	a.refSpace = refSpace
 
 	var onFrame js.Func
 	onFrame = js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
@@ -145,12 +175,13 @@ func (a *WebXRHeadsetAdapter) startFrameLoop() {
 }
 
 // updatePoseFromFrame reads the viewer pose and input sources from an XRFrame.
+// It uses the pre-resolved a.refSpace; callers must not invoke this before
+// startFrameLoop completes reference-space resolution.
 func (a *WebXRHeadsetAdapter) updatePoseFromFrame(frame js.Value) {
-	refSpace := a.session.Call("requestReferenceSpace", "viewer")
-	if refSpace.IsUndefined() || refSpace.IsNull() {
+	if a.refSpace.IsUndefined() || a.refSpace.IsNull() {
 		return
 	}
-	pose := frame.Call("getViewerPose", refSpace)
+	pose := frame.Call("getViewerPose", a.refSpace)
 	if pose.IsUndefined() || pose.IsNull() {
 		return
 	}
@@ -191,6 +222,61 @@ func (a *WebXRHeadsetAdapter) updatePoseFromFrame(frame js.Value) {
 			ipd := math.Sqrt(dx*dx+dy*dy+dz*dz) * 1000 // convert m → mm
 			if ipd > 0 {
 				a.cache.ipd = ipd
+			}
+		}
+	}
+
+	// Update controller state from the session's inputSources.
+	// Each XRInputSource exposes a Gamepad object with axes and buttons.
+	inputSources := a.session.Get("inputSources")
+	if inputSources.IsUndefined() || inputSources.IsNull() {
+		return
+	}
+	for i := 0; i < inputSources.Length(); i++ {
+		src := inputSources.Index(i)
+		handedness := src.Get("handedness").String()
+		var idx int
+		switch handedness {
+		case "left":
+			idx = 0
+		case "right":
+			idx = 1
+		default:
+			continue
+		}
+		gp := src.Get("gamepad")
+		if gp.IsUndefined() || gp.IsNull() {
+			continue
+		}
+		axes := gp.Get("axes")
+		if !axes.IsUndefined() && !axes.IsNull() {
+			if axes.Length() > 0 {
+				a.cache.thumbX[idx] = axes.Index(0).Float()
+			}
+			if axes.Length() > 1 {
+				a.cache.thumbY[idx] = axes.Index(1).Float()
+			}
+		}
+		buttons := gp.Get("buttons")
+		if !buttons.IsUndefined() && !buttons.IsNull() {
+			// WebXR gamepad button layout (OpenXR-compatible mapping):
+			//   0 = trigger, 1 = grip/squeeze, 2 = touchpad/thumbstick click
+			if buttons.Length() > 0 {
+				a.cache.trigger[idx] = buttons.Index(0).Get("value").Float()
+			}
+			if buttons.Length() > 1 {
+				a.cache.grip[idx] = buttons.Index(1).Get("value").Float()
+			}
+			if buttons.Length() > 2 {
+				a.cache.thumbPress[idx] = buttons.Index(2).Get("pressed").Bool()
+			}
+			// Named face buttons (a/b/x/y) at indices 4–7 when present.
+			btnNames := []string{"a", "b", "x", "y"}
+			for bi, bname := range btnNames {
+				bIdx := 4 + bi
+				if buttons.Length() > bIdx {
+					a.cache.buttons[idx][bname] = buttons.Index(bIdx).Get("pressed").Bool()
+				}
 			}
 		}
 	}

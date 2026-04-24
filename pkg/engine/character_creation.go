@@ -1775,7 +1775,7 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 	// Browse button — hidden on mobile/WASM where file dialogs are unavailable.
 	// G12 (AUDIT.md): on mobile, character portrait import is preset-only.
 	browseButtonY := buttonY
-	if !mobile.IsWASM() {
+	if !mobile.IsWASM() && !mobile.IsMobilePlatform() {
 		vector.DrawFilledRect(screen, float32(buttonX), float32(browseButtonY),
 			float32(buttonW), float32(buttonH),
 			color.RGBA{50, 80, 120, 255}, false)

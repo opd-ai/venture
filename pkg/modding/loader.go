@@ -304,11 +304,22 @@ func (l *Loader) GetModPath(modID string) string {
 	return filepath.Join(l.config.ModsDirectory, modID+".json")
 }
 
-// ParseModFromBytes unmarshals raw JSON bytes into a Mod, validates it, and
-// returns it ready for use with Manager.AddMod.  It is a package-level
-// convenience wrapper around Loader.parseModJSON without file-system access,
-// intended for use by the ModBrowserSystem install callback.
+// ParseModFromBytes unmarshals raw JSON bytes into a Mod, runs the same
+// validateFileSize and validateModContent security checks as LoadFromFile,
+// and returns it ready for use with Manager.AddMod.
+// It is a package-level convenience wrapper intended for use by the
+// ModBrowserSystem install callback.
 func ParseModFromBytes(data []byte) (*Mod, error) {
-l := NewLoader()
-return l.parseModJSON("<bytes>", data)
+	l := NewLoader()
+	if err := l.validateFileSize("<bytes>", data); err != nil {
+		return nil, err
+	}
+	mod, err := l.parseModJSON("<bytes>", data)
+	if err != nil {
+		return nil, err
+	}
+	if err := l.validateModContent(mod); err != nil {
+		return nil, err
+	}
+	return mod, nil
 }

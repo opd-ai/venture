@@ -124,53 +124,53 @@ func logPerformanceStatus(fps float64, currentMem uint64, fields logrus.Fields, 
 //
 // Satisfies AUDIT.md G7: client observability surface for host-and-play.
 func initializeClientMetrics(game *engine.EbitenGame, clientLogger *logrus.Entry) func() {
-if !*clientEnableMetrics {
-return func() {}
-}
+	if !*clientEnableMetrics {
+		return func() {}
+	}
 
-addr := "127.0.0.1:" + *clientMetricsPort
-exporter := initObservabilityExporter(game, addr, clientLogger)
-if exporter == nil {
-return func() {}
-}
+	addr := "127.0.0.1:" + *clientMetricsPort
+	exporter := initObservabilityExporter(game, addr, clientLogger)
+	if exporter == nil {
+		return func() {}
+	}
 
-if err := exporter.Start(); err != nil {
-clientLogger.WithFields(logrus.Fields{
-"addr":  addr,
-"error": err,
-}).Warn("client metrics: failed to start exporter — continuing without it")
-return func() {}
-}
+	if err := exporter.Start(); err != nil {
+		clientLogger.WithFields(logrus.Fields{
+			"addr":  addr,
+			"error": err,
+		}).Warn("client metrics: failed to start exporter — continuing without it")
+		return func() {}
+	}
 
-clientLogger.WithField("addr", addr).Info("client metrics endpoint started")
+	clientLogger.WithField("addr", addr).Info("client metrics endpoint started")
 
-return func() {
-if err := exporter.Stop(); err != nil {
-clientLogger.WithError(err).Warn("client metrics: failed to stop exporter")
-}
-}
+	return func() {
+		if err := exporter.Stop(); err != nil {
+			clientLogger.WithError(err).Warn("client metrics: failed to stop exporter")
+		}
+	}
 }
 
 // initObservabilityExporter creates a MetricsExporter, registers the world and
 // the PerformanceMonitoringSystem from the game, and returns it ready to Start().
 // Returns nil if addr is empty or the exporter cannot be constructed.
 func initObservabilityExporter(game *engine.EbitenGame, addr string, clientLogger *logrus.Entry) *observability.MetricsExporter {
-exporter := observability.NewMetricsExporterWithLogger(addr, clientLogger.Logger)
+	exporter := observability.NewMetricsExporterWithLogger(addr, clientLogger.Logger)
 
-// Locate the PerformanceMonitoringSystem already registered in the world.
-var perfMon *engine.PerformanceMonitoringSystem
-for _, sys := range game.World.GetSystems() {
-if pms, ok := sys.(*engine.PerformanceMonitoringSystem); ok {
-perfMon = pms
-break
-}
-}
-if perfMon == nil {
-perfMon = engine.NewPerformanceMonitoringSystem()
-game.World.AddSystem(perfMon)
-}
+	// Locate the PerformanceMonitoringSystem already registered in the world.
+	var perfMon *engine.PerformanceMonitoringSystem
+	for _, sys := range game.World.GetSystems() {
+		if pms, ok := sys.(*engine.PerformanceMonitoringSystem); ok {
+			perfMon = pms
+			break
+		}
+	}
+	if perfMon == nil {
+		perfMon = engine.NewPerformanceMonitoringSystem()
+		game.World.AddSystem(perfMon)
+	}
 
-exporter.RegisterPerformanceMonitor(perfMon)
-exporter.RegisterWorld(game.World)
-return exporter
+	exporter.RegisterPerformanceMonitor(perfMon)
+	exporter.RegisterWorld(game.World)
+	return exporter
 }

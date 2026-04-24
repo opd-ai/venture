@@ -474,3 +474,31 @@ checkType(result.EventRewardSystem, "EventRewardSystem")
 checkType(result.ModCompatibilitySystem, "ModCompatibilitySystem")
 checkType(result.ModBrowserSystem, "ModBrowserSystem")
 }
+
+// TestInitializeGameSystems_SingleAchievementInstances asserts that exactly one
+// ExtendedAchievementSystem is registered in the World (G10).
+// Duplicate registrations would cause double-fired achievement rewards.
+func TestInitializeGameSystems_SingleAchievementInstances(t *testing.T) {
+logger := logging.TestUtilityLogger("system_init_test")
+game := NewEbitenGameWithLogger(800, 600, logger)
+config := DefaultSystemInitConfig(42, "fantasy", logger)
+
+result, err := InitializeGameSystems(game, config)
+if err != nil {
+t.Fatalf("InitializeGameSystems: %v", err)
+}
+
+extendedCount := 0
+for _, sys := range game.World.GetSystems() {
+if _, ok := sys.(*ExtendedAchievementSystem); ok {
+extendedCount++
+}
+}
+if extendedCount != 1 {
+t.Errorf("expected exactly 1 ExtendedAchievementSystem in World, got %d", extendedCount)
+}
+if result.ExtendedAchievementSystem == nil {
+t.Error("GameSystemsResult.ExtendedAchievementSystem is nil")
+}
+}
+

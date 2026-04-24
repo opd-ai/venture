@@ -1,6 +1,19 @@
 // Package engine provides the extended achievement system for tracking
 // player accomplishments across all game systems.
 //
+// # Relationship to AchievementSystem
+//
+// The engine contains two complementary achievement trackers:
+//
+//   - AchievementSystem (achievement.go) — tracks expression/social combos.
+//   - ExtendedAchievementSystem (this file) — tracks gameplay events (kills,
+//     quests, crafting, exploration, PvP) with multi-tier progression.
+//
+// Both systems use distinct component types (AchievementComponent vs
+// ExtendedAchievementComponent) so registering both in the same World is safe
+// and does not cause double-firing of rewards.  InitializeGameSystems registers
+// both to provide full achievement coverage.
+//
 // Phase 83: Extended Achievement Categories (V15.0)
 package engine
 

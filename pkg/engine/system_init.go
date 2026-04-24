@@ -282,6 +282,9 @@ type SystemInitResult struct {
 	// Mod systems (G2/G3 — basic registration; full repository wiring done in cmd/client)
 	ModCompatibilitySystem *ModCompatibilitySystem
 	ModBrowserSystem       *ModBrowserSystem
+	// G10: ExtendedAchievementSystem is the gameplay tracker (kills/quests/crafting/PvP).
+	// Safe to register alongside AchievementSystem — they use different components.
+	ExtendedAchievementSystem *ExtendedAchievementSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -2102,6 +2105,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	modBrowserSystem := NewModBrowserSystem(game.World)
 	result.ModBrowserSystem = modBrowserSystem
 	game.World.AddSystem(modBrowserSystem)
+
+	// G10: ExtendedAchievementSystem tracks gameplay events (kills, quests, crafting,
+	// exploration, PvP) with multi-tier progression.  It complements AchievementSystem
+	// (expression/social) and is safe to register alongside it.
+	extendedAchievementSystem := NewExtendedAchievementSystem(game.World)
+	result.ExtendedAchievementSystem = extendedAchievementSystem
+	game.World.AddSystem(extendedAchievementSystem)
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{

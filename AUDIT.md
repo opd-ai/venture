@@ -232,7 +232,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `EnableShadows == true && !AOConfig.Enabled`, plus a unit test asserting the warn
   fires once.
 
-- [ ] **G10 — `extended_achievement_system.go` shadows `pkg/engine` achievement system** —
+- [x] **G10 — `extended_achievement_system.go` shadows `pkg/engine` achievement system** —
   `pkg/engine/extended_achievement_system.go` (815 LOC) defines an unregistered
   parallel system to the wired achievement system. Whether it is meant to *replace*,
   *augment*, or *be deleted* is undocumented. Two parallel achievement systems can

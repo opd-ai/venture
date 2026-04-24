@@ -68,13 +68,21 @@ func (s *TalentSystem) processEntity(entity *Entity) bool {
 	if !ok || !talent.Dirty {
 		return false
 	}
+	if talent.AppliedDeltas == nil {
+		talent.AppliedDeltas = make(map[string]float64)
+	}
+
+	// G23 fix: remove previously applied bonuses before computing new ones so
+	// that talent resets and reallocations don't permanently stack old values.
+	s.removeTalentBonuses(entity, talent.AppliedDeltas)
 
 	// Calculate total bonuses from all allocated talents
 	bonuses := s.calculateTotalBonuses(talent)
 	talent.CachedBonuses = bonuses
 
-	// Apply bonuses to entity stats
-	s.applyBonuses(entity, bonuses)
+	// Apply bonuses to entity stats and record absolute deltas for future removal.
+	talent.AppliedDeltas = s.applyBonusesTracked(entity, bonuses)
+	talent.AppliedBonuses = bonuses
 
 	talent.Dirty = false
 	return true
@@ -133,6 +141,96 @@ func (s *TalentSystem) applyBonuses(entity *Entity, bonuses TalentBonus) {
 	s.applyManaBonuses(entity, bonuses)
 	s.applyStatsBonuses(entity, bonuses)
 	s.applyCombatBonuses(entity, bonuses)
+}
+
+// applyBonusesTracked applies bonuses and returns the absolute deltas that were
+// added to each stat.  Using absolute deltas (not ratios) avoids the sign-flip
+// error in the previous division-based removal approach.
+//
+// Known limitation: deltas are computed against the stat values at apply-time.
+// If another system applies multiplicative modifiers to the same fields after
+// this call (e.g. StatusEffectDamageBoostSystem), subtracting the delta later
+// will not restore the correct pre-talent value under those modifiers.
+// A full fix requires a non-compounding stat aggregation layer (see GAPS.md G32).
+func (s *TalentSystem) applyBonusesTracked(entity *Entity, bonuses TalentBonus) map[string]float64 {
+	deltas := make(map[string]float64)
+
+	if statsComp, ok := entity.GetComponent("stats"); ok {
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			before := *stats
+			s.applyStatsBonuses(entity, bonuses)
+			deltas["attack"] = stats.Attack - before.Attack
+			deltas["defense"] = stats.Defense - before.Defense
+			deltas["magicPower"] = stats.MagicPower - before.MagicPower
+			deltas["magicDefense"] = stats.MagicDefense - before.MagicDefense
+			deltas["critChance"] = stats.CritChance - before.CritChance
+			deltas["critDamage"] = stats.CritDamage - before.CritDamage
+			deltas["lifesteal"] = stats.Lifesteal - before.Lifesteal
+			deltas["blockChance"] = stats.BlockChance - before.BlockChance
+			deltas["evasion"] = stats.Evasion - before.Evasion
+		}
+	}
+
+	if healthComp, ok := entity.GetComponent("health"); ok {
+		if health, ok := healthComp.(*HealthComponent); ok {
+			beforeMax := health.Max
+			s.applyHealthBonuses(entity, bonuses)
+			deltas["healthMax"] = health.Max - beforeMax
+		}
+	}
+
+	if manaComp, ok := entity.GetComponent("mana"); ok {
+		if mana, ok := manaComp.(*ManaComponent); ok {
+			beforeMax := mana.Max
+			s.applyManaBonuses(entity, bonuses)
+			deltas["manaMax"] = float64(mana.Max - beforeMax)
+		}
+	}
+
+	s.applyCombatBonuses(entity, bonuses)
+	return deltas
+}
+
+// removeTalentBonuses subtracts previously applied talent bonuses from entity stats.
+// Uses the absolute deltas recorded at apply time for exact removal (G23 fix).
+func (s *TalentSystem) removeTalentBonuses(entity *Entity, deltas map[string]float64) {
+	if len(deltas) == 0 {
+		return
+	}
+
+	if statsComp, ok := entity.GetComponent("stats"); ok {
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			stats.Attack -= deltas["attack"]
+			stats.Defense -= deltas["defense"]
+			stats.MagicPower -= deltas["magicPower"]
+			stats.MagicDefense -= deltas["magicDefense"]
+			stats.CritChance -= deltas["critChance"]
+			stats.CritDamage -= deltas["critDamage"]
+			stats.Lifesteal -= deltas["lifesteal"]
+			stats.BlockChance -= deltas["blockChance"]
+			stats.Evasion -= deltas["evasion"]
+		}
+	}
+
+	if healthComp, ok := entity.GetComponent("health"); ok {
+		if health, ok := healthComp.(*HealthComponent); ok {
+			health.Max -= deltas["healthMax"]
+			// Clamp Current to new Max so overheal or stale values don't persist.
+			if health.Current > health.Max {
+				health.Current = health.Max
+			}
+		}
+	}
+
+	if manaComp, ok := entity.GetComponent("mana"); ok {
+		if mana, ok := manaComp.(*ManaComponent); ok {
+			mana.Max -= int(deltas["manaMax"])
+			// Clamp Current to new Max so mana stays consistent after talent reset.
+			if mana.Current > mana.Max {
+				mana.Current = mana.Max
+			}
+		}
+	}
 }
 
 // applyHealthBonuses applies health bonuses from talents.

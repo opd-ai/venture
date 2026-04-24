@@ -71,6 +71,25 @@ type CombatSystem struct {
 
 	// Logger for combat events
 	logger *logrus.Entry
+
+	// processedDeaths tracks entities whose death callback was already invoked
+	// this session.  It prevents re-invocation on frames where the entity is
+	// still in the entity list but its health is still ≤0.  The callback is
+	// invoked BEFORE DeadComponent is attached, preserving the original contract
+	// where the callback is responsible for adding DeadComponent itself.
+	//
+	// Lifetime: the map is never explicitly cleared.  A new CombatSystem is
+	// created for each World/level, so entity IDs from a prior World will not
+	// collide.  Call ClearProcessedDeaths() if entity IDs are recycled within a
+	// single long-lived World instance.
+	processedDeaths map[uint64]struct{}
+}
+
+// ClearProcessedDeaths removes all entries from the internal death-tracking map.
+// Call this when entity IDs may be recycled (e.g. object-pool entity reuse) to
+// ensure the death callback fires correctly for reused IDs.
+func (s *CombatSystem) ClearProcessedDeaths() {
+	s.processedDeaths = make(map[uint64]struct{})
 }
 
 // NewCombatSystem creates a new combat system with a given random seed.
@@ -93,10 +112,11 @@ func NewCombatSystemWithLogger(seed int64, logger *logrus.Logger) *CombatSystem 
 	combatResolver := combat.NewDefaultCombatResolver(nil)
 
 	return &CombatSystem{
-		rng:            rand.New(rand.NewSource(seed)),
-		seed:           seed,
-		logger:         logEntry,
-		combatResolver: combatResolver,
+		rng:             rand.New(rand.NewSource(seed)),
+		seed:            seed,
+		logger:          logEntry,
+		combatResolver:  combatResolver,
+		processedDeaths: make(map[uint64]struct{}),
 	}
 }
 
@@ -157,9 +177,27 @@ func (s *CombatSystem) updateEntityCombat(entity *Entity, deltaTime float64) {
 
 	if !isDead {
 		s.updateAttackCooldown(entity, deltaTime)
+		s.applyBaseHealthRegen(entity, deltaTime)
 	}
 
 	s.processStatusEffects(entity, deltaTime)
+}
+
+// applyBaseHealthRegen ticks HealthComponent.RegenRate into health.Current for
+// living entities.  Written by AttributeAllocationSystem (G26 VIT→regen fix).
+func (s *CombatSystem) applyBaseHealthRegen(entity *Entity, deltaTime float64) {
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
+	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok || health.RegenRate <= 0 || health.Current >= health.Max {
+		return
+	}
+	health.Current += health.RegenRate * deltaTime
+	if health.Current > health.Max {
+		health.Current = health.Max
+	}
 }
 
 // updateAttackCooldown updates attack cooldown for living entities.
@@ -216,6 +254,14 @@ func (s *CombatSystem) processDeadEntities(entities []*Entity) {
 }
 
 // handleEntityDeath checks and handles entity death.
+// Death callback contract (G28 / review fix):
+//   - The callback is invoked BEFORE DeadComponent is attached, preserving the
+//     original contract: the callback is the single transaction responsible for
+//     adding DeadComponent, awarding XP, dropping loot, etc.
+//   - An internal processedDeaths map prevents re-invocation on subsequent frames
+//     where the entity is still in the entity list but health is still ≤ 0.
+//   - If no callback is registered (or the callback does not add DeadComponent),
+//     handleEntityDeath adds DeadComponent itself as a fallback.
 func (s *CombatSystem) handleEntityDeath(entity *Entity) {
 	healthComp, ok := entity.GetComponent("health")
 	if !ok {
@@ -227,6 +273,19 @@ func (s *CombatSystem) handleEntityDeath(entity *Entity) {
 		return
 	}
 
+	// Entity already has a DeadComponent from a previous invocation or an
+	// external source (e.g. save-file loading).  Skip entirely.
+	if entity.HasComponent("dead") {
+		return
+	}
+
+	// Internal guard: prevent re-invocation on subsequent frames before the
+	// entity is removed from the world.
+	if _, alreadyFired := s.processedDeaths[entity.ID]; alreadyFired {
+		return
+	}
+	s.processedDeaths[entity.ID] = struct{}{}
+
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entityID":      entity.ID,
@@ -234,8 +293,18 @@ func (s *CombatSystem) handleEntityDeath(entity *Entity) {
 		}).Info("entity death")
 	}
 
+	// Invoke callback first.  The callback (cmd/client/client_loot.go:
+	// createDeathCallback) is the authoritative source for loot, XP, and
+	// adding DeadComponent in one atomic transaction.
 	if s.onDeathCallback != nil {
 		s.onDeathCallback(entity)
+	}
+
+	// Fallback: if there is no callback, or the callback did not add
+	// DeadComponent, add it here to ensure the entity is marked dead and the
+	// guard above fires on subsequent frames.
+	if !entity.HasComponent("dead") {
+		entity.AddComponent(NewDeadComponent(0.0))
 	}
 }
 
@@ -277,6 +346,14 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 
 // validateAttackEntities checks if attacker and target entities are in a valid state for combat.
 func (s *CombatSystem) validateAttackEntities(attacker, target *Entity) bool {
+	// G30 fix: an entity cannot damage itself.
+	if attacker.ID == target.ID {
+		if s.logger != nil {
+			s.logger.WithField("entity_id", attacker.ID).Debug("attack blocked - self-attack")
+		}
+		return false
+	}
+
 	// Priority 1.3: Dead entities cannot attack
 	if attacker.HasComponent("dead") {
 		if s.logger != nil {

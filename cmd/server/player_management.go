@@ -295,7 +295,9 @@ func consumeItem(entity *engine.Entity, inventory *engine.InventoryComponent, it
 	}
 	health := healthComp.(*engine.HealthComponent)
 
-	healAmount := float64(item.Stats.Defense)
+	// G25 fix: use item.Stats.Healing as the authoritative heal amount.
+	// item.Stats.Defense is the armor contribution and is 0 for consumables.
+	healAmount := float64(item.Stats.Healing)
 	if healAmount <= 0 {
 		return
 	}

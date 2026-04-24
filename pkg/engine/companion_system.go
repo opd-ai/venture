@@ -11,6 +11,11 @@ import (
 type CompanionSystem struct {
 	world  *World
 	logger *logrus.Entry
+
+	// scoutTimers tracks accumulated time per-companion for direction changes.
+	// Used by executeScout to cycle through four cardinal directions.
+	scoutTimers     map[uint64]float64
+	scoutDirections map[uint64]int
 }
 
 // NewCompanionSystem creates a new companion management system.
@@ -19,14 +24,19 @@ func NewCompanionSystem(world *World) *CompanionSystem {
 		"system": "companion",
 	})
 	return &CompanionSystem{
-		world:  world,
-		logger: logger,
+		world:           world,
+		logger:          logger,
+		scoutTimers:     make(map[uint64]float64),
+		scoutDirections: make(map[uint64]int),
 	}
 }
 
 // Update processes companion AI behavior, following, and bonding.
 func (s *CompanionSystem) Update(deltaTime float64) {
 	companions := s.world.GetEntitiesWith("companion")
+
+	// Build the set of live companion IDs so we can purge stale scout entries.
+	liveIDs := make(map[uint64]struct{}, len(companions))
 
 	for _, companion := range companions {
 		comp, ok := companion.GetComponent("companion")
@@ -37,6 +47,12 @@ func (s *CompanionSystem) Update(deltaTime float64) {
 		if !ok {
 			continue
 		}
+
+		// Skip dead companions but still track ID so we clean up below.
+		if companion.HasComponent("dead") {
+			continue
+		}
+		liveIDs[companion.ID] = struct{}{}
 
 		// Get owner entity
 		owner, _ := s.world.GetEntity(companionComp.OwnerID)
@@ -53,6 +69,21 @@ func (s *CompanionSystem) Update(deltaTime float64) {
 
 		// Apply bonding perks
 		s.applyBondingPerks(companion, companionComp)
+	}
+
+	// Purge scout state for companions that are no longer alive.
+	// This prevents unbounded map growth over long sessions (review comment).
+	s.cleanupScoutMaps(liveIDs)
+}
+
+// cleanupScoutMaps removes scout timer/direction entries for companions that are
+// no longer in the live set (dead, removed, or despawned).
+func (s *CompanionSystem) cleanupScoutMaps(liveIDs map[uint64]struct{}) {
+	for id := range s.scoutTimers {
+		if _, alive := liveIDs[id]; !alive {
+			delete(s.scoutTimers, id)
+			delete(s.scoutDirections, id)
+		}
 	}
 }
 
@@ -157,7 +188,7 @@ func (s *CompanionSystem) processCommand(companion *Entity, companionComp *Compa
 	case CommandGather:
 		s.executeGather(companion, companionComp)
 	case CommandScout:
-		s.executeScout(companion, companionComp, owner)
+		s.executeScout(companion, companionComp, owner, deltaTime)
 	}
 }
 
@@ -491,14 +522,27 @@ func (s *CompanionSystem) moveCompanionToward(companion *Entity, dx, dy, distanc
 }
 
 // executeScout makes the companion explore nearby areas.
-func (s *CompanionSystem) executeScout(companion *Entity, companionComp *CompanionComponent, owner *Entity) {
-	// Move in expanding circles around owner
-	// This is a stub - full implementation would use pathfinding
+// Cycles through four cardinal directions every scoutIntervalSecs seconds to avoid
+// moving diagonally north-east indefinitely (G19 fix).
+func (s *CompanionSystem) executeScout(companion *Entity, _ *CompanionComponent, _ *Entity, deltaTime float64) {
+	const scoutSpeed = 80.0
+	const scoutIntervalSecs = 3.0 // seconds per direction segment
+
+	// Cardinal direction vectors: E, S, W, N
+	dirs := [4][2]float64{{1, 0}, {0, 1}, {-1, 0}, {0, -1}}
+
+	id := companion.ID
+	s.scoutTimers[id] += deltaTime
+	if s.scoutTimers[id] >= scoutIntervalSecs {
+		s.scoutTimers[id] = 0
+		s.scoutDirections[id] = (s.scoutDirections[id] + 1) % 4
+	}
+
+	dir := dirs[s.scoutDirections[id]]
 	velComp, hasVelocity := companion.GetComponent("velocity")
 	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
-		// Simple circular motion for scouting
-		velocityComp.VX = 80.0
-		velocityComp.VY = 80.0
+		velocityComp.VX = dir[0] * scoutSpeed
+		velocityComp.VY = dir[1] * scoutSpeed
 	}
 }
 

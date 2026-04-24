@@ -15,9 +15,12 @@ func NewClassProgressionSystem() *ClassProgressionSystem {
 }
 
 // Update processes class progression for all entities.
+// DESIGN CONTRACT (G18): Progression is event-driven through explicit LevelUp() calls.
+// Passive per-frame effects (e.g., class-specific regen ticks) are out of scope until
+// a dedicated passive-effects subsystem is added to the class configuration.
 func (cps *ClassProgressionSystem) Update(entities []*Entity, deltaTime float64) {
-	// Currently a stub - progression happens through LevelUp() calls
-	// This system could be extended to apply passive effects
+	_ = entities
+	_ = deltaTime
 }
 
 // LevelUp increases the class level and applies stat growth bonuses.

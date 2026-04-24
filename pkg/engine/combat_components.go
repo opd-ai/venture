@@ -9,6 +9,9 @@ import "github.com/opd-ai/venture/pkg/combat"
 type HealthComponent struct {
 	Current float64
 	Max     float64
+	// RegenRate is health regenerated per second.
+	// G26 fix: written by AttributeAllocationSystem (HealthRegenPerVit).
+	RegenRate float64
 }
 
 // Type returns the component type identifier.
@@ -18,9 +21,10 @@ func (h *HealthComponent) Type() string {
 
 // Serialize encodes the component to bytes for persistence
 func (h *HealthComponent) Serialize() ([]byte, error) {
-	buf := make([]byte, 16) // 2 float64s = 16 bytes
+	buf := make([]byte, 24) // 3 float64s = 24 bytes
 	writeFloat64(buf[0:8], h.Current)
 	writeFloat64(buf[8:16], h.Max)
+	writeFloat64(buf[16:24], h.RegenRate)
 	return buf, nil
 }
 
@@ -31,6 +35,10 @@ func (h *HealthComponent) Deserialize(data []byte) error {
 	}
 	h.Current = readFloat64(data[0:8])
 	h.Max = readFloat64(data[8:16])
+	// RegenRate was added later; default to 0 for existing saves.
+	if len(data) >= 24 {
+		h.RegenRate = readFloat64(data[16:24])
+	}
 	return nil
 }
 
@@ -80,6 +88,10 @@ type StatsComponent struct {
 
 	// Lifesteal - heals attacker for percentage of damage dealt (0.0 to 1.0)
 	Lifesteal float64
+
+	// SpeedBonus is an additive % modifier to base movement speed from attributes.
+	// G26 fix: written by AttributeAllocationSystem (SpeedBonusPerAgi).
+	SpeedBonus float64
 
 	// Resistances per damage type
 	Resistances map[combat.DamageType]float64

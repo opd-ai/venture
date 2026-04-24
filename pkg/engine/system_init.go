@@ -291,6 +291,12 @@ type SystemInitResult struct {
 	RotationSystemWrapper             System
 	SquadSystemWrapper                System
 	CompanionProgressionSystemWrapper System
+
+	// G31: CarryOverSystem (New Game+ prestige carry-over) is intentionally NOT
+	// registered here. It is a client-only, single-player prestige feature that is
+	// instantiated and registered in cmd/client/init_versions.go. Server builds and
+	// headless test harnesses do not include it because prestige state is owned by
+	// the client. Any server-side prestige integration must wire its own instance.
 }
 
 // InitializeGameSystems initializes all game systems for Version 2.0 feature parity.
@@ -924,18 +930,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 		if classAffinitySystem != nil {
 			classAffinitySystem.OnKill(attacker, "power_strike")
 		}
-		// Award base combat XP to the attacker based on target's level/stats
-		if progressionSystem != nil {
-			xp := progressionSystem.CalculateXPReward(target)
-			if xp > 0 {
-				if err := progressionSystem.AwardXP(attacker, xp); err != nil {
-					logrus.WithFields(logrus.Fields{
-						"system": "progression",
-						"xp":     xp,
-					}).WithError(err).Warn("Failed to award kill XP")
-				}
-			}
-		}
+		// G22 fix: XP is awarded exclusively by the death callback in
+		// cmd/client/client_loot.go (createDeathCallback), which is the
+		// authoritative single transaction for loot, XP, and DeadComponent
+		// attachment.  CombatSystem.handleEntityDeath invokes that callback
+		// BEFORE attaching DeadComponent, so createDeathCallback's own
+		// HasComponent("dead") guard works correctly (callback runs once,
+		// adds DeadComponent, subsequent frames exit via HasComponent guard).
+		// Awarding XP here as well caused every kill to grant XP twice.
 	})
 
 	// 18c. AttributeAllocationSystem - manages core attribute point allocation

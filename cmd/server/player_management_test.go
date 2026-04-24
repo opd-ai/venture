@@ -317,7 +317,7 @@ func TestApplyInputCommand_UseItem(t *testing.T) {
 	healPotion := &itemgen.Item{
 		Name:  "Health Potion",
 		Type:  itemgen.TypeConsumable,
-		Stats: itemgen.Stats{Defense: 25}, // Defense stat used as heal amount
+		Stats: itemgen.Stats{Healing: 25},
 	}
 	invComp.Items = append(invComp.Items, healPotion)
 	entity.AddComponent(invComp)
@@ -357,7 +357,7 @@ func TestApplyInputCommand_UseItemHealthCapped(t *testing.T) {
 	bigPotion := &itemgen.Item{
 		Name:  "Big Health Potion",
 		Type:  itemgen.TypeConsumable,
-		Stats: itemgen.Stats{Defense: 50}, // Would heal 50, but capped at max
+		Stats: itemgen.Stats{Healing: 50},
 	}
 	invComp.Items = append(invComp.Items, bigPotion)
 	entity.AddComponent(invComp)
@@ -523,7 +523,7 @@ func TestConsumeItem_ZeroHeal(t *testing.T) {
 	zeroItem := &itemgen.Item{
 		Name:  "Empty Vial",
 		Type:  itemgen.TypeConsumable,
-		Stats: itemgen.Stats{Defense: 0}, // Zero heal
+		Stats: itemgen.Stats{Healing: 0}, // Zero heal
 	}
 	invComp.Items = append(invComp.Items, zeroItem)
 
@@ -553,7 +553,7 @@ func TestConsumeItem_NoHealthComponent(t *testing.T) {
 	item := &itemgen.Item{
 		Name:  "Potion",
 		Type:  itemgen.TypeConsumable,
-		Stats: itemgen.Stats{Defense: 25},
+		Stats: itemgen.Stats{Healing: 25},
 	}
 	invComp.Items = append(invComp.Items, item)
 

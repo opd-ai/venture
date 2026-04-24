@@ -303,3 +303,23 @@ func (l *Loader) marshalModToJSON(mod *Mod) ([]byte, error) {
 func (l *Loader) GetModPath(modID string) string {
 	return filepath.Join(l.config.ModsDirectory, modID+".json")
 }
+
+// ParseModFromBytes unmarshals raw JSON bytes into a Mod, runs the same
+// validateFileSize and validateModContent security checks as LoadFromFile,
+// and returns it ready for use with Manager.AddMod.
+// It is a package-level convenience wrapper intended for use by the
+// ModBrowserSystem install callback.
+func ParseModFromBytes(data []byte) (*Mod, error) {
+	l := NewLoader()
+	if err := l.validateFileSize("<bytes>", data); err != nil {
+		return nil, err
+	}
+	mod, err := l.parseModJSON("<bytes>", data)
+	if err != nil {
+		return nil, err
+	}
+	if err := l.validateModContent(mod); err != nil {
+		return nil, err
+	}
+	return mod, nil
+}

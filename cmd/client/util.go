@@ -66,6 +66,10 @@ var (
 	forceVR       = flag.Bool("force-vr", false, "Force VR mode even without detected hardware (for testing)")
 	showVersion   = flag.Bool("version", false, "Print version information and exit")
 	spriteCacheMB = flag.Int("sprite-cache-mb", 0, "Sprite cache size in MB (0 = use platform default: 400 desktop, 150 WASM; max 300)")
+
+	// G7 (AUDIT.md): opt-in client Prometheus/health endpoint for host-and-play observability.
+	clientMetricsPort   = flag.String("metrics-port", "9091", "Port for client Prometheus metrics HTTP endpoint (only active when --enable-metrics is set)")
+	clientEnableMetrics = flag.Bool("enable-metrics", false, "Start a Prometheus /metrics endpoint on --metrics-port (opt-in; disabled by default for desktop)")
 )
 
 // initializeLogger creates and configures the logger based on environment variables and flags.

@@ -1772,18 +1772,27 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 	buttonW := w - 100
 	buttonH := 25
 
-	// Browse button
+	// Browse button — hidden on mobile/WASM where file dialogs are unavailable.
+	// G12 (AUDIT.md): on mobile, character portrait import is preset-only.
 	browseButtonY := buttonY
-	vector.DrawFilledRect(screen, float32(buttonX), float32(browseButtonY),
-		float32(buttonW), float32(buttonH),
-		color.RGBA{50, 80, 120, 255}, false)
-	vector.StrokeRect(screen, float32(buttonX), float32(browseButtonY),
-		float32(buttonW), float32(buttonH), 2,
-		color.RGBA{100, 150, 200, 255}, false)
-	browseText := "Browse for Portrait (SPACE/B)"
-	browseTextX := buttonX + buttonW/2 - len(browseText)*3
-	text.Draw(screen, browseText, basicfont.Face7x13, browseTextX, browseButtonY+17,
-		color.RGBA{255, 255, 255, 255})
+	if !mobile.IsWASM() && !mobile.IsMobilePlatform() {
+		vector.DrawFilledRect(screen, float32(buttonX), float32(browseButtonY),
+			float32(buttonW), float32(buttonH),
+			color.RGBA{50, 80, 120, 255}, false)
+		vector.StrokeRect(screen, float32(buttonX), float32(browseButtonY),
+			float32(buttonW), float32(buttonH), 2,
+			color.RGBA{100, 150, 200, 255}, false)
+		browseText := "Browse for Portrait (SPACE/B)"
+		browseTextX := buttonX + buttonW/2 - len(browseText)*3
+		text.Draw(screen, browseText, basicfont.Face7x13, browseTextX, browseButtonY+17,
+			color.RGBA{255, 255, 255, 255})
+	} else {
+		// Mobile/WASM: show preset-only hint instead of a non-functional browse button.
+		presetHint := "Portrait: type a preset name above or skip"
+		hintX := buttonX + buttonW/2 - len(presetHint)*3
+		text.Draw(screen, presetHint, basicfont.Face7x13, hintX, browseButtonY+17,
+			color.RGBA{100, 200, 100, 255})
+	}
 
 	// Skip button
 	skipButtonY := browseButtonY + 35

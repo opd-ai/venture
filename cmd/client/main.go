@@ -97,6 +97,10 @@ func main() {
 	}()
 	startPerformanceMonitoring(game, clientLogger)
 
+	// G7 (AUDIT.md): opt-in Prometheus metrics endpoint for host-and-play observability.
+	stopClientMetrics := initializeClientMetrics(game, clientLogger)
+	defer stopClientMetrics()
+
 	// Performance Audit Fix: Start async terrain generation and show loading screen
 	// instead of blocking main thread. This prevents 2-8s freeze for large terrains.
 	startAsyncTerrainGeneration(game, logger, clientLogger)

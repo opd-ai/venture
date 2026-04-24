@@ -274,6 +274,17 @@ type SystemInitResult struct {
 	AchievementNotificationSystem               *AchievementNotificationSystem
 	AvailabilitySystem                          *AvailabilitySystem
 	SkillPointGainParticleSystem                *SkillPointGainParticleSystem
+	// Seasonal-event cluster (G2/G4 — registered; SeasonalEventComponent seeded at runtime)
+	EventCalendarSystem    *EventCalendarSystem
+	EventQuestSystem       *EventQuestSystem
+	EventDecorationSystem  *EventDecorationSystem
+	EventRewardSystem      *EventRewardSystem
+	// Mod systems (G2/G3 — basic registration; full repository wiring done in cmd/client)
+	ModCompatibilitySystem *ModCompatibilitySystem
+	ModBrowserSystem       *ModBrowserSystem
+	// G10: ExtendedAchievementSystem is the gameplay tracker (kills/quests/crafting/PvP).
+	// Safe to register alongside AchievementSystem — they use different components.
+	ExtendedAchievementSystem *ExtendedAchievementSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -2056,6 +2067,51 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	availabilitySystem := NewAvailabilitySystem(game.World, game.World.Clock)
 	result.AvailabilitySystem = availabilitySystem
 	game.World.AddSystem(availabilitySystem)
+
+	// Seasonal-event cluster (G2 / G4): all four systems are registered and the
+	// SeasonalEventComponent is seeded on a dedicated world entity so the cluster
+	// is fully active from the start.  The seed is derived deterministically so
+	// different worlds produce different event calendars.
+	eventCalendarSystem := NewEventCalendarSystem(game.World, game.World.Clock)
+	result.EventCalendarSystem = eventCalendarSystem
+	game.World.AddSystem(eventCalendarSystem)
+
+	eventQuestSystem := NewEventQuestSystem(game.World, game.World.Clock)
+	result.EventQuestSystem = eventQuestSystem
+	game.World.AddSystem(eventQuestSystem)
+
+	eventDecorationSystem := NewEventDecorationSystem(game.World)
+	result.EventDecorationSystem = eventDecorationSystem
+	game.World.AddSystem(eventDecorationSystem)
+
+	eventRewardSystem := NewEventRewardSystem(game.World, game.World.Clock)
+	result.EventRewardSystem = eventRewardSystem
+	game.World.AddSystem(eventRewardSystem)
+
+	// G4: Seed the SeasonalEventComponent on a world-level entity so the event
+	// calendar systems have something to act on.  useRealTime=true so events
+	// align with wall-clock dates (festivals, holidays) rather than game ticks.
+	const seasonalSeedMagic = int64(0x53454153) // "SEAS"
+	seasonalWorldEntity := game.World.CreateEntity()
+	seasonalWorldEntity.AddComponent(NewSeasonalEventComponent(config.Seed^seasonalSeedMagic, true))
+	game.World.AddEntity(seasonalWorldEntity)
+
+	// Mod systems (G2 / G3): ModCompatibilitySystem runs conflict detection;
+	// ModBrowserSystem is wired with its repository by cmd/client after init.
+	modCompatibilitySystem := NewModCompatibilitySystem(game.World)
+	result.ModCompatibilitySystem = modCompatibilitySystem
+	game.World.AddSystem(modCompatibilitySystem)
+
+	modBrowserSystem := NewModBrowserSystem(game.World)
+	result.ModBrowserSystem = modBrowserSystem
+	game.World.AddSystem(modBrowserSystem)
+
+	// G10: ExtendedAchievementSystem tracks gameplay events (kills, quests, crafting,
+	// exploration, PvP) with multi-tier progression.  It complements AchievementSystem
+	// (expression/social) and is safe to register alongside it.
+	extendedAchievementSystem := NewExtendedAchievementSystem(game.World)
+	result.ExtendedAchievementSystem = extendedAchievementSystem
+	game.World.AddSystem(extendedAchievementSystem)
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{

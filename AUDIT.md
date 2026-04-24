@@ -92,7 +92,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
 
 ### HIGH
 
-- [ ] **G1 — OpenXR controller/headset adapters return zero values** —
+- [x] **G1 — OpenXR controller/headset adapters return zero values** —
   `pkg/engine/vr_openxr_adapters.go:91-230` — All 11 controller/headset methods
   (`GetTrigger`, `GetGrip`, `GetThumbstick`, `IsThumbstickPressed`, `GetButton`,
   `SetHaptic`, `GetHeadOrientation`, `GetHeadPosition`, plus the two
@@ -112,7 +112,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   init. Validation: `go build -tags vr ./...` + new `-tags vr` integration test that
   reports non-zero pose when an OpenXR runtime is available.
 
-- [ ] **G2 — Eleven engine systems are defined but never registered with the World** —
+- [x] **G2 — Eleven engine systems are defined but never registered with the World** —
   collectively ~5 672 LOC of working ECS code whose `Update()` is never called at runtime.
   Confirmed via `grep -rn 'New<SystemName>' pkg/ cmd/ --include='*.go'` returning hits only
   inside the system's own definition file plus its tests. Files:
@@ -147,7 +147,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
 
 ### MEDIUM
 
-- [ ] **G3 — Mod browser & repository unreachable from any binary** —
+- [x] **G3 — Mod browser & repository unreachable from any binary** —
   `pkg/engine/mod_browser_system.go:37` (`NewModBrowserSystem`) and
   `pkg/engine/mod_repository_fs.go` (`NewModRepositoryFS` — confirmed via grep) are
   referenced only by their own tests, `pkg/engine/mod_browser_integration_test.go`,
@@ -158,7 +158,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `SetInstallCallback`/`SetUninstallCallback` to bridge into `modding.Manager`. Add a
   smoke test that lists then installs a mod via the system.
 
-- [ ] **G4 — Seasonal-event subsystem is internally complete but un-instantiated** —
+- [x] **G4 — Seasonal-event subsystem is internally complete but un-instantiated** —
   `EventCalendarSystem` + `EventQuestSystem` + `EventDecorationSystem` +
   `EventRewardSystem` + the matching components (`EventQuestComponent`,
   `EventDecorationComponent`, `EventRewardComponent`) form a cohesive feature cluster
@@ -170,7 +170,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   a `SeasonalEventComponent` on the world entity from `pkg/procgen/`, or (b) move
   these files behind a `//go:build seasonal_events` tag and document the deferral.
 
-- [ ] **G5 — Modding system not wired into the client** —
+- [x] **G5 — Modding system not wired into the client** —
   `cmd/server/main.go:120-121` calls `world.SetModRules(modding.NewProviderAdapter(modManager))`,
   but `cmd/client/` never imports `pkg/modding` (verified by `grep -rn 'modding\.' cmd/client/`
   returning zero hits) and never calls `SetModRules`. In single-player / host-and-play
@@ -182,7 +182,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   inside the host-and-play / single-player branch (avoid double-loading when an
   embedded server is already managing mods).
 
-- [ ] **G6 — `pkg/engine/vr_webxr_adapters.go` documented but missing** —
+- [x] **G6 — `pkg/engine/vr_webxr_adapters.go` documented but missing** —
   `pkg/vr/doc.go:79,84` and `pkg/engine/vr_openxr_adapters.go:9,31-35` both reference
   a `pkg/engine/vr_webxr_adapters.go` file with `//go:build js` constraints for the
   WASM VR path. The file does not exist (`ls pkg/engine/vr_*.go` confirms only
@@ -195,7 +195,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `navigator.xr` (`requestSession("immersive-vr")`, `XRReferenceSpace`, frame
   callbacks). Add a `//go:build js` smoke test.
 
-- [ ] **G7 — `cmd/client` does not expose Prometheus/health endpoints** —
+- [x] **G7 — `cmd/client` does not expose Prometheus/health endpoints** —
   `pkg/observability/MetricsExporter` is used only in `cmd/server/main.go:1270`. The
   client has no `/metrics`, `/healthz`, `/ready`, or `/status` server. ROADMAP §64
   records "Health Check Endpoints" as ✅ Achieved but the implementation is
@@ -207,7 +207,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   opt-in flag `--metrics-port` to avoid surprising desktop users. Register the
   client-side perf monitor and embedded server (if any) as sources.
 
-- [ ] **G8 — Dead `Server` constructor in `pkg/hostplay`** —
+- [x] **G8 — Dead `Server` constructor in `pkg/hostplay`** —
   `pkg/hostplay/host_and_play.go:45` (`hostplay.New(...)` returning `*Server`) and the
   `*Server` type are not referenced outside the package's own tests. The live
   host-and-play path uses `pkg/hostplay.NewServerManager` (`cmd/client/util.go:210`),
@@ -220,7 +220,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   or document `*Server` as the low-level API and `*ServerManager` as the high-level
   wrapper. Validation: `go build ./... && go test ./pkg/hostplay/...`.
 
-- [ ] **G9 — `EnableShadows` deprecation path not enforced** —
+- [x] **G9 — `EnableShadows` deprecation path not enforced** —
   `pkg/rendering/lighting/types.go:116-123` marks `EnableShadows` as `// Deprecated:` but
   no `staticcheck` configuration or build-time deprecation warning is emitted; new
   callers can still set the legacy field without notice. The legacy 2026-04-23 finding
@@ -232,7 +232,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `EnableShadows == true && !AOConfig.Enabled`, plus a unit test asserting the warn
   fires once.
 
-- [ ] **G10 — `extended_achievement_system.go` shadows `pkg/engine` achievement system** —
+- [x] **G10 — `extended_achievement_system.go` shadows `pkg/engine` achievement system** —
   `pkg/engine/extended_achievement_system.go` (815 LOC) defines an unregistered
   parallel system to the wired achievement system. Whether it is meant to *replace*,
   *augment*, or *be deleted* is undocumented. Two parallel achievement systems can
@@ -244,7 +244,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
 
 ### LOW
 
-- [ ] **G11 — Menu "Exit Game" returns an error rather than exiting** —
+- [x] **G11 — Menu "Exit Game" returns an error rather than exiting** —
   `pkg/engine/menu_system.go:613` returns `fmt.Errorf("exit not implemented (close window manually)")`.
   This is the lone TODO-equivalent in the engine outside `vr_openxr_adapters.go`. The
   surrounding code closes the menu and bubbles the error — the user must Alt-F4 to
@@ -254,7 +254,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   `os.Exit` or `ebiten.Termination` is appropriate per platform) and call it from the
   confirm action.
 
-- [ ] **G12 — `pkg/engine/character_creation_mobile.go` — portrait dialog returns error** —
+- [x] **G12 — `pkg/engine/character_creation_mobile.go` — portrait dialog returns error** —
   `OpenPortraitDialog()` on `js || android || ios` returns
   `fmt.Errorf("file dialogs are not supported on mobile/WASM platforms")`
   (`pkg/engine/character_creation_mobile.go:15-17`). On mobile, character creation
@@ -266,7 +266,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   documented preset-only flow and update the character-creation UI to hide the import
   button on mobile.
 
-- [ ] **G13 — `pkg/companion` namespace contains only `learning` subpackage** —
+- [x] **G13 — `pkg/companion` namespace contains only `learning` subpackage** —
   Per the audit prompt's expectation of a separate companion package distinct from
   `pkg/engine/companion_*.go`, `pkg/companion/` ships a single subdirectory
   `pkg/companion/learning/`. `pkg/engine/companion_*.go` plus `pkg/procgen/companion/`
@@ -276,7 +276,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   **Remediation**: Add `pkg/companion/doc.go` describing the namespace and its
   relationship to `pkg/engine/companion_*.go` + `pkg/procgen/companion/`.
 
-- [ ] **G14 — Stop / Start idempotency gaps in federation (carried from prior GAPS.md)** —
+- [x] **G14 — Stop / Start idempotency gaps in federation (carried from prior GAPS.md)** —
   `pkg/network/federation/market.go:92-112` (`FederatedMarket.Start/Stop`) still
   lacks `sync.Once` guards (concurrency Gaps 1 & 2 in the prior root `GAPS.md`).
   These remain LOW for the implementation-gap perspective (no missing feature) but

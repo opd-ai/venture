@@ -417,3 +417,86 @@ func BenchmarkSystemInitDebugFlagCaching(b *testing.B) {
 		})
 	}
 }
+
+// TestInitializeGameSystems_PreviouslyDanglingSystemsG2 asserts that the six
+// systems identified in G2 of AUDIT.md (event cluster + mod systems) are now
+// registered with the World after InitializeGameSystems returns.
+// It also verifies the result references are non-nil so downstream callers
+// can perform additional wiring (e.g. cmd/client repository injection for G3).
+func TestInitializeGameSystems_PreviouslyDanglingSystemsG2(t *testing.T) {
+	logger := logging.TestUtilityLogger("system_init_test")
+	game := NewEbitenGameWithLogger(800, 600, logger)
+	config := DefaultSystemInitConfig(12345, "fantasy", logger)
+
+	result, err := InitializeGameSystems(game, config)
+	if err != nil {
+		t.Fatalf("InitializeGameSystems failed: %v", err)
+	}
+
+	// G2: verify result pointers for the event cluster.
+	if result.EventCalendarSystem == nil {
+		t.Error("EventCalendarSystem not in result (G2)")
+	}
+	if result.EventQuestSystem == nil {
+		t.Error("EventQuestSystem not in result (G2)")
+	}
+	if result.EventDecorationSystem == nil {
+		t.Error("EventDecorationSystem not in result (G2)")
+	}
+	if result.EventRewardSystem == nil {
+		t.Error("EventRewardSystem not in result (G2)")
+	}
+	// G2: verify result pointers for mod systems.
+	if result.ModCompatibilitySystem == nil {
+		t.Error("ModCompatibilitySystem not in result (G2)")
+	}
+	if result.ModBrowserSystem == nil {
+		t.Error("ModBrowserSystem not in result (G2)")
+	}
+
+	// Verify the systems appear in the world's registered system list.
+	registered := game.World.GetSystems()
+	checkType := func(target interface{}, name string) {
+		t.Helper()
+		targetType := reflect.TypeOf(target)
+		for _, sys := range registered {
+			if reflect.TypeOf(sys) == targetType {
+				return
+			}
+		}
+		t.Errorf("%s not found in world.GetSystems() (G2)", name)
+	}
+	checkType(result.EventCalendarSystem, "EventCalendarSystem")
+	checkType(result.EventQuestSystem, "EventQuestSystem")
+	checkType(result.EventDecorationSystem, "EventDecorationSystem")
+	checkType(result.EventRewardSystem, "EventRewardSystem")
+	checkType(result.ModCompatibilitySystem, "ModCompatibilitySystem")
+	checkType(result.ModBrowserSystem, "ModBrowserSystem")
+}
+
+// TestInitializeGameSystems_SingleAchievementInstances asserts that exactly one
+// ExtendedAchievementSystem is registered in the World (G10).
+// Duplicate registrations would cause double-fired achievement rewards.
+func TestInitializeGameSystems_SingleAchievementInstances(t *testing.T) {
+	logger := logging.TestUtilityLogger("system_init_test")
+	game := NewEbitenGameWithLogger(800, 600, logger)
+	config := DefaultSystemInitConfig(42, "fantasy", logger)
+
+	result, err := InitializeGameSystems(game, config)
+	if err != nil {
+		t.Fatalf("InitializeGameSystems: %v", err)
+	}
+
+	extendedCount := 0
+	for _, sys := range game.World.GetSystems() {
+		if _, ok := sys.(*ExtendedAchievementSystem); ok {
+			extendedCount++
+		}
+	}
+	if extendedCount != 1 {
+		t.Errorf("expected exactly 1 ExtendedAchievementSystem in World, got %d", extendedCount)
+	}
+	if result.ExtendedAchievementSystem == nil {
+		t.Error("GameSystemsResult.ExtendedAchievementSystem is nil")
+	}
+}

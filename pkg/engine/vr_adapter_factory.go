@@ -1,4 +1,4 @@
-//go:build !vr || js
+//go:build !vr
 
 package engine
 

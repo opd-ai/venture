@@ -138,6 +138,9 @@ import (
 
 	// Phase 101: Integration Package Activation
 	"github.com/opd-ai/venture/pkg/integration/world_events"
+
+	// G3 (AUDIT.md): ModBrowserSystem callback wiring via modding.Manager
+	"github.com/opd-ai/venture/pkg/modding"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -599,6 +602,10 @@ type systemsContainer struct {
 	vrControllerSystem *engine.VRControllerSystem // VR controller input system
 	vrUISystem         *engine.VRUISystem         // VR-optimized UI rendering
 
+	// G3 (AUDIT.md): ModBrowserSystem repository + callback wiring
+	modManager    *modding.Manager         // Sandboxed JSON mod manager
+	modBrowserSys *engine.ModBrowserSystem // Mod discovery and install UI system
+
 	// Time abstraction for deterministic testing of gameplay code
 	timeProvider TimeProvider
 
@@ -852,6 +859,9 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 
 		// AUDIT.md Task 7: VR hardware detection and conditional system initialization
 		initializeVRSystems(game, sys, clientLogger)
+
+		// G3 (AUDIT.md): wire ModBrowserSystem repository + install/uninstall callbacks.
+		initializeModBrowserWiring(game, sys, clientLogger)
 
 		// Register non-critical systems
 		registerNonCriticalSystems(game, sys)
@@ -3174,6 +3184,12 @@ func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generat
 
 	game.MenuSystem.SetSaveCallback(saveCallback)
 	game.MenuSystem.SetLoadCallback(loadCallback)
+
+	// G11 (AUDIT.md): inject ebiten.Termination as the exit callback so
+	// "Exit to Desktop" actually terminates the game loop on all platforms.
+	game.MenuSystem.SetExitCallback(func() error {
+		return ebiten.Termination
+	})
 
 	if *verbose {
 		clientLogger.Info("save/load callbacks connected to menu system")

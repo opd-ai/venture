@@ -1,5 +1,10 @@
 package engine
 
+import (
+	"fmt"
+	"testing"
+)
+
 // StubMenuSystem is a test implementation of UISystem for menu testing.
 type StubMenuSystem struct {
 	UpdateCount int
@@ -45,3 +50,54 @@ func (s *StubMenuSystem) Toggle() {
 
 // Compile-time check that StubMenuSystem implements UISystem
 var _ UISystem = (*StubMenuSystem)(nil)
+
+// TestEbitenMenuSystem_SetExitCallback verifies that SetExitCallback is called
+// when the player confirms "Exit to Desktop" (G11).
+func TestEbitenMenuSystem_SetExitCallback(t *testing.T) {
+	world := NewWorld()
+	ms, err := NewEbitenMenuSystem(world, 800, 600, t.TempDir())
+	if err != nil {
+		t.Fatalf("NewEbitenMenuSystem: %v", err)
+	}
+
+	called := false
+	sentinel := fmt.Errorf("exit-sentinel")
+	ms.SetExitCallback(func() error {
+		called = true
+		return sentinel
+	})
+
+	// Trigger the confirm action directly.
+	ms.Toggle()
+	menu := ms.validateMenuComponent()
+	if menu == nil {
+		t.Fatal("no menu component after Toggle()")
+	}
+
+	// Find the "Exit to Desktop" action and invoke it to enter confirm state.
+	var exitAction func() error
+	for _, item := range menu.Items {
+		if item.Label == "Exit to Desktop" {
+			exitAction = item.Action
+			break
+		}
+	}
+	if exitAction == nil {
+		t.Fatal("Exit to Desktop item not found in main menu")
+	}
+	if err := exitAction(); err != nil {
+		t.Fatalf("Exit action failed: %v", err)
+	}
+
+	// The confirm action is now set; fire it.
+	if menu.ConfirmAction == nil {
+		t.Fatal("ConfirmAction is nil after exiting to confirm state")
+	}
+	err = menu.ConfirmAction()
+	if err != sentinel {
+		t.Errorf("ConfirmAction returned %v, want sentinel error", err)
+	}
+	if !called {
+		t.Error("exit callback was not called")
+	}
+}

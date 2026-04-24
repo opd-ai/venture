@@ -30,7 +30,7 @@
 //
 // # Usage Example
 //
-//	config := &hostplay.Config{
+//	config := &hostplay.ServerConfig{
 //		Port:       8080,
 //		MaxPlayers: 4,
 //		BindLAN:    false, // localhost only

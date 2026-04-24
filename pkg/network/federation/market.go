@@ -18,6 +18,10 @@ type FederatedMarket struct {
 	lastUpdate   time.Time
 	updateTicker *time.Ticker
 	stopChan     chan struct{}
+
+	// G14 (AUDIT.md): startOnce/stopOnce prevent double-start and double-stop panics.
+	startOnce sync.Once
+	stopOnce  sync.Once
 }
 
 // PriceHistory tracks price changes for a specific item.
@@ -89,27 +93,33 @@ func NewFederatedMarket() *FederatedMarket {
 }
 
 // Start begins the market update loop (price updates every 60 seconds).
+// Idempotent: subsequent calls after the first are no-ops.
 func (m *FederatedMarket) Start() {
-	m.updateTicker = time.NewTicker(60 * time.Second)
-	go func() {
-		defer recovery.RecoverPanicWithLogger("federation_market", "update loop", nil)()
-		for {
-			select {
-			case <-m.updateTicker.C:
-				m.UpdatePrices()
-			case <-m.stopChan:
-				return
+	m.startOnce.Do(func() {
+		m.updateTicker = time.NewTicker(60 * time.Second)
+		go func() {
+			defer recovery.RecoverPanicWithLogger("federation_market", "update loop", nil)()
+			for {
+				select {
+				case <-m.updateTicker.C:
+					m.UpdatePrices()
+				case <-m.stopChan:
+					return
+				}
 			}
-		}
-	}()
+		}()
+	})
 }
 
 // Stop halts the market update loop.
+// Idempotent: subsequent calls after the first are no-ops.
 func (m *FederatedMarket) Stop() {
-	if m.updateTicker != nil {
-		m.updateTicker.Stop()
-	}
-	close(m.stopChan)
+	m.stopOnce.Do(func() {
+		if m.updateTicker != nil {
+			m.updateTicker.Stop()
+		}
+		close(m.stopChan)
+	})
 }
 
 // RegisterItem initializes price tracking for an item.

@@ -334,7 +334,7 @@ VR mode is currently **experimental**. Two adapter tiers are provided:
 
 | Build | Adapter | Head Tracking | Controllers | Haptics |
 |-------|---------|---------------|-------------|---------|
-| Default (`go build`) | Stub | Mouse fallback | Keyboard fallback | No-op |
+| Default (`go build`) | Stub | Mouse fallback | Keyboard fallback | None |
 | VR build (`go build -tags vr`) | OpenXR 1.x | ✅ xrLocateViews | ✅ Action-input system | ✅ xrApplyHapticFeedback |
 
 The default build uses stub adapters for graceful degradation on systems without a VR runtime.  The `-tags vr` build links against the Khronos OpenXR Loader and provides full hardware head tracking, controller input, and haptic feedback through any OpenXR-compatible runtime (SteamVR, Monado, Meta Link, Windows Mixed Reality).
@@ -364,7 +364,8 @@ Example usage:
 
 # VR build — OpenXR hardware adapters (requires OpenXR loader)
 # Linux: sudo apt install libopenxr-loader1 libopenxr-dev
-# Windows: install the Khronos OpenXR SDK and set CGO_LDFLAGS
+# Windows: install the Khronos OpenXR SDK, then:
+#   set CGO_LDFLAGS=-L"C:\Program Files\OpenXR-SDK\lib"
 go build -tags vr ./cmd/client && ./venture-client --vr
 
 # Force VR mode for testing stereoscopic rendering
@@ -374,7 +375,7 @@ go build -tags vr ./cmd/client && ./venture-client --vr
 ./venture-client --force-vr --genre scifi --seed 2077 --fullscreen
 ```
 
-**Development Status:** OpenXR 1.x hardware adapters are implemented (`pkg/engine/vr_openxr_adapters.go`). Validation on real VR headsets is pending; the feature remains experimental until that validation is complete.
+**Development Status:** OpenXR 1.x hardware adapters are implemented in `pkg/engine/vr_openxr_adapters.go`. The implementation is complete; real-hardware validation on an actual VR headset is the remaining step before removing the experimental label.
 
 ### Mod Configuration
 

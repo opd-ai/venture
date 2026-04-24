@@ -77,7 +77,19 @@ type CombatSystem struct {
 	// still in the entity list but its health is still ≤0.  The callback is
 	// invoked BEFORE DeadComponent is attached, preserving the original contract
 	// where the callback is responsible for adding DeadComponent itself.
+	//
+	// Lifetime: the map is never explicitly cleared.  A new CombatSystem is
+	// created for each World/level, so entity IDs from a prior World will not
+	// collide.  Call ClearProcessedDeaths() if entity IDs are recycled within a
+	// single long-lived World instance.
 	processedDeaths map[uint64]struct{}
+}
+
+// ClearProcessedDeaths removes all entries from the internal death-tracking map.
+// Call this when entity IDs may be recycled (e.g. object-pool entity reuse) to
+// ensure the death callback fires correctly for reused IDs.
+func (s *CombatSystem) ClearProcessedDeaths() {
+	s.processedDeaths = make(map[uint64]struct{})
 }
 
 // NewCombatSystem creates a new combat system with a given random seed.

@@ -1067,7 +1067,7 @@ func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64)
 func (s *InputSystem) processInputProvider(entity *Entity, provider InputProvider) {
 	s.detectInputMethod()
 
-	// Synthesise a temporary EbitenInput so we can reuse the full downstream pipeline.
+	// Synthesize a temporary EbitenInput so we can reuse the full downstream pipeline.
 	input := &EbitenInput{}
 
 	// Movement

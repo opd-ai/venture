@@ -112,7 +112,7 @@ Counts below are based on direct file reads and grep across the non-test tree.
   init. Validation: `go build -tags vr ./...` + new `-tags vr` integration test that
   reports non-zero pose when an OpenXR runtime is available.
 
-- [ ] **G2 — Eleven engine systems are defined but never registered with the World** —
+- [x] **G2 — Eleven engine systems are defined but never registered with the World** —
   collectively ~5 672 LOC of working ECS code whose `Update()` is never called at runtime.
   Confirmed via `grep -rn 'New<SystemName>' pkg/ cmd/ --include='*.go'` returning hits only
   inside the system's own definition file plus its tests. Files:

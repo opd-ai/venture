@@ -274,6 +274,14 @@ type SystemInitResult struct {
 	AchievementNotificationSystem               *AchievementNotificationSystem
 	AvailabilitySystem                          *AvailabilitySystem
 	SkillPointGainParticleSystem                *SkillPointGainParticleSystem
+	// Seasonal-event cluster (G2/G4 — registered; SeasonalEventComponent seeded at runtime)
+	EventCalendarSystem    *EventCalendarSystem
+	EventQuestSystem       *EventQuestSystem
+	EventDecorationSystem  *EventDecorationSystem
+	EventRewardSystem      *EventRewardSystem
+	// Mod systems (G2/G3 — basic registration; full repository wiring done in cmd/client)
+	ModCompatibilitySystem *ModCompatibilitySystem
+	ModBrowserSystem       *ModBrowserSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -2056,6 +2064,35 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	availabilitySystem := NewAvailabilitySystem(game.World, game.World.Clock)
 	result.AvailabilitySystem = availabilitySystem
 	game.World.AddSystem(availabilitySystem)
+
+	// Seasonal-event cluster (G2 / G4): all four systems are registered so their
+	// Update loops run; a SeasonalEventComponent must be attached to the world
+	// entity (at procgen time) before they produce output.
+	eventCalendarSystem := NewEventCalendarSystem(game.World, game.World.Clock)
+	result.EventCalendarSystem = eventCalendarSystem
+	game.World.AddSystem(eventCalendarSystem)
+
+	eventQuestSystem := NewEventQuestSystem(game.World, game.World.Clock)
+	result.EventQuestSystem = eventQuestSystem
+	game.World.AddSystem(eventQuestSystem)
+
+	eventDecorationSystem := NewEventDecorationSystem(game.World)
+	result.EventDecorationSystem = eventDecorationSystem
+	game.World.AddSystem(eventDecorationSystem)
+
+	eventRewardSystem := NewEventRewardSystem(game.World, game.World.Clock)
+	result.EventRewardSystem = eventRewardSystem
+	game.World.AddSystem(eventRewardSystem)
+
+	// Mod systems (G2 / G3): ModCompatibilitySystem runs conflict detection;
+	// ModBrowserSystem is wired with its repository by cmd/client after init.
+	modCompatibilitySystem := NewModCompatibilitySystem(game.World)
+	result.ModCompatibilitySystem = modCompatibilitySystem
+	game.World.AddSystem(modCompatibilitySystem)
+
+	modBrowserSystem := NewModBrowserSystem(game.World)
+	result.ModBrowserSystem = modBrowserSystem
+	game.World.AddSystem(modBrowserSystem)
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{

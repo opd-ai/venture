@@ -1,480 +1,199 @@
-# Bug and Gap Details — 2026-04-24 (Rev 5)
+# Bug and Gap Details — 2026-04-24 (Rev 6)
 
-> **Rev 5 — deep behavioral-correctness pass (2026-04-24).** This file supersedes
-> `GAPS.md` Rev 3 (2026-04-25). All G1–G31 findings from prior revisions are
-> confirmed resolved. Seven new gaps G32–G38 are documented below.
+> **Rev 6 — fresh deep behavioral-correctness pass (2026-04-24).** This
+> file supersedes `GAPS.md` Rev 5 (2026-04-24, earlier). All previously
+> documented findings G32–G38 are confirmed resolved against the
+> current source tree (see `AUDIT.md` for the per-finding evidence
+> table). One newly-discovered defect, **G39**, is documented below.
 >
-> **Legacy ID compatibility**: G1–G31 are preserved in `AUDIT.md` and in the
-> historical `GAPS.md` entries; this file contains only the new Rev 5 findings.
+> **Legacy ID compatibility**: G1–G38 IDs remain reserved for
+> cross-references in code comments and historical issue trackers; all
+> are resolved.
 >
 > **Status legend**: ✅ RESOLVED | ⚠️ PARTIAL | 🔴 OPEN
 
 ---
 
-## G32 — `AdvancedClassSystem` Adds Stat Bonuses Every Frame Without Guard
+## G39 — `completeCast` Always Applies Cooldown Even When `executeCast` Silently No-Ops
 
-- **Category**: Per-Frame Mutation
-- **Status**: 🔴 OPEN
-- **Severity**: CRITICAL
-
-**Evidence** (`pkg/engine/advanced_class_system.go`):
-```go
-// Update — called every frame (lines 27–48)
-func (acs *AdvancedClassSystem) Update(entities []*Entity, deltaTime float64) {
-    classEntities = acs.world.GetEntitiesWith("advanced_class")
-    for _, entity := range classEntities {
-        playerID := strconv.FormatUint(entity.ID, 10)
-        stats, err := acs.manager.CalculateTotalStats(playerID)
-        if err != nil { continue }
-        acs.applyStatBonuses(entity, stats)   // ← called unconditionally each frame
-    }
-}
-
-// applyHealthBonuses (line 68)
-health.Max += float64(bonuses.Health)   // no subtraction of prior value
-
-// applyManaBonuses (line 84)
-mana.Max += bonuses.Mana               // no subtraction of prior value
-
-// applyStatsBonuses (lines 100–104)
-stats.Attack     += float64(bonuses.Strength)
-stats.Defense    += float64(bonuses.Defense)
-stats.MagicPower += float64(bonuses.Intelligence)
-stats.CritChance += bonuses.CritChance
-stats.CritDamage += bonuses.CritDamage
-```
-
-- **Incorrect Behavior**: For a Warrior with `bonuses.Strength = 10` (attack
-  bonus per strength point), `stats.Attack` grows by 600 per second at 60 FPS.
-  After 10 seconds the player has +6 000 attack on top of the base 10, making
-  the game trivially winnable. `health.Max` and `mana.Max` grow similarly
-  without bound. Values are never clamped.
-
-- **Root Cause**: The system applies bonuses additively on every Update tick
-  without storing the previously-applied value and subtracting it first. The
-  identical pattern was fixed for `TalentSystem` (G23) by adding
-  `removeTalentBonuses` + `AppliedDeltas` tracking, but `AdvancedClassSystem`
-  received no equivalent fix.
-
-- **Impact**: Every player who has an advanced class assigned (all players after
-  calling `InitializePlayerClass` from `cmd/client/handlers.go:3473`) develops
-  unbounded stats within seconds of gameplay, breaking all combat balance.
-
-- **Remediation**: Store the last-applied bonuses on the system or in the
-  `AdvancedClassComponent`. Before applying, subtract the previous bonuses; after
-  applying, cache the new bonuses. Pattern from `talent_system.go:77`:
-  ```go
-  acs.removeBonuses(entity, acs.lastApplied[entity.ID])
-  acs.applyStatBonuses(entity, stats)
-  acs.lastApplied[entity.ID] = stats
-  ```
-  Alternatively, use the existing `statBonusApplier` helper
-  (`pkg/engine/statmod.go`) which already implements this pattern correctly.
-
-- **Dependencies**: None — standalone fix.
-
-- **Effort**: small
-
----
-
-## G33 — `StatusEffectCriticalChanceSystem` Permanently Corrupts `CritChance`
-
-- **Category**: Per-Frame Mutation
-- **Status**: 🔴 OPEN
-- **Severity**: CRITICAL
-
-**Evidence** (`pkg/engine/status_effect_crit_chance_system.go:60–92`):
-```go
-func (s *StatusEffectCriticalChanceSystem) Update(entities []*Entity, dt float64) {
-    // Clear cache each frame (lines 61–64)
-    for k := range s.critCache {
-        delete(s.critCache, k)
-    }
-
-    for _, entity := range entities {
-        stats := entity.GetStats()
-        if stats == nil { continue }
-
-        modifier := s.calculateCritModifier(entity)
-        if modifier == 0.0 {
-            continue              // expired effect — no subtraction of prior modifier
-        }
-
-        s.critCache[entity.ID] = modifier
-        stats.CritChance += modifier   // unconditional ADD every frame (line 82)
-
-        if stats.CritChance < 0.0 { stats.CritChance = 0.0 }
-        else if stats.CritChance > 1.0 { stats.CritChance = 1.0 }
-    }
-}
-```
-Because `critCache` is cleared at lines 61–64, `calculateCritModifier` always
-recomputes from scratch and never returns a cached value. The modifier is then
-added to `stats.CritChance` on **every frame** without subtracting the
-contribution from the previous frame.
-
-- **Incorrect Behavior (positive modifier, e.g. "blessed" = +0.10)**:
-  - Frame 1: CritChance = 0.05 + 0.10 = 0.15
-  - Frame 10: CritChance = 0.95 + 0.10 = 1.05 → clamped to 1.0
-  - Blessed expires: `modifier = 0.0`, entity skipped via `continue`
-  - CritChance stays permanently at 1.0 (100% crit forever)
-
-- **Incorrect Behavior (negative modifier, e.g. "cursed" = −0.10)**:
-  - Frame 1: CritChance = 0.05 − 0.10 = −0.05 → clamped to 0.0
-  - All frames: CritChance stays at 0.0 (clamped each frame)
-  - Cursed expires: entity skipped via `continue`
-  - CritChance stays permanently at 0.0 (0% crit forever)
-
-- **Root Cause**: The `critCache` serves as a "what modifier did we store for
-  combat lookup" cache, but it was repurposed without adding a "what was the last
-  crit delta applied to stats" cache. Without knowing the previous delta, it is
-  impossible to undo it. The `continue` on `modifier == 0.0` skips undo.
-
-- **Impact**: Any player or enemy briefly affected by a crit-modifier status
-  effect will have their CritChance permanently locked at 0 or 1 after the
-  effect expires. All PvP and PvE combat balance is affected.
-
-- **Remediation**: Add a `prevApplied map[uint64]float64` field tracking the
-  last delta written to each entity's `stats.CritChance`. Each frame:
-  ```go
-  // Undo previous contribution
-  stats.CritChance -= s.prevApplied[entity.ID]
-
-  // Compute and apply new contribution
-  modifier = s.calculateCritModifier(entity)
-  stats.CritChance += modifier
-  s.prevApplied[entity.ID] = modifier
-
-  // Clamp
-  ```
-  On entity removal or effect expiry, ensure `delete(s.prevApplied, id)`.
-
-  This is the same delta-tracking pattern correctly implemented in
-  `TerrainAmbushCritSystem` (lines 127–148, which tracks `s.critBonuses` and
-  subtracts `currentBonus` before adding `newBonus`).
-
-- **Dependencies**: None.
-
-- **Effort**: small
-
----
-
-## G34 — `EquipmentSetBonusSystem` Output Never Consumed
-
-- **Category**: System Output Never Used (Dangling Integration)
-- **Status**: 🔴 OPEN
-- **Severity**: HIGH
-
-**Evidence** (`pkg/engine/equipment_set_bonus_system.go:207–299`,
-`pkg/engine/equipment_set_bonus_component.go:83–110`):
-
-The system correctly detects equipment changes (via `currentHash !=
-setBonus.LastEquipmentHash`), recalculates which sets are active, and
-populates `EquipmentSetBonusComponent.ActiveSets` and `CombinedBonus`. It
-exposes these bonus values through the following methods:
-- `GetTotalDamageBonus() int`
-- `GetTotalDefenseBonus() int`
-- `GetTotalHealthBonus() int`
-- `GetTotalAttackSpeed() float64`
-- `GetTotalCritBonus() float64`
-
-A grep of all non-test Go files in `pkg/` and `cmd/` for any of these method
-names returns **zero results** outside of the component file itself and test
-files. Neither `CombatSystem.calculateDamage` nor `InventorySystem` nor any
-other system reads from `EquipmentSetBonusComponent`.
-
-```bash
-grep -rn "GetTotalDamageBonus\|GetTotalDefenseBonus\|GetTotalHealthBonus\|GetTotalAttackSpeed\|GetTotalCritBonus" \
-  pkg/ cmd/ --include="*.go" | grep -v "_test.go" | grep -v "equipment_set_bonus"
-# Returns no output
-```
-
-- **Incorrect Behavior**: Wearing any combination of set items (e.g. the
-  "Inferno" 2-piece or 4-piece set) grants no stat benefit whatsoever. The
-  system faithfully tracks set membership but the computed bonuses are stored
-  in a component that nothing ever reads.
-
-- **Root Cause**: Integration step 5 of the six-link chain ("Output → Consumer")
-  is missing. The system's output is computed correctly; no downstream consumer
-  exists.
-
-- **Impact**: The entire equipment set system is non-functional. Players who
-  collect set items for their bonuses receive no reward.
-
-- **Remediation**: Options (in order of invasiveness):
-  1. **In `CombatSystem.calculateDamage`**: retrieve
-     `EquipmentSetBonusComponent` from the attacker entity and add
-     `GetTotalDamageBonus()` to `baseDamage`.
-  2. **New applicator system**: Register an `EquipmentSetBonusApplicatorSystem`
-     after `EquipmentSetBonusSystem` in the update order. When the component's
-     `Dirty` flag is set, subtract old bonuses from stats and apply new ones.
-  3. **Inline in `InventorySystem`**: When equipment changes fire,
-     read set bonuses and propagate to `StatsComponent`.
-
-  Option 2 is recommended for clean separation of concerns.
-
-- **Dependencies**: None.
-
-- **Effort**: medium
-
----
-
-## G35 — Minimum Damage Floor Applied Before Shield Absorption
-
-- **Category**: Combat Formula Bug
+- **Category**: Spell Bug
 - **Status**: 🔴 OPEN
 - **Severity**: MEDIUM
 
-**Evidence** (`pkg/engine/combat_system.go:569–574`):
+**Evidence** (`pkg/engine/spell_casting.go`):
+
 ```go
-finalDamage := damageAfterResist
-if finalDamage < 1.0 {
-    finalDamage = 1.0          // floor at lines 570–572
-}
-finalDamage = s.applyShieldAbsorption(target, finalDamage)  // line 574
-```
-The 1.0 floor at lines 570–572 fires **before** shield absorption at line 574.
-`applyShieldAbsorption` subtracts up to `shield.AbsorbAmount` from
-`finalDamage` and can return 0.0. However, because `finalDamage` was already
-floored to 1.0, a shield that fully absorbs ≤ 1 damage still leaks 1 point per
-hit.
-
-- **Incorrect Behavior**: A target with a charged shield (`AbsorbAmount = 5`,
-  incoming `damageAfterResist = 0.3`) should take 0 damage (shield absorbs all).
-  Instead: `0.3 → floored to 1.0 → shield absorbs 1.0 → finalDamage = 0`.
-  If `AbsorbAmount = 0.8` then: `0.3 → floored to 1.0 → shield absorbs 0.8 →
-  finalDamage = 0.2 → target takes 0.2 damage`. In both cases more damage leaks
-  through than the attacker's raw damage warrants.
-
-  More practically: any attack that deals 0.x damage after resistance
-  (resistances > ~0.9 and moderate defense) will always deal 1 damage regardless
-  of shield because the floor clamps before shield can act.
-
-- **Root Cause**: The 1.0 floor is placed two lines before the shield call. This
-  ordering made sense before shields were added but was not re-evaluated when
-  `applyShieldAbsorption` was introduced.
-
-- **Impact**: Shield mechanics do not function as intended against highly-resisted
-  attacks. Affects any target that both has resistances and equips a shield.
-
-- **Remediation**: Move the floor after shield absorption, or apply it only to
-  `damageAfterResist` values that are positive but below 1.0 (which guards
-  against floating-point underflow, not intentional full blocks):
-  ```go
-  finalDamage = s.applyShieldAbsorption(target, damageAfterResist)
-  if finalDamage > 0 && finalDamage < 1.0 {
-      finalDamage = 1.0
-  }
-  ```
-
-- **Dependencies**: None.
-
-- **Effort**: small
-
----
-
-## G36 — `CancelCast` Does Not Apply Cooldown to Interrupted Slot
-
-- **Category**: Spell/Mana Bug
-- **Status**: 🔴 OPEN
-- **Severity**: MEDIUM
-
-**Evidence** (`pkg/engine/spell_casting.go:2697–2741`):
-```go
-func (s *SpellCastingSystem) CancelCast(entity *Entity) {
-    ...
-    if slots.IsCasting() {
-        // Only records the cancel, no cooldown applied
-        slots.Casting    = -1
-        slots.CastingBar = 0
-        // slots.Cooldowns[slotIdx] is never written
+// completeCast — lines 288–303
+func (s *SpellCastingSystem) completeCast(entity *Entity, slots *SpellSlotComponent, spell *magic.Spell) {
+    if s.logger != nil {
+        s.logger.WithFields(logrus.Fields{
+            "entity_id":  entity.ID,
+            "spell_name": spell.Name,
+            "spell_type": spell.Type.String(),
+            "slot_index": slots.Casting,
+            "mana_cost":  spell.Stats.ManaCost,
+        }).Info("Spell cast completed")
     }
+    s.executeCast(entity, spell, slots.Casting)        // line 299 — silent no-op possible
+    slots.Cooldowns[slots.Casting] = spell.Stats.Cooldown  // line 300 — UNCONDITIONAL
+    slots.Casting = -1
+    slots.CastingBar = 0
+}
+
+// executeCast — lines 305–321
+func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slotIndex int) {
+    s.logSpellExecution(caster, spell, slotIndex)
+    mana := s.validateAndConsumeMana(caster, spell)
+    if mana == nil {
+        return        // ← spell vanishes silently
+    }
+    pos := s.getCasterPosition(caster, spell)
+    if pos == nil {
+        return        // ← spell vanishes silently
+    }
+    s.dispatchSpellByType(caster, spell, pos)
+    s.applySpellEffects(caster, spell, pos, slotIndex)
+}
+
+// validateAndConsumeMana — lines 336–350
+func (s *SpellCastingSystem) validateAndConsumeMana(caster *Entity, spell *magic.Spell) *ManaComponent {
+    mana := s.getManaComponent(caster, spell.Name)
+    if mana == nil { return nil }                     // missing component path
+    if !s.hasEnoughMana(mana, spell) { return nil }   // mid-cast drain path
+    s.consumeMana(caster.ID, mana, spell.Stats.ManaCost)
+    return mana
 }
 ```
-In `completeCast` (the success path), the cooldown is set:
-```go
-slots.Cooldowns[slots.Casting] = spell.Stats.Cooldown
-```
-`CancelCast` does not reproduce this write.
 
-- **Incorrect Behavior**: A player initiates a 3-second cast, advances the bar
-  to 2.9 seconds (97% progress), and then cancels. `slots.Cooldowns[slotIndex]`
-  remains 0. The player can immediately start the same cast again. This cycle
-  can be repeated indefinitely, creating 100% cast uptime and allowing
-  continuous cast-animation pressure without any spell economy cost.
+- **Incorrect Behavior**:
 
-- **Root Cause**: Cooldown assignment is only in the success path
-  (`completeCast`). The cancel path was not updated to apply a proportional
-  penalty.
+  Concrete trace (Mage, Fireball, cost=50, cooldown=8s, cast time=3s):
 
-- **Impact**: Spell economy is broken. Spells with long cast times and high
-  cooldowns are effectively free to "attempt" repeatedly, removing the
-  risk/reward trade-off of slow-cast spells.
+  1. `mana.Current = 60`. Player calls `StartCast(slot=0)`.
+     `checkManaAvailability` (line 2584) succeeds (60 ≥ 50).
+     `slots.Casting = 0`, `slots.CastingBar` begins advancing.
+  2. At T=2.5s an enemy applies a mana-drain debuff that deducts 30
+     mana. Now `mana.Current = 30`.
+  3. At T=3.0s `slots.CastingBar >= 1.0`, `Update` calls
+     `completeCast`.
+  4. `completeCast` calls `executeCast` (line 299).
+  5. `executeCast` calls `validateAndConsumeMana`. `hasEnoughMana`
+     returns false (30 < 50), shows the "Not enough mana!"
+     notification (line 397), and returns nil. `executeCast` returns
+     immediately at line 311 — no projectile spawned, no spell effect
+     applied, no mana consumed.
+  6. Control returns to `completeCast` line 300, which writes
+     `slots.Cooldowns[0] = 8.0` regardless of the silent failure.
+  7. The Mage now has Fireball locked out for 8 seconds despite
+     producing zero output.
 
-- **Remediation**:
+  The same trace applies if the entity loses its mana component
+  between `StartCast` and completion (e.g. polymorph effect,
+  component swap). `getManaComponent` returns nil → `executeCast`
+  returns early → cooldown is still applied.
+
+- **Root Cause**: `completeCast` writes the cooldown unconditionally
+  on the line immediately after the `executeCast` call, with no
+  success/failure signal flowing back from `executeCast` or
+  `validateAndConsumeMana`. The function treats "the cast bar reached
+  100%" as equivalent to "the spell executed", which is incorrect when
+  preconditions checked at `StartCast` (mana availability, mana
+  component presence) no longer hold at completion.
+
+- **Impact**:
+  - **Player-visible**: A spell that produces no effect locks out its
+    slot for the full cooldown. In PvP, repeated mana-drain trivially
+    denies a caster's entire spellbook with no resource cost to the
+    drainer — the drainer pays mana once per drain cast, the caster
+    pays the full cooldown of their own spell with no benefit.
+  - **Hidden state**: Internal state is consistent (`slots.Casting`
+    correctly resets to `-1`, `slots.CastingBar` to 0); the issue is
+    purely the spurious cooldown write.
+
+- **Remediation**: Have `executeCast` (and/or
+  `validateAndConsumeMana`) return a `bool` indicating whether the
+  spell actually executed. Apply cooldown only on success.
+
   ```go
-  if slots.IsCasting() {
+  func (s *SpellCastingSystem) completeCast(entity *Entity, slots *SpellSlotComponent, spell *magic.Spell) {
+      // Snapshot slot before clearing casting state so executeCast
+      // cannot observe inconsistent state via side effects.
       slotIdx := slots.Casting
-      spell   := slots.GetSlot(slotIdx)
-      if spell != nil && slots.CastingBar > 0 {
-          // Partial cooldown proportional to how far the cast progressed
-          slots.Cooldowns[slotIdx] = spell.Stats.Cooldown * slots.CastingBar
-      }
-      slots.Casting    = -1
+      slots.Casting = -1
       slots.CastingBar = 0
+
+      if s.executeCast(entity, spell, slotIdx) {
+          slots.Cooldowns[slotIdx] = spell.Stats.Cooldown
+      }
+      // Optional: apply a small "wasted attempt" cooldown (e.g. 0.5s GCD)
+      // when the cast fizzles, mirroring the partial cooldown applied
+      // by CancelCast (G36 fix at line 2738).
   }
-  ```
-  A simpler alternative: apply a fixed interrupt penalty (e.g. 25% of full
-  cooldown) regardless of progress to avoid encouraging fast-cancel optimisation.
 
-- **Dependencies**: None.
-
-- **Effort**: small
-
----
-
-## G37 — `ClassAffinitySystem` Mana Regen Removal Uses Stale `mana.Max`
-
-- **Category**: Stat Removal Precision Bug
-- **Status**: 🔴 OPEN
-- **Severity**: MEDIUM
-
-**Evidence** (`pkg/engine/class_affinity_system.go:157–163`):
-```go
-if oldLevel, exists := comp.BonusesApplied[affinityType]; exists {
-    oldBonuses := GetAffinityBonuses(affinityType, oldLevel)
-    // Removal uses CURRENT mana.Max (line 160)
-    mana.Regen -= oldBonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
-}
-// Application also uses CURRENT mana.Max (line 163)
-mana.Regen += bonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
-```
-
-Both the removal and the new application use the same current `mana.Max`. If
-`mana.Max` at removal equals `mana.Max` at the original application, the
-arithmetic is correct. But `mana.Max` is modified by many other systems
-(talents, items, buffs) and will routinely differ.
-
-**Worked example:**
-- T1: `mana.Max = 100`, mana affinity level 1 applied:
-  `mana.Regen += 0.05 × 100 × 1.0 = 5.0`
-- T2: Talent increases `mana.Max` to 150.
-- T3: Affinity level 1 → level 2 upgrade fires:
-  - Removal: `mana.Regen -= 0.05 × 150 × 1.0 = 7.5` (only 5.0 was added at T1)
-  - Net removal: −7.5 instead of −5.0 → permanent −2.5 mana regen drain
-  - Application: `mana.Regen += 0.08 × 150 × 1.0 = 12.0`
-  - Expected net (if removal was correct): +7.0; actual: +4.5
-
-- **Incorrect Behavior**: Any affinity level-up that occurs after `mana.Max`
-  increased causes a permanent mana regen shortfall (drain). If `mana.Max`
-  decreased, the shortfall is inverted (regen bonus is overstated).
-
-- **Root Cause**: The contribution of the bonus was computed relative to
-  `mana.Max` at application time, but the removal computation uses the current
-  `mana.Max`, which may differ. The absolute regen value added was never stored.
-
-- **Impact**: Mana regeneration drifts from the intended value every time a
-  player levels up an affinity after gaining or losing max mana from any source.
-  In a typical session (multiple affinity upgrades, multiple talent purchases)
-  the cumulative drift can render mana regen negligible or extremely overpowered.
-
-- **Remediation**: Store the absolute regen value that was applied in
-  `ClassAffinityComponent.AppliedManaRegen map[AffinityType]float64`. Replace
-  the current removal formula with a lookup into this map:
-  ```go
-  mana.Regen -= comp.AppliedManaRegen[affinityType]  // exact previously-applied value
-  newRegen := bonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
-  mana.Regen += newRegen
-  comp.AppliedManaRegen[affinityType] = newRegen
-  ```
-
-- **Dependencies**: `ClassAffinityComponent` needs a new `AppliedManaRegen`
-  map field. Existing save-files may not have this field; zero-value on load
-  is safe (first level-up will apply correctly, subsequent level-ups will
-  track correctly).
-
-- **Effort**: small
-
----
-
-## G38 — Render Interpolation Guard False-Positive at World Origin
-
-- **Category**: Render Bug
-- **Status**: 🔴 OPEN
-- **Severity**: LOW
-
-**Evidence** (`pkg/engine/render_system.go:331`):
-```go
-func (r *EbitenRenderSystem) interpolatePosition(pos *PositionComponent) (float64, float64) {
-    if r.renderAlpha >= 1.0 || (pos.PrevX == 0 && pos.PrevY == 0 && (pos.X != 0 || pos.Y != 0)) {
-        return r.cameraSystem.WorldToScreen(pos.X, pos.Y)
-    }
-    interpX := pos.PrevX + (pos.X-pos.PrevX)*r.renderAlpha
-    interpY := pos.PrevY + (pos.Y-pos.PrevY)*r.renderAlpha
-    return r.cameraSystem.WorldToScreenInterpolated(interpX, interpY, r.renderAlpha)
-}
-```
-The guard `(pos.PrevX == 0 && pos.PrevY == 0 && (pos.X != 0 || pos.Y != 0))`
-is designed to skip interpolation when `PrevX`/`PrevY` are uninitialized
-(default zero) so that a newly spawned entity does not blend from the world
-origin to its real position. However it also fires for entities that are
-genuinely located at pixel position (0,0) — i.e., the top-left tile of the
-world — and begin moving in their first rendered frame.
-
-`MovementSystem.Update` stores `pos.PrevX = pos.X; pos.PrevY = pos.Y` before
-applying velocity. For a fresh entity at (0,0) in the same frame as its first
-velocity tick: `PrevX = 0, PrevY = 0, X = newX`. The guard triggers, skipping
-interpolation and snapping the entity directly to `newX, newY`.
-
-- **Incorrect Behavior**: An entity spawned at world origin (0,0) that moves in
-  its first simulated frame renders without position interpolation for exactly
-  one frame, causing a single-frame visual snap from (0,0) to the new position
-  instead of a smooth blend.
-
-- **Root Cause**: The "uninitialized" state is inferred from a zero-value check
-  rather than an explicit flag. The world origin is a legitimate position, not
-  the same thing as "never had a physics tick."
-
-- **Impact**: Low — visually observable only when entities spawn at or near
-  (0,0), which is the world origin. Starting room spawns (first room, first
-  corridor intersection) at `(room.X + room.Width/2) * 32` are almost never at
-  literal pixel (0,0). The issue surfaces primarily in server test harnesses
-  that spawn entities without a terrain context (default `spawnX = 400.0`,
-  `spawnY = 300.0` — not affected).
-
-- **Remediation**: Add `Initialized bool` to `PositionComponent`. Set it to
-  `true` in `MovementSystem.Update` on first tick (or in `AddComponent`). Guard
-  becomes:
-  ```go
-  if r.renderAlpha >= 1.0 || !pos.Initialized {
-      return r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+  func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slotIndex int) bool {
+      s.logSpellExecution(caster, spell, slotIndex)
+      mana := s.validateAndConsumeMana(caster, spell)
+      if mana == nil { return false }
+      pos := s.getCasterPosition(caster, spell)
+      if pos == nil { return false }
+      s.dispatchSpellByType(caster, spell, pos)
+      s.applySpellEffects(caster, spell, pos, slotIndex)
+      return true
   }
   ```
 
-- **Dependencies**: `PositionComponent` struct change; `MovementSystem.Update`
-  must set `Initialized = true` before copying `PrevX`/`PrevY`.
+  Update the existing call site in `updateCastingProgress` (line 248)
+  — no API change needed since the return value can be ignored there.
 
-- **Effort**: small
+- **Dependencies**: None. G36 (`CancelCast` cooldown) is already in
+  place and provides a precedent for partial-cooldown behavior on a
+  failed cast attempt.
+
+- **Effort**: small — three signature changes (`executeCast`,
+  `completeCast`) and one decision about whether to apply a partial
+  GCD on failure. Add a regression test that drains mana between
+  `StartCast` and `completeCast` and asserts `slots.Cooldowns[idx] == 0`.
 
 ---
 
-## Prior Gap Compatibility Table
+## Resolved Findings (G32–G38) — Verification Citations
 
-| Prior ID | Title | Current Status |
-|----------|-------|---------------|
-| G1–G16   | Various (see Rev 2 GAPS.md) | ✅ All resolved |
-| G17      | WebRTC federation simulated | ✅ Resolved (pion/webrtc WASM) |
-| G18      | ClassProgressionSystem no-op | ⚠️ By design; documented |
-| G19      | Companion scout velocity | ⚠️ Partial (4-dir cycle, not pathfinding) |
-| G20      | Ambush node random offset | ⚠️ Partial (fallback, not cover-based) |
-| G21      | Mobile input Type() collision | Verify separately |
-| G22      | XP double-award on kill | ✅ Resolved |
-| G23      | TalentSystem stat accumulation | ✅ Resolved |
-| G24      | HUD no mana bar | ✅ Resolved |
-| G25      | consumeItem heals by Defense | ✅ Resolved |
-| G26      | AttributeEffects not applied | ✅ Resolved |
-| G27      | HUD health bar overflow | ✅ Resolved |
-| G28      | Death callback fires every frame | ✅ Resolved |
-| G29      | Streak decay hardcoded time=0 | ✅ Resolved |
-| G30      | Self-damage guard missing | ✅ Resolved |
-| G31      | CarryOverSystem not in system_init | ⚠️ By design (client-only) |
+The following table records the exact lines in the *current* source
+tree that demonstrate each prior finding has been remediated. Cite
+these locations rather than re-opening the issues.
+
+| ID  | Resolution evidence (current code)                                                                                                     |
+|-----|----------------------------------------------------------------------------------------------------------------------------------------|
+| G32 | `pkg/engine/advanced_class_system.go:14` (`lastApplied` field), `:67–73` (`prev` subtracted in `applyStatBonuses`), `:87–88,106–110,125–135` (per-domain `prev` subtraction)            |
+| G33 | `pkg/engine/status_effect_crit_chance_system.go:42` (`prevCache` field), `:72–87` (cache swap + `stats.CritChance -= prev`), `:105–112` (expiry path clamp) |
+| G34 | `pkg/engine/combat_system.go:562–565` (defense bonus folded in via `applyEquipmentSetDefenseBonus`), `:580` (final damage), `:599` (`getEquipmentSetDamageBonus`), `:618` (defense bonus reader) |
+| G35 | `pkg/engine/combat_system.go:577–583` — `applyShieldAbsorption` precedes the `< 1.0` floor, and the floor only triggers when `finalDamage > 0` |
+| G36 | `pkg/engine/spell_casting.go:2734–2738` — `slots.Cooldowns[slotIdx] = spell.Stats.Cooldown * castProgress` on `CancelCast`         |
+| G37 | `pkg/engine/class_affinity_system.go:157–169` — `comp.AppliedManaRegen[affinityType]` stores absolute regen; subtracted on level-up |
+| G38 | `pkg/engine/render_system.go:328–333` — guard uses `!pos.Initialized` instead of the (PrevX==0 && PrevY==0) heuristic              |
+
+---
+
+## Categories With No New Findings
+
+These categories were investigated and produced no new defects this
+revision. See `AUDIT.md` "Categories Audited Clean" for the supporting
+citations.
+
+- Per-Frame Stat Mutation (3a) — all known systems use delta-tracking.
+- Combat Formula Correctness (3b) — shield/floor ordering fixed
+  (G35); `MinDamageMultiplier` is intentional balance protection.
+- Server Concurrency (3d) — `running` consistently locked; lock order
+  `clientsMu → c.mu` is consistent across all paths.
+- ECS Component Cache Consistency (3e) — `AddComponent` keeps the
+  typed cache pointer in sync with the map entry.
+- Input and UI Correctness (3f) — dead-zone applied before
+  normalization; modal input fully suppressed; ESC handler dismisses
+  in priority order.
+- UI Display Bugs (3g) — health/mana bars clamp; render interpolation
+  uses `Initialized`; `consumeItem` uses `Stats.Healing`.
+- Procedural Generation Determinism (3i) — pooled-RNG re-seeding is
+  intentional for deterministic replay.
+- System Registration Ordering (3j) — `AdvancedClassSystem` is
+  registered (`cmd/client/handlers.go:2162`); registration order is
+  no longer correctness-critical thanks to delta-tracking fixes.

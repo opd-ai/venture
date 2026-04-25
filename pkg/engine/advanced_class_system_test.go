@@ -341,32 +341,32 @@ func TestAdvancedClassComponent_Type(t *testing.T) {
 // N times produces the same net stat delta as calling it once (idempotency).
 // This is the regression test for G32.
 func TestG32_AdvancedClassSystem_NoBonusAccumulation(t *testing.T) {
-world := NewWorld()
-system := NewAdvancedClassSystem(world)
+	world := NewWorld()
+	system := NewAdvancedClassSystem(world)
 
-player := world.CreateEntity()
-baseAttack := float64(10)
-player.AddComponent(&HealthComponent{Current: 100, Max: 100})
-player.AddComponent(&ManaComponent{Current: 50, Max: 50})
-player.AddComponent(&StatsComponent{Attack: baseAttack})
-if err := system.InitializePlayerClass(player, advanced.ClassWarrior, 10); err != nil {
-t.Fatalf("InitializePlayerClass: %v", err)
-}
+	player := world.CreateEntity()
+	baseAttack := float64(10)
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&ManaComponent{Current: 50, Max: 50})
+	player.AddComponent(&StatsComponent{Attack: baseAttack})
+	if err := system.InitializePlayerClass(player, advanced.ClassWarrior, 10); err != nil {
+		t.Fatalf("InitializePlayerClass: %v", err)
+	}
 
-entities := []*Entity{player}
+	entities := []*Entity{player}
 
-// Run 300 frames
-for i := 0; i < 300; i++ {
-system.Update(entities, 1.0/60.0)
-}
+	// Run 300 frames
+	for i := 0; i < 300; i++ {
+		system.Update(entities, 1.0/60.0)
+	}
 
-statsComp, _ := player.GetComponent("stats")
-stats := statsComp.(*StatsComponent)
+	statsComp, _ := player.GetComponent("stats")
+	stats := statsComp.(*StatsComponent)
 
-// At 300 frames the attack bonus must equal exactly one application, not 300×.
-expectedAttack := baseAttack + float64(10) // Warrior level-10 strength bonus
-if stats.Attack > expectedAttack+5 {       // allow ±5 for floating-point / manager variance
-t.Errorf("G32: Attack accumulated across frames: got %.1f, want ~%.1f (base %.1f + bonus)",
-stats.Attack, expectedAttack, baseAttack)
-}
+	// At 300 frames the attack bonus must equal exactly one application, not 300×.
+	expectedAttack := baseAttack + float64(10) // Warrior level-10 strength bonus
+	if stats.Attack > expectedAttack+5 {       // allow ±5 for floating-point / manager variance
+		t.Errorf("G32: Attack accumulated across frames: got %.1f, want ~%.1f (base %.1f + bonus)",
+			stats.Attack, expectedAttack, baseAttack)
+	}
 }

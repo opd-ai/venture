@@ -60,7 +60,7 @@ successfully without a display.
 
 ### MEDIUM
 
-- [ ] **[G39] `completeCast` Always Applies Cooldown Even When `executeCast` Silently No-Ops**
+- [x] **[G39] `completeCast` Always Applies Cooldown Even When `executeCast` Silently No-Ops**
   — `pkg/engine/spell_casting.go:288–303`,
     `pkg/engine/spell_casting.go:305–321`,
     `pkg/engine/spell_casting.go:336–350` —

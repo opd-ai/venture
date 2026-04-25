@@ -286,6 +286,7 @@ func (s *SpellCastingSystem) advanceCastingBar(slots *SpellSlotComponent, spell 
 }
 
 // completeCast finalizes a spell cast and resets casting state.
+// Cooldown is only applied when executeCast returns true (spell fully executed).
 func (s *SpellCastingSystem) completeCast(entity *Entity, slots *SpellSlotComponent, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -296,28 +297,33 @@ func (s *SpellCastingSystem) completeCast(entity *Entity, slots *SpellSlotCompon
 			"mana_cost":  spell.Stats.ManaCost,
 		}).Info("Spell cast completed")
 	}
-	s.executeCast(entity, spell, slots.Casting)
-	slots.Cooldowns[slots.Casting] = spell.Stats.Cooldown
+	slotIdx := slots.Casting
 	slots.Casting = -1
 	slots.CastingBar = 0
+	if s.executeCast(entity, spell, slotIdx) {
+		slots.Cooldowns[slotIdx] = spell.Stats.Cooldown
+	}
 }
 
 // executeCast performs the spell effect.
-func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slotIndex int) {
+// Returns true when the spell was fully executed; false when it silently no-ops
+// (e.g. mana drained mid-cast or mana component missing).
+func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slotIndex int) bool {
 	s.logSpellExecution(caster, spell, slotIndex)
 
 	mana := s.validateAndConsumeMana(caster, spell)
 	if mana == nil {
-		return
+		return false
 	}
 
 	pos := s.getCasterPosition(caster, spell)
 	if pos == nil {
-		return
+		return false
 	}
 
 	s.dispatchSpellByType(caster, spell, pos)
 	s.applySpellEffects(caster, spell, pos, slotIndex)
+	return true
 }
 
 // logSpellExecution logs the initial spell cast event with relevant details.

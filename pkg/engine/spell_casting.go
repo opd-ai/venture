@@ -286,38 +286,48 @@ func (s *SpellCastingSystem) advanceCastingBar(slots *SpellSlotComponent, spell 
 }
 
 // completeCast finalizes a spell cast and resets casting state.
+// Cooldown is only applied when executeCast returns true (spell fully executed).
 func (s *SpellCastingSystem) completeCast(entity *Entity, slots *SpellSlotComponent, spell *magic.Spell) {
+	slotIdx := slots.Casting
+	slots.Casting = -1
+	slots.CastingBar = 0
+	success := s.executeCast(entity, spell, slotIdx)
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  entity.ID,
 			"spell_name": spell.Name,
 			"spell_type": spell.Type.String(),
-			"slot_index": slots.Casting,
+			"slot_index": slotIdx,
 			"mana_cost":  spell.Stats.ManaCost,
+			"success":    success,
 		}).Info("Spell cast completed")
 	}
-	s.executeCast(entity, spell, slots.Casting)
-	slots.Cooldowns[slots.Casting] = spell.Stats.Cooldown
-	slots.Casting = -1
-	slots.CastingBar = 0
+	if success {
+		slots.Cooldowns[slotIdx] = spell.Stats.Cooldown
+	}
 }
 
 // executeCast performs the spell effect.
-func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slotIndex int) {
+// Returns true when the spell was fully executed; false when it silently no-ops
+// (e.g. mana drained mid-cast, mana component missing, or position unavailable).
+// Position is validated before mana is consumed so a missing position never
+// silently drains mana while leaving executeCast returning false.
+func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slotIndex int) bool {
 	s.logSpellExecution(caster, spell, slotIndex)
-
-	mana := s.validateAndConsumeMana(caster, spell)
-	if mana == nil {
-		return
-	}
 
 	pos := s.getCasterPosition(caster, spell)
 	if pos == nil {
-		return
+		return false
+	}
+
+	mana := s.validateAndConsumeMana(caster, spell)
+	if mana == nil {
+		return false
 	}
 
 	s.dispatchSpellByType(caster, spell, pos)
 	s.applySpellEffects(caster, spell, pos, slotIndex)
+	return true
 }
 
 // logSpellExecution logs the initial spell cast event with relevant details.

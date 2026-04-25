@@ -1860,7 +1860,7 @@ func TestG35_ShieldAbsorbsFullDamage(t *testing.T) {
 
 	hit := cs.Attack(attacker, target)
 	if !hit {
-		t.Skip("G35: attack did not land (may require specific entity setup)")
+		t.Fatalf("G35: attack did not land (check range, cooldown, evasion setup)")
 	}
 
 	healthComp, _ := target.GetComponent("health")
@@ -1892,7 +1892,9 @@ func TestG34_EquipmentSetBonusDamageApplied(t *testing.T) {
 
 	world.Update(0)
 
-	cs.Attack(attacker, target)
+	if !cs.Attack(attacker, target) {
+		t.Fatalf("G34: first attack (without set bonus) did not land")
+	}
 	healthComp, _ := target.GetComponent("health")
 	health := healthComp.(*HealthComponent)
 	damageWithoutBonus := 1000.0 - health.Current
@@ -1912,7 +1914,9 @@ func TestG34_EquipmentSetBonusDamageApplied(t *testing.T) {
 	}
 	attacker.AddComponent(setBonus)
 
-	cs.Attack(attacker, target)
+	if !cs.Attack(attacker, target) {
+		t.Fatalf("G34: second attack (with set bonus) did not land")
+	}
 	damageWithBonus := 1000.0 - health.Current
 
 	if damageWithBonus <= damageWithoutBonus {

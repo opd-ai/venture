@@ -16,11 +16,22 @@ type AdvancedClassSystem struct {
 
 // NewAdvancedClassSystem creates a new advanced class system
 func NewAdvancedClassSystem(world *World) *AdvancedClassSystem {
-	return &AdvancedClassSystem{
+	acs := &AdvancedClassSystem{
 		manager:     advanced.NewManager(),
 		world:       world,
 		lastApplied: make(map[uint64]advanced.StatBonuses),
 	}
+	// G32: register a removal hook so lastApplied entries are pruned when an
+	// entity is removed, preventing unbounded map growth in long sessions.
+	if world != nil {
+		world.AddEntityRemovalHook(acs.onEntityRemoved)
+	}
+	return acs
+}
+
+// onEntityRemoved removes the cached stat bonuses for a deleted entity.
+func (acs *AdvancedClassSystem) onEntityRemoved(entityID uint64) {
+	delete(acs.lastApplied, entityID)
 }
 
 // Update applies stat bonuses from classes and talents to entities

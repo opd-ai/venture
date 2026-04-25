@@ -553,10 +553,16 @@ func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *Atta
 func (s *CombatSystem) computeFinalDamage(attacker *Entity, attack *AttackComponent, attackerStats, targetStats *StatsComponent, target *Entity) (float64, float64, bool) {
 	baseDamage, isCrit := s.calculateDamage(attack, attackerStats)
 
+	// G34: apply equipment set bonus damage from attacker.
+	baseDamage += s.getEquipmentSetDamageBonus(attacker)
+
 	// Apply mod rule damage multipliers (Phase 6.3: Modding System Integration)
 	baseDamage = s.applyModDamageMultipliers(attacker, target, baseDamage)
 
-	damageAfterResist := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
+	// G34: boost effective defense with target's equipment set bonus before resist.
+	effectiveTargetStats := s.applyEquipmentSetDefenseBonus(target, targetStats)
+
+	damageAfterResist := s.applyDefenseAndResistance(baseDamage, attack.DamageType, effectiveTargetStats)
 
 	// Check if significant damage was resisted and trigger callback
 	if s.onDamageResistedCallback != nil && targetStats != nil {
@@ -567,12 +573,56 @@ func (s *CombatSystem) computeFinalDamage(attacker *Entity, attack *AttackCompon
 	}
 
 	finalDamage := damageAfterResist
-	if finalDamage < 1.0 {
+
+	// G35 fix: apply shield absorption before the minimum-damage floor so that a
+	// fully-charged shield can reduce damage to 0. The floor only guards against
+	// near-zero resist math; it must not bypass intentional full-block shields.
+	finalDamage = s.applyShieldAbsorption(target, finalDamage)
+	if finalDamage < 1.0 && finalDamage > 0 {
 		finalDamage = 1.0
 	}
 
-	finalDamage = s.applyShieldAbsorption(target, finalDamage)
 	return finalDamage, baseDamage, isCrit
+}
+
+// getEquipmentSetDamageBonus returns the additional flat damage from the
+// attacker's active equipment set bonuses (G34).
+func (s *CombatSystem) getEquipmentSetDamageBonus(attacker *Entity) float64 {
+	comp, ok := attacker.GetComponent("equipment_set_bonus")
+	if !ok {
+		return 0
+	}
+	setBonus, ok := comp.(*EquipmentSetBonusComponent)
+	if !ok {
+		return 0
+	}
+	return float64(setBonus.GetTotalDamageBonus())
+}
+
+// applyEquipmentSetDefenseBonus returns a copy of the targetStats with the
+// target's equipment set defense bonus folded in. If the target has no set
+// bonus component or targetStats is nil, the original pointer is returned
+// unchanged (G34).
+func (s *CombatSystem) applyEquipmentSetDefenseBonus(target *Entity, targetStats *StatsComponent) *StatsComponent {
+	if targetStats == nil {
+		return targetStats
+	}
+	comp, ok := target.GetComponent("equipment_set_bonus")
+	if !ok {
+		return targetStats
+	}
+	setBonus, ok := comp.(*EquipmentSetBonusComponent)
+	if !ok {
+		return targetStats
+	}
+	defenseBonus := float64(setBonus.GetTotalDefenseBonus())
+	if defenseBonus == 0 {
+		return targetStats
+	}
+	// Return a shallow copy so that we do not mutate the live component.
+	adjusted := *targetStats
+	adjusted.Defense += defenseBonus
+	return &adjusted
 }
 
 // applyDamageAndFeedback applies damage to target and triggers all feedback.

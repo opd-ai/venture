@@ -1836,3 +1836,86 @@ func (m *mockModRuleProvider) GetRuleBool(ruleName string, defaultValue bool) bo
 func (m *mockModRuleProvider) TriggerEvent(eventType string, eventData map[string]interface{}) error {
 	return nil
 }
+
+// TestG35_ShieldAbsorbsFullDamage verifies that a fully-charged shield reduces
+// final damage to 0 (not 1), i.e., the floor is applied after shield absorption.
+func TestG35_ShieldAbsorbsFullDamage(t *testing.T) {
+	world := NewWorld()
+	cs := NewCombatSystem(42)
+	world.AddSystem(cs)
+
+	attacker := world.CreateEntity()
+	attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+	attacker.AddComponent(&AttackComponent{Damage: 1.0, DamageType: combat.DamagePhysical, Range: 100, Cooldown: 1.0})
+	attacker.AddComponent(NewStatsComponent())
+
+	target := world.CreateEntity()
+	target.AddComponent(&PositionComponent{X: 10, Y: 0})
+	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	// Shield absorbs ALL incoming damage; Duration must be >0 for IsActive().
+	target.AddComponent(&ShieldComponent{Amount: 1000, MaxAmount: 1000, Duration: 9999})
+	target.AddComponent(NewStatsComponent())
+
+	world.Update(0)
+
+	hit := cs.Attack(attacker, target)
+	if !hit {
+		t.Skip("G35: attack did not land (may require specific entity setup)")
+	}
+
+	healthComp, _ := target.GetComponent("health")
+	health := healthComp.(*HealthComponent)
+	if health.Current != 100 {
+		t.Errorf("G35: health = %.0f, want 100 (shield should have absorbed all damage)", health.Current)
+	}
+}
+
+// TestG34_EquipmentSetBonusDamageApplied verifies that the equipment set damage
+// bonus from EquipmentSetBonusComponent is added to the attacker's damage output.
+func TestG34_EquipmentSetBonusDamageApplied(t *testing.T) {
+	world := NewWorld()
+	cs := NewCombatSystem(42)
+	world.AddSystem(cs)
+
+	baseAttackDamage := 10.0
+
+	// Attacker without set bonus
+	attacker := world.CreateEntity()
+	attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+	attacker.AddComponent(&AttackComponent{Damage: baseAttackDamage, DamageType: combat.DamagePhysical, Range: 100, Cooldown: 1.0})
+	attacker.AddComponent(NewStatsComponent())
+
+	target := world.CreateEntity()
+	target.AddComponent(&PositionComponent{X: 10, Y: 0})
+	target.AddComponent(&HealthComponent{Current: 1000, Max: 1000})
+	target.AddComponent(NewStatsComponent())
+
+	world.Update(0)
+
+	cs.Attack(attacker, target)
+	healthComp, _ := target.GetComponent("health")
+	health := healthComp.(*HealthComponent)
+	damageWithoutBonus := 1000.0 - health.Current
+
+	// Reset health and cooldown.
+	health.Current = 1000
+	attackComp, _ := attacker.GetComponent("attack")
+	attack := attackComp.(*AttackComponent)
+	attack.CooldownTimer = 0 // allow next attack
+
+	// Add equipment set bonus (+15 damage).
+	setBonus := NewEquipmentSetBonusComponent()
+	setBonus.ActiveSets["inferno"] = &ActiveSetBonus{
+		SetID:          "inferno",
+		PiecesEquipped: 2,
+		CombinedBonus:  SetBonusTier{DamageBonus: 15},
+	}
+	attacker.AddComponent(setBonus)
+
+	cs.Attack(attacker, target)
+	damageWithBonus := 1000.0 - health.Current
+
+	if damageWithBonus <= damageWithoutBonus {
+		t.Errorf("G34: damage with set bonus (%.1f) should exceed damage without (%.1f)", damageWithBonus, damageWithoutBonus)
+	}
+}

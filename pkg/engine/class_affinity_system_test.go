@@ -817,3 +817,64 @@ func BenchmarkClassAffinityComponent_Serialize(b *testing.B) {
 		_ = comp.Serialize()
 	}
 }
+
+// TestG37_ClassAffinity_ManaRegenPrecision verifies that mana regen removal
+// uses the stored absolute value, not a recomputed one, so that changes to
+// mana.Max between apply and removal do not leave a residual regen bonus.
+func TestG37_ClassAffinity_ManaRegenPrecision(t *testing.T) {
+	world := NewWorld()
+	system := NewClassAffinitySystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&StatsComponent{})
+	mana := &ManaComponent{Current: 100, Max: 100, Regen: 0.0}
+	entity.AddComponent(mana)
+
+	affinityComp := NewClassAffinityComponent()
+	// Use AffinityAggressor which has a mana regen bonus defined.
+	affinityComp.Affinities[AffinityAggressor] = &AffinityData{
+		Level: AffinityLevelNovice,
+	}
+	affinityComp.PrimaryAffinity = AffinityAggressor
+	affinityComp.Dirty = true
+	entity.AddComponent(affinityComp)
+
+	entities := []*Entity{entity}
+
+	// First batch of frames with mana.Max = 100
+	for i := 0; i < 35; i++ { // >30 to pass updateInterval
+		system.Update(entities, 1.0/60.0)
+	}
+
+	regenAfterFirstApply := mana.Regen
+
+	// Simulate a mana.Max change (e.g. equipment upgrade).
+	mana.Max = 200
+
+	// Force re-apply by marking dirty (level change).
+	affinityComp.Affinities[AffinityAggressor].Level = AffinityLevelApprentice
+	affinityComp.Dirty = true
+
+	for i := 0; i < 35; i++ {
+		system.Update(entities, 1.0/60.0)
+	}
+
+	regenAfterSecondApply := mana.Regen
+
+	// Now revert back to Novice and check there's no residual regen.
+	affinityComp.Affinities[AffinityAggressor].Level = AffinityLevelNovice
+	affinityComp.Dirty = true
+
+	for i := 0; i < 35; i++ {
+		system.Update(entities, 1.0/60.0)
+	}
+
+	// After reverting the level, mana.Regen must not be negative.
+	// If G37 is NOT fixed, removal would recompute using mana.Max=200,
+	// subtracting more than was added, yielding a negative regen.
+	if mana.Regen < 0 {
+		t.Errorf("G37: mana.Regen is negative (%.4f): removal used wrong Max", mana.Regen)
+	}
+	_ = regenAfterFirstApply
+	_ = regenAfterSecondApply
+}

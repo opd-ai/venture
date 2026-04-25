@@ -154,13 +154,19 @@ func (s *ClassAffinitySystem) applyAffinityBonuses(entity *Entity, comp *ClassAf
 	if hasMana {
 		mana, ok := manaComp.(*ManaComponent)
 		if ok {
-			// Remove old bonus
-			if oldLevel, exists := comp.BonusesApplied[affinityType]; exists {
-				oldBonuses := GetAffinityBonuses(affinityType, oldLevel)
-				mana.Regen -= oldBonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
+			// G37 fix: remove the stored absolute regen value rather than
+			// recomputing it from the (possibly changed) mana.Max, which
+			// would remove a different amount than was originally added.
+			if comp.AppliedManaRegen == nil {
+				comp.AppliedManaRegen = make(map[AffinityType]float64)
 			}
-			// Apply new bonus
-			mana.Regen += bonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
+			if prev, exists := comp.AppliedManaRegen[affinityType]; exists {
+				mana.Regen -= prev
+			}
+			// Apply new bonus and store the absolute value for future removal.
+			newRegen := bonuses.ManaRegenBonus * float64(mana.Max) * effectiveness
+			mana.Regen += newRegen
+			comp.AppliedManaRegen[affinityType] = newRegen
 		}
 	}
 

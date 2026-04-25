@@ -9,15 +9,17 @@ import (
 // AdvancedClassSystem integrates the advanced class manager with ECS.
 // Handles multi-classing, prestige classes, and talent trees for deep character customization.
 type AdvancedClassSystem struct {
-	manager *advanced.Manager
-	world   *World
+	manager     *advanced.Manager
+	world       *World
+	lastApplied map[uint64]advanced.StatBonuses // G32: guards per-frame accumulation
 }
 
 // NewAdvancedClassSystem creates a new advanced class system
 func NewAdvancedClassSystem(world *World) *AdvancedClassSystem {
 	return &AdvancedClassSystem{
-		manager: advanced.NewManager(),
-		world:   world,
+		manager:     advanced.NewManager(),
+		world:       world,
+		lastApplied: make(map[uint64]advanced.StatBonuses),
 	}
 }
 
@@ -48,15 +50,21 @@ func (acs *AdvancedClassSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 }
 
-// applyStatBonuses applies calculated stat bonuses to entity components
+// applyStatBonuses applies calculated stat bonuses to entity components.
+// G32 fix: subtract the previously applied bonus before adding the new one so
+// that calling this method N times per session is idempotent.
 func (acs *AdvancedClassSystem) applyStatBonuses(entity *Entity, bonuses advanced.StatBonuses) {
-	acs.applyHealthBonuses(entity, bonuses)
-	acs.applyManaBonuses(entity, bonuses)
-	acs.applyStatsBonuses(entity, bonuses)
+	prev := acs.lastApplied[entity.ID]
+	acs.applyHealthBonuses(entity, prev, bonuses)
+	acs.applyManaBonuses(entity, prev, bonuses)
+	acs.applyStatsBonuses(entity, prev, bonuses)
+	acs.lastApplied[entity.ID] = bonuses
 }
 
 // applyHealthBonuses applies health bonuses to an entity's health component.
-func (acs *AdvancedClassSystem) applyHealthBonuses(entity *Entity, bonuses advanced.StatBonuses) {
+// prev contains the bonuses applied on the previous call; they are subtracted
+// before the new bonuses are added so the net change is always (new - prev).
+func (acs *AdvancedClassSystem) applyHealthBonuses(entity *Entity, prev, bonuses advanced.StatBonuses) {
 	healthComp, ok := entity.GetComponent("health")
 	if !ok {
 		return
@@ -65,6 +73,7 @@ func (acs *AdvancedClassSystem) applyHealthBonuses(entity *Entity, bonuses advan
 	if !ok {
 		return
 	}
+	health.Max -= float64(prev.Health)
 	health.Max += float64(bonuses.Health)
 	if health.Current > health.Max {
 		health.Current = health.Max
@@ -72,7 +81,9 @@ func (acs *AdvancedClassSystem) applyHealthBonuses(entity *Entity, bonuses advan
 }
 
 // applyManaBonuses applies mana bonuses to an entity's mana component.
-func (acs *AdvancedClassSystem) applyManaBonuses(entity *Entity, bonuses advanced.StatBonuses) {
+// prev contains the bonuses applied on the previous call; they are subtracted
+// before the new bonuses are added so the net change is always (new - prev).
+func (acs *AdvancedClassSystem) applyManaBonuses(entity *Entity, prev, bonuses advanced.StatBonuses) {
 	manaComp, ok := entity.GetComponent("mana")
 	if !ok {
 		return
@@ -81,6 +92,7 @@ func (acs *AdvancedClassSystem) applyManaBonuses(entity *Entity, bonuses advance
 	if !ok {
 		return
 	}
+	mana.Max -= prev.Mana
 	mana.Max += bonuses.Mana
 	if mana.Current > mana.Max {
 		mana.Current = mana.Max
@@ -88,7 +100,9 @@ func (acs *AdvancedClassSystem) applyManaBonuses(entity *Entity, bonuses advance
 }
 
 // applyStatsBonuses applies attribute bonuses to an entity's stats component.
-func (acs *AdvancedClassSystem) applyStatsBonuses(entity *Entity, bonuses advanced.StatBonuses) {
+// prev contains the bonuses applied on the previous call; they are subtracted
+// before the new bonuses are added so the net change is always (new - prev).
+func (acs *AdvancedClassSystem) applyStatsBonuses(entity *Entity, prev, bonuses advanced.StatBonuses) {
 	statsComp, ok := entity.GetComponent("stats")
 	if !ok {
 		return
@@ -97,6 +111,12 @@ func (acs *AdvancedClassSystem) applyStatsBonuses(entity *Entity, bonuses advanc
 	if !ok {
 		return
 	}
+	stats.Attack -= float64(prev.Strength)
+	stats.Defense -= float64(prev.Defense)
+	stats.MagicPower -= float64(prev.Intelligence)
+	stats.CritChance -= prev.CritChance
+	stats.CritDamage -= prev.CritDamage
+
 	stats.Attack += float64(bonuses.Strength)
 	stats.Defense += float64(bonuses.Defense)
 	stats.MagicPower += float64(bonuses.Intelligence)

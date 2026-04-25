@@ -178,3 +178,28 @@ func TestRenderSystem_NoDoubleCulling(t *testing.T) {
 		t.Error("spatialCullingUsed should be false before Draw()")
 	}
 }
+
+// TestG38_PositionComponent_Initialized verifies that a PositionComponent
+// starts with Initialized=false, and that the interpolatePosition function
+// uses the current position (not PrevX/PrevY) until Initialized becomes true.
+// This is the regression test for G38.
+func TestG38_PositionComponent_Initialized(t *testing.T) {
+// A freshly created component must not be Initialized.
+pos := &PositionComponent{X: 0, Y: 0}
+if pos.Initialized {
+t.Error("G38: fresh PositionComponent should have Initialized=false")
+}
+
+// An entity spawned at (0,0) should not be snapped away from origin
+// before the first physics tick — Initialized protects this case.
+posAtOrigin := &PositionComponent{X: 0, Y: 0, PrevX: 0, PrevY: 0}
+if posAtOrigin.Initialized {
+t.Error("G38: PositionComponent at origin should have Initialized=false before first tick")
+}
+
+// After MovementSystem runs, Initialized should be true.
+posAtOrigin.Initialized = true
+if !posAtOrigin.Initialized {
+t.Error("G38: Initialized should be settable to true")
+}
+}

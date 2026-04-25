@@ -47,7 +47,7 @@ the same reason. `go test ./pkg/combat/...` passes successfully.
 
 ### CRITICAL
 
-- [ ] **[G32] `AdvancedClassSystem` Adds Stat Bonuses Every Frame Without Guard**
+- [x] **[G32] `AdvancedClassSystem` Adds Stat Bonuses Every Frame Without Guard**
   — `pkg/engine/advanced_class_system.go:68,84,100–104` —
 
   **Evidence:**
@@ -93,7 +93,7 @@ the same reason. `go test ./pkg/combat/...` passes successfully.
 
 ---
 
-- [ ] **[G33] `StatusEffectCriticalChanceSystem` Permanently Corrupts `CritChance`**
+- [x] **[G33] `StatusEffectCriticalChanceSystem` Permanently Corrupts `CritChance`**
   — `pkg/engine/status_effect_crit_chance_system.go:61–92` —
 
   **Evidence:**
@@ -155,7 +155,7 @@ the same reason. `go test ./pkg/combat/...` passes successfully.
 
 ### HIGH
 
-- [ ] **[G34] `EquipmentSetBonusSystem` Computes Bonuses But Nothing Consumes Them**
+- [x] **[G34] `EquipmentSetBonusSystem` Computes Bonuses But Nothing Consumes Them**
   — `pkg/engine/equipment_set_bonus_system.go:207–299`,
   `pkg/engine/equipment_set_bonus_component.go:83–110` —
 
@@ -199,7 +199,7 @@ the same reason. `go test ./pkg/combat/...` passes successfully.
 
 ### MEDIUM
 
-- [ ] **[G35] Minimum Damage Floor Applied Before Shield Absorption**
+- [x] **[G35] Minimum Damage Floor Applied Before Shield Absorption**
   — `pkg/engine/combat_system.go:570–574` —
 
   **Evidence:**
@@ -242,7 +242,7 @@ the same reason. `go test ./pkg/combat/...` passes successfully.
 
 ---
 
-- [ ] **[G36] `CancelCast` Does Not Apply Cooldown to Interrupted Slot**
+- [x] **[G36] `CancelCast` Does Not Apply Cooldown to Interrupted Slot**
   — `pkg/engine/spell_casting.go:2697–2741` —
 
   **Evidence:**
@@ -294,7 +294,7 @@ the same reason. `go test ./pkg/combat/...` passes successfully.
 
 ---
 
-- [ ] **[G37] `ClassAffinitySystem` Mana Regen Removal Uses Current `mana.Max`**
+- [x] **[G37] `ClassAffinitySystem` Mana Regen Removal Uses Current `mana.Max`**
   — `pkg/engine/class_affinity_system.go:157–163` —
 
   **Evidence:**
@@ -336,7 +336,7 @@ the same reason. `go test ./pkg/combat/...` passes successfully.
 
 ### LOW
 
-- [ ] **[G38] Render Interpolation Guard Snaps First-Frame Movement at World Origin**
+- [x] **[G38] Render Interpolation Guard Snaps First-Frame Movement at World Origin**
   — `pkg/engine/render_system.go:331` —
 
   **Evidence:**

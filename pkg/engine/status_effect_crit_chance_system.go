@@ -31,9 +31,15 @@ type StatusEffectCriticalChanceSystem struct {
 	logger *logrus.Entry
 	genre  string
 
-	// Cache for crit chance modifiers to avoid recalculating each frame.
-	// Maps entityID -> cumulative crit modifier (added to base crit chance).
+	// critCache holds the modifier written to stats.CritChance this frame.
+	// Maps entityID -> cumulative crit modifier applied this frame.
 	critCache map[uint64]float64
+
+	// prevCache holds the modifier that was applied to stats.CritChance last
+	// frame. It is subtracted at the start of each frame before the new
+	// modifier is added, making the net change always (new - prev). This fixes
+	// G33: without prevCache the accumulated additions were never undone.
+	prevCache map[uint64]float64
 }
 
 // NewStatusEffectCriticalChanceSystem creates a new status effect crit chance system.
@@ -47,6 +53,7 @@ func NewStatusEffectCriticalChanceSystem(world *World, seed int64) *StatusEffect
 		rng:       rand.New(rand.NewSource(seed)),
 		logger:    logEntry,
 		critCache: make(map[uint64]float64, 64),
+		prevCache: make(map[uint64]float64, 64),
 	}
 }
 
@@ -57,8 +64,12 @@ func (s *StatusEffectCriticalChanceSystem) SetGenre(genre string) {
 
 // Update processes all entities and calculates crit chance modifiers based on
 // their active status effects. The modifiers are cached for combat use.
+// G33 fix: each frame the previously applied modifier is subtracted from
+// stats.CritChance before the new modifier is added, so the net delta is
+// always (newModifier - prevModifier) regardless of how many frames pass.
 func (s *StatusEffectCriticalChanceSystem) Update(entities []*Entity, deltaTime float64) {
-	// Clear cache each frame
+	// Swap caches: critCache becomes prevCache, then clear critCache for this frame.
+	s.critCache, s.prevCache = s.prevCache, s.critCache
 	for k := range s.critCache {
 		delete(s.critCache, k)
 	}
@@ -70,25 +81,35 @@ func (s *StatusEffectCriticalChanceSystem) Update(entities []*Entity, deltaTime 
 		}
 
 		modifier := s.calculateCritModifier(entity)
-		if modifier == 0.0 {
-			continue // No modification needed
+
+		// Undo the modifier we applied last frame (0.0 if none).
+		prev := s.prevCache[entity.ID]
+		stats.CritChance -= prev
+
+		if modifier != 0.0 {
+			// Cache the modifier for combat system to use
+			s.critCache[entity.ID] = modifier
+
+			// Apply new modifier to stats
+			oldCrit := stats.CritChance
+			stats.CritChance += modifier
+
+			// Clamp crit chance to valid range [0.0, 1.0]
+			if stats.CritChance < 0.0 {
+				stats.CritChance = 0.0
+			} else if stats.CritChance > 1.0 {
+				stats.CritChance = 1.0
+			}
+
+			s.logCritModification(entity, oldCrit, stats.CritChance, modifier)
+		} else if prev != 0.0 {
+			// Effect expired: clamp after removal.
+			if stats.CritChance < 0.0 {
+				stats.CritChance = 0.0
+			} else if stats.CritChance > 1.0 {
+				stats.CritChance = 1.0
+			}
 		}
-
-		// Cache the modifier for combat system to use
-		s.critCache[entity.ID] = modifier
-
-		// Apply modifier to stats (additive)
-		oldCrit := stats.CritChance
-		stats.CritChance += modifier
-
-		// Clamp crit chance to valid range [0.0, 1.0]
-		if stats.CritChance < 0.0 {
-			stats.CritChance = 0.0
-		} else if stats.CritChance > 1.0 {
-			stats.CritChance = 1.0
-		}
-
-		s.logCritModification(entity, oldCrit, stats.CritChance, modifier)
 	}
 }
 

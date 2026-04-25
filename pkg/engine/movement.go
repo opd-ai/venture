@@ -208,6 +208,7 @@ func (s *MovementSystem) validateAndUpdatePosition(entity *Entity, pos *Position
 	// Save previous position for render interpolation (fixes visual jitter between Update/Draw)
 	pos.PrevX = oldX
 	pos.PrevY = oldY
+	pos.Initialized = true // G38: mark that at least one physics tick has run
 
 	// Track entity movement before updating position (for incremental spatial updates)
 	if s.spatialPartition != nil && (newX != oldX || newY != oldY) {

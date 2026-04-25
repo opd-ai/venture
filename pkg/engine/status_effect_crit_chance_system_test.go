@@ -445,3 +445,50 @@ func BenchmarkStatusEffectCriticalChanceSystem_SingleEntity(b *testing.B) {
 		system.Update(entities, 0.016)
 	}
 }
+
+// TestG33_StatusEffectCritChance_NoCritAccumulation verifies that Update called
+// N frames with the same active effect produces a stable CritChance, and that
+// when the effect expires the CritChance returns to the baseline.
+// This is the regression test for G33.
+func TestG33_StatusEffectCritChance_NoCritAccumulation(t *testing.T) {
+	world := NewWorld()
+	system := NewStatusEffectCriticalChanceSystem(world, 1)
+	system.SetGenre("fantasy")
+
+	entity := world.CreateEntity()
+	stats := NewStatsComponent()
+	baseCrit := 0.05
+	stats.CritChance = baseCrit
+	entity.AddComponent(stats)
+
+	blessedEffect := &StatusEffectComponent{
+		EffectType: "blessed",
+		Duration:   100.0, // long-lived so it does not expire during the 100 frames
+		Magnitude:  1.0,
+	}
+	entity.AddComponent(blessedEffect)
+
+	entities := []*Entity{entity}
+
+	// Run 100 frames with the effect active.
+	for i := 0; i < 100; i++ {
+		system.Update(entities, 0.016)
+	}
+
+	expectedCrit := baseCrit + 0.10 // blessed = +10%
+	if math.Abs(stats.CritChance-expectedCrit) > 0.001 {
+		t.Errorf("G33 accumulation: CritChance after 100 frames = %.4f, want %.4f", stats.CritChance, expectedCrit)
+	}
+
+	// Expire the effect: set Duration to 0 (IsExpired returns true).
+	blessedEffect.Duration = 0.0
+
+	// Run a few more frames — CritChance must return to baseline.
+	for i := 0; i < 5; i++ {
+		system.Update(entities, 0.016)
+	}
+
+	if math.Abs(stats.CritChance-baseCrit) > 0.001 {
+		t.Errorf("G33 restore: CritChance after effect expiry = %.4f, want %.4f (baseline)", stats.CritChance, baseCrit)
+	}
+}

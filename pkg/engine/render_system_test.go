@@ -1,6 +1,9 @@
 package engine
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 // StubRenderSystem is a test implementation of RenderingSystem interface.
 // It provides a simple mock for unit testing without actual rendering.
@@ -176,5 +179,48 @@ func TestRenderSystem_NoDoubleCulling(t *testing.T) {
 	// The spatialCullingUsed flag should be false initially
 	if renderSystem.spatialCullingUsed {
 		t.Error("spatialCullingUsed should be false before Draw()")
+	}
+}
+
+// TestG38_PositionComponent_Initialized verifies that interpolatePosition uses
+// the current position when Initialized=false (first-frame guard) and correctly
+// interpolates between PrevX/PrevY and X/Y when Initialized=true.
+// This is the regression test for G38.
+func TestG38_PositionComponent_Initialized(t *testing.T) {
+	// Create a CameraSystem with no active camera so WorldToScreen is an identity
+	// function (returns world coords unchanged), making the expected values trivial.
+	cam := NewCameraSystem(0, 0)
+	rs := NewRenderSystem(cam)
+	rs.SetRenderAlpha(0.5) // midpoint interpolation
+
+	// Case 1: Initialized=false at world origin — interpolatePosition must return
+	// the current position (0,0), not an interpolation artefact from PrevX/PrevY.
+	posOrigin := &PositionComponent{X: 0, Y: 0, PrevX: 100, PrevY: 100}
+	// posOrigin.Initialized is false (zero-value), so the old heuristic would
+	// have entered interpolation because PrevX != 0 and X == 0.
+	gotX, gotY := rs.interpolatePosition(posOrigin)
+	if gotX != 0 || gotY != 0 {
+		t.Errorf("G38 Initialized=false at origin: interpolatePosition = (%.1f,%.1f), want (0,0)", gotX, gotY)
+	}
+
+	// Case 2: Initialized=true — must interpolate between prev and current.
+	posMoving := &PositionComponent{
+		X: 10, Y: 20,
+		PrevX: 0, PrevY: 0,
+		Initialized: true,
+	}
+	// alpha=0.5 → expected midpoint: (5, 10)
+	gotX, gotY = rs.interpolatePosition(posMoving)
+	wantX, wantY := 5.0, 10.0
+	if math.Abs(gotX-wantX) > 0.001 || math.Abs(gotY-wantY) > 0.001 {
+		t.Errorf("G38 Initialized=true alpha=0.5: interpolatePosition = (%.3f,%.3f), want (%.3f,%.3f)",
+			gotX, gotY, wantX, wantY)
+	}
+
+	// Case 3: alpha=1.0 — always returns current position regardless of Initialized.
+	rs.SetRenderAlpha(1.0)
+	gotX, gotY = rs.interpolatePosition(posMoving)
+	if math.Abs(gotX-10) > 0.001 || math.Abs(gotY-20) > 0.001 {
+		t.Errorf("G38 alpha=1.0: interpolatePosition = (%.3f,%.3f), want (10,20)", gotX, gotY)
 	}
 }

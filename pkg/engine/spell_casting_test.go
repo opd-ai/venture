@@ -1003,3 +1003,5 @@ func TestSpellCastingSystem_SetWeatherSpellDamageSystem(t *testing.T) {
 		t.Error("weatherSpellDamageSys not set correctly")
 	}
 }
+
+

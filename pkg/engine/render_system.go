@@ -325,10 +325,10 @@ func (r *EbitenRenderSystem) SetRenderAlpha(alpha float64) {
 // blending between the previous tick position (PrevX/PrevY) and current position (X/Y)
 // using the render alpha. Both entity and camera positions are interpolated to
 // eliminate visual snapping on high-refresh-rate monitors.
+// G38 fix: use pos.Initialized instead of the (PrevX==0 && PrevY==0) heuristic,
+// which incorrectly skipped interpolation for entities legitimately at (0,0).
 func (r *EbitenRenderSystem) interpolatePosition(pos *PositionComponent) (float64, float64) {
-	// If previous position is uninitialized (zero values and current is non-zero),
-	// or alpha is 1.0, use current position directly
-	if r.renderAlpha >= 1.0 || (pos.PrevX == 0 && pos.PrevY == 0 && (pos.X != 0 || pos.Y != 0)) {
+	if r.renderAlpha >= 1.0 || !pos.Initialized {
 		return r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 	}
 	interpX := pos.PrevX + (pos.X-pos.PrevX)*r.renderAlpha

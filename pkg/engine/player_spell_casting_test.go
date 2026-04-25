@@ -271,3 +271,42 @@ func TestPlayerSpellCastingSystem_Update_EmptySlot(t *testing.T) {
 		t.Error("Should not be casting from empty slot")
 	}
 }
+
+// TestG36_CancelCast_PartialCooldown verifies that cancelling a cast in progress
+// applies a cooldown proportional to the cast progress (G36 regression test).
+func TestG36_CancelCast_PartialCooldown(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(1))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
+
+	caster := world.CreateEntity()
+	caster.AddComponent(&ManaComponent{Current: 100, Max: 100, Regen: 5.0})
+
+	const spellCooldown = 4.0
+	slots := &SpellSlotComponent{Casting: -1}
+	slots.SetSlot(0, &magic.Spell{
+		Name: "Fireball",
+		Stats: magic.Stats{
+			ManaCost: 20,
+			CastTime: 2.0,
+			Cooldown: spellCooldown,
+		},
+	})
+	caster.AddComponent(slots)
+
+	// Start casting and simulate 80% cast progress.
+	system.StartCast(caster, 0)
+	slots.CastingBar = 0.80
+
+	system.CancelCast(caster)
+
+	if slots.IsCasting() {
+		t.Error("G36: Should not be casting after cancel")
+	}
+
+	expectedCD := spellCooldown * 0.80
+	if slots.Cooldowns[0] < expectedCD-0.001 || slots.Cooldowns[0] > expectedCD+0.001 {
+		t.Errorf("G36: Cooldowns[0] = %.3f, want %.3f (80%% of full cooldown)", slots.Cooldowns[0], expectedCD)
+	}
+}

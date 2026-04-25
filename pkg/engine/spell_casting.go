@@ -2722,12 +2722,20 @@ func (s *SpellCastingSystem) CancelCast(entity *Entity) {
 	}
 
 	if slots.IsCasting() {
+		slotIdx := slots.Casting
+		castProgress := slots.CastingBar
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":     entity.ID,
-				"slot_index":    slots.Casting,
-				"cast_progress": slots.CastingBar,
+				"slot_index":    slotIdx,
+				"cast_progress": castProgress,
 			}).Info("Spell cast canceled")
+		}
+		// G36 fix: apply a partial cooldown proportional to cast progress so
+		// that players cannot abuse cancel-spam to bypass spell economy.
+		spell := slots.GetSlot(slotIdx)
+		if spell != nil && castProgress > 0 {
+			slots.Cooldowns[slotIdx] = spell.Stats.Cooldown * castProgress
 		}
 		slots.Casting = -1
 		slots.CastingBar = 0

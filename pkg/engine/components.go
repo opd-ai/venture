@@ -21,9 +21,12 @@ func init() {
 // PositionComponent represents an entity's position in 2D space.
 // PrevX/PrevY store the position from the previous simulation tick,
 // enabling smooth interpolation in the render path between Update() and Draw().
+// Initialized is set to true by MovementSystem after the first physics tick,
+// distinguishing a genuine (0,0) spawn from an uninitialized component.
 type PositionComponent struct {
 	X, Y         float64
 	PrevX, PrevY float64 // Previous tick position for render interpolation
+	Initialized  bool    // G38: true once MovementSystem has run at least one tick
 }
 
 // Type returns the component type identifier.

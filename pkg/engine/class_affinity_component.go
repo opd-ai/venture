@@ -170,6 +170,11 @@ type ClassAffinityComponent struct {
 	// BonusesApplied tracks which affinity bonuses are currently applied
 	BonusesApplied map[AffinityType]AffinityLevel
 
+	// AppliedManaRegen stores the absolute mana regen value that was added for
+	// each affinity at the time it was applied. G37 fix: using the stored value
+	// at removal time prevents drift when mana.Max changes between apply and removal.
+	AppliedManaRegen map[AffinityType]float64
+
 	// Dirty marks that bonuses need recalculation
 	Dirty bool
 }
@@ -187,6 +192,7 @@ func NewClassAffinityComponent() *ClassAffinityComponent {
 		SecondaryAffinity: AffinityNone,
 		TotalAffinityXP:   0,
 		BonusesApplied:    make(map[AffinityType]AffinityLevel),
+		AppliedManaRegen:  make(map[AffinityType]float64),
 		Dirty:             false,
 	}
 }
@@ -553,6 +559,7 @@ func (c *ClassAffinityComponent) Deserialize(data []byte) error {
 	}
 
 	c.BonusesApplied = make(map[AffinityType]AffinityLevel)
+	c.AppliedManaRegen = make(map[AffinityType]float64)
 	c.Dirty = true
 
 	return nil

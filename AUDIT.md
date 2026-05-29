@@ -59,7 +59,7 @@ own remediation step (a nil-aware fallback or an init-order assertion).
 
 ### HIGH
 
-- [ ] **[G40] `SpecializationCritDamageSystem` declared but never instantiated and never registered in any client/server entry point** — `cmd/client/handlers.go:393` — Axis **S1**
+- [x] **[G40] `SpecializationCritDamageSystem` declared but never instantiated and never registered in any client/server entry point** — `cmd/client/handlers.go:393` — Axis **S1**
 
   **Evidence:**
   ```go
@@ -108,7 +108,7 @@ own remediation step (a nil-aware fallback or an init-order assertion).
   asserts `sys.specializationCritDamageSys != nil` and that the
   `engine.World.GetSystems()` slice contains a `*engine.SpecializationCritDamageSystem`.
 
-- [ ] **[G41] `SpecializationEvasionSystem` declared but never instantiated and never registered in any client/server entry point** — `cmd/client/handlers.go:394` — Axis **S1**
+- [x] **[G41] `SpecializationEvasionSystem` declared but never instantiated and never registered in any client/server entry point** — `cmd/client/handlers.go:394` — Axis **S1**
 
   **Evidence:**
   ```go
@@ -148,7 +148,7 @@ own remediation step (a nil-aware fallback or an init-order assertion).
   with `ClassProgressionComponent.SpecializationID == "shadowdancer"` shows
   `StatsComponent.Evasion` increase by ~30% after `Update` runs.
 
-- [ ] **[G42] Eleven Time-of-Day stat-affecting systems never constructed in the desktop client** — `cmd/client/handlers.go:353`–`363` — Axis **S1**
+- [x] **[G42] Eleven Time-of-Day stat-affecting systems never constructed in the desktop client** — `cmd/client/handlers.go:353`–`363` — Axis **S1**
 
   **Evidence:** systemsContainer fields declared:
   ```go
@@ -218,7 +218,7 @@ own remediation step (a nil-aware fallback or an init-order assertion).
   of the eleven fields is non-nil after lazy init completes. Mirror the
   existing system-existence assertions in `cmd/client/lazy_init_test.go`.
 
-- [ ] **[G43] Ten Terrain stat-affecting systems never constructed in the desktop client** — `cmd/client/handlers.go:299`–`311` — Axis **S1**
+- [x] **[G43] Ten Terrain stat-affecting systems never constructed in the desktop client** — `cmd/client/handlers.go:299`–`311` — Axis **S1**
 
   **Evidence:** systemsContainer fields declared:
   ```go
@@ -278,7 +278,7 @@ own remediation step (a nil-aware fallback or an init-order assertion).
   **Validation:** Same shape as G42 — assert each of the ten fields is
   non-nil after init in `cmd/client/handlers_test.go`.
 
-- [ ] **[G44] `WeatherCritChanceSystem` constructed and configured but never registered** — `cmd/client/handlers.go:1390`–`1391` — Axis **S1**
+- [x] **[G44] `WeatherCritChanceSystem` constructed and configured but never registered** — `cmd/client/handlers.go:1390`–`1391` — Axis **S1**
 
   **Evidence:**
   ```go
@@ -322,7 +322,7 @@ own remediation step (a nil-aware fallback or an init-order assertion).
   `cmd/client/handlers_test.go` that `game.World.GetSystems()` contains a
   `*engine.WeatherCritChanceSystem` after `lazyInit` completes.
 
-- [ ] **[G45] `WeatherBlockChanceSystem` field declared but never instantiated in the desktop client** — `cmd/client/handlers.go:334` — Axis **S1**
+- [x] **[G45] `WeatherBlockChanceSystem` field declared but never instantiated in the desktop client** — `cmd/client/handlers.go:334` — Axis **S1**
 
   **Evidence:**
   ```go
@@ -364,7 +364,7 @@ own remediation step (a nil-aware fallback or an init-order assertion).
 
 ### MEDIUM
 
-- [ ] **[G46] `TimeOfDayFishingBonusSystem.SetLightingSystem` is called with a perpetually-nil reference on the desktop client** — `cmd/client/init_versions.go:207` — Axis **S4**
+- [x] **[G46] `TimeOfDayFishingBonusSystem.SetLightingSystem` is called with a perpetually-nil reference on the desktop client** — `cmd/client/init_versions.go:207` — Axis **S4**
 
   **Evidence:**
   ```go

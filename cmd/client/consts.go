@@ -101,9 +101,9 @@ const (
 	seedOffsetSpecAttackSpeed    = 17500 // offset for specialization attack speed system (class-combat integration)
 	seedOffsetSpecDefense        = 18000 // offset for specialization defense system (class-defense integration)
 	seedOffsetSpecLifesteal      = 18500 // offset for specialization lifesteal system (class-lifesteal integration)
-	seedOffsetSpecCritDamage     = 19000 // offset for specialization crit damage system (class-crit integration)
-	seedOffsetSpecEvasion        = 19500 // offset for specialization evasion system (class-evasion integration)
-	seedOffsetDualClassSynergy   = 20000 // offset for dual-class synergy system (class combination bonuses)
+	seedOffsetDualClassSynergy   = 19000 // offset for dual-class synergy system (class combination bonuses)
+	seedOffsetSpecCritDamage     = 19500 // offset for specialization crit damage system (class-crit integration)
+	seedOffsetSpecEvasion        = 20000 // offset for specialization evasion system (class-evasion integration)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

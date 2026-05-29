@@ -868,6 +868,7 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 
 		// Register non-critical systems
 		registerNonCriticalSystems(game, sys)
+		wireLazyInitTimeOfDaySystems(sys)
 
 		// Phase 4: Sprite cache warming (deferred to idle time)
 		// Priority 4 optimization: Warm common sprites to improve cache hit rate
@@ -887,6 +888,50 @@ func (sys *systemsContainer) isLazyInitCompleted() bool {
 	sys.lazyInitMutex.Lock()
 	defer sys.lazyInitMutex.Unlock()
 	return sys.lazyInitCompleted
+}
+
+func wireLazyInitTimeOfDaySystems(sys *systemsContainer) {
+	if sys.timeOfDayLightingSystem != nil {
+		if sys.timeOfDayStealthSystem != nil {
+			sys.timeOfDayStealthSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayXPBonusSystem != nil {
+			sys.timeOfDayXPBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayManaCostSystem != nil {
+			sys.timeOfDayManaCostSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayCriticalChanceSystem != nil {
+			sys.timeOfDayCriticalChanceSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayCompanionBonusSystem != nil {
+			sys.timeOfDayCompanionBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayManaRegenSystem != nil {
+			sys.timeOfDayManaRegenSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayBlockChanceSystem != nil {
+			sys.timeOfDayBlockChanceSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayEvasionSystem != nil {
+			sys.timeOfDayEvasionSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDaySpellDamageSystem != nil {
+			sys.timeOfDaySpellDamageSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayAttackSpeedSystem != nil {
+			sys.timeOfDayAttackSpeedSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayShadowDirectionSystem != nil {
+			sys.timeOfDayShadowDirectionSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+		if sys.timeOfDayFishingBonusSystem != nil {
+			sys.timeOfDayFishingBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+		}
+	}
+	if sys.timeOfDayXPBonusSystem != nil && sys.progressionSystem != nil {
+		sys.timeOfDayXPBonusSystem.SetProgressionSystem(sys.progressionSystem)
+	}
 }
 
 // warmCommonSprites pre-generates common sprites to improve cache hit rate.
@@ -1233,52 +1278,52 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 
 	// Phase 99.0: Terrain Systems (10 systems affecting gameplay based on terrain type)
 	// These systems apply stat modifiers and gameplay changes based on the terrain the player is standing on
-	
+
 	// TerrainMovementSpeedSystem: connects terrain tiles to movement speed modifiers
 	// Different terrains have different movement speeds (mud slower, ice faster, etc.)
 	sys.terrainMovementSpeedSystem = engine.NewTerrainMovementSpeedSystem(game.World, *seed+6300)
 	addGenreSystem(game.World, *genreID, sys.terrainMovementSpeedSystem)
-	
+
 	// TerrainCombatBonusSystem: connects terrain tiles to combat bonuses (high ground, cover)
 	// High ground grants damage bonus; cover grants defense bonus
 	sys.terrainCombatBonusSystem = engine.NewTerrainCombatBonusSystem(game.World, *seed+6325)
 	addGenreSystem(game.World, *genreID, sys.terrainCombatBonusSystem)
-	
+
 	// TerrainStealthSystem: connects terrain tiles to stealth effectiveness
 	// Tall grass increases stealth; open areas decrease stealth effectiveness
 	sys.terrainStealthSystem = engine.NewTerrainStealthSystem(game.World, *seed+6350)
 	addGenreSystem(game.World, *genreID, sys.terrainStealthSystem)
-	
+
 	// TerrainAmbushCritSystem: increases crit chance when attacking from concealment terrain
 	// Attacking from stealth terrain grants temporary crit bonus on first hit
 	sys.terrainAmbushCritSystem = engine.NewTerrainAmbushCritSystem(game.World, *seed+6375)
 	addGenreSystem(game.World, *genreID, sys.terrainAmbushCritSystem)
-	
+
 	// TerrainStatusEffectSystem: applies terrain-based status effects (burning lava, frozen water)
 	// Standing on hazardous terrain applies status effects (burning, frozen, poisoned)
 	sys.terrainStatusEffectSystem = engine.NewTerrainStatusEffectSystem(game.World, *seed+6400)
 	addGenreSystem(game.World, *genreID, sys.terrainStatusEffectSystem)
-	
+
 	// TerrainManaRegenSystem: mana regeneration varies by terrain type
 	// Magical terrain grants mana regen bonuses; anti-magic terrain reduces it
 	sys.terrainManaRegenSystem = engine.NewTerrainManaRegenSystem(game.World, *seed+6425)
 	addGenreSystem(game.World, *genreID, sys.terrainManaRegenSystem)
-	
+
 	// TerrainSpellDamageSystem: connects terrain tiles to spell damage modifiers
 	// Magical terrain increases spell damage; dispelled terrain decreases it
 	sys.terrainSpellDamageSystem = engine.NewTerrainSpellDamageSystem(game.World, *seed+6450)
 	addGenreSystem(game.World, *genreID, sys.terrainSpellDamageSystem)
-	
+
 	// TerrainEquipmentDurabilitySystem: terrain affects equipment durability loss rate
 	// Rough terrain causes faster durability loss; smooth terrain slows it
 	sys.terrainEquipmentDurabilitySys = engine.NewTerrainEquipmentDurabilitySystem(game.World, *seed+6475)
 	addGenreSystem(game.World, *genreID, sys.terrainEquipmentDurabilitySys)
-	
+
 	// TerrainRangedAccuracySystem: terrain affects ranged attack accuracy
 	// Open terrain increases accuracy; obstacles/rough terrain decrease it
 	sys.terrainRangedAccuracySys = engine.NewTerrainRangedAccuracySystem(game.World, *seed+6500)
 	addGenreSystem(game.World, *genreID, sys.terrainRangedAccuracySys)
-	
+
 	// TerrainCompanionBonusSystem: terrain affects companion combat effectiveness
 	// Companions get stat bonuses on favorable terrain; penalties on unfavorable terrain
 	sys.terrainCompanionBonusSystem = engine.NewTerrainCompanionBonusSystem(game.World, *seed+6525)
@@ -1792,56 +1837,56 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 99.1: Time of Day Systems (11 systems affecting gameplay based on time-of-day)
 	// These systems apply stat modifiers, behavioral changes, and gameplay adjustments based on the current in-game time
-	
+
 	// TimeOfDayLightingSystem: simulated sun arc and ambient lighting tint over 24-hour cycle
 	sys.timeOfDayLightingSystem = engine.NewTimeOfDayLightingSystem(game.World, *seed+7500)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayLightingSystem)
-	
+
 	// TimeOfDayStealthSystem: connects time-of-day lighting with AI detection for stealth
 	// Low light (night) increases stealth effectiveness; high light (noon) decreases it
 	sys.timeOfDayStealthSystem = engine.NewTimeOfDayStealthSystem(game.World, *seed+7550)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayStealthSystem)
-	
+
 	// TimeOfDayXPBonusSystem: connects time-of-day lighting with XP bonuses
 	// Certain times of day grant bonus XP (e.g., dawn/dusk active bonuses)
 	sys.timeOfDayXPBonusSystem = engine.NewTimeOfDayXPBonusSystem(game.World, *seed+7575)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayXPBonusSystem)
-	
+
 	// TimeOfDayManaCostSystem: connects time-of-day lighting with spell mana costs
 	// Night reduces mana costs for dark-magic spells; day increases them
 	sys.timeOfDayManaCostSystem = engine.NewTimeOfDayManaCostSystem(game.World, *seed+7600)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayManaCostSystem)
-	
+
 	// TimeOfDayCriticalChanceSystem: connects time-of-day lighting with crit chance bonuses
 	// Dusk/dawn grants crit bonuses; noon reduces crit effectiveness
 	sys.timeOfDayCriticalChanceSystem = engine.NewTimeOfDayCriticalChanceSystem(game.World, *seed+7625)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayCriticalChanceSystem)
-	
+
 	// TimeOfDayCompanionBonusSystem: connects time-of-day lighting with companion stat bonuses
 	// Companions gain stat bonuses at certain times of day based on their nature
 	sys.timeOfDayCompanionBonusSystem = engine.NewTimeOfDayCompanionBonusSystem(game.World, *seed+7650)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayCompanionBonusSystem)
-	
+
 	// TimeOfDayManaRegenSystem: connects time-of-day lighting with mana regen rates
 	// Mana regeneration varies by time of day; higher at night for casters
 	sys.timeOfDayManaRegenSystem = engine.NewTimeOfDayManaRegenSystem(game.World, *seed+7700)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayManaRegenSystem)
-	
+
 	// TimeOfDayBlockChanceSystem: connects time-of-day lighting with block chance bonuses
 	// Block chance increases during the day when vision is better
 	sys.timeOfDayBlockChanceSystem = engine.NewTimeOfDayBlockChanceSystem(game.World, *seed+7725)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayBlockChanceSystem)
-	
+
 	// TimeOfDayEvasionSystem: connects time-of-day lighting with evasion bonuses
 	// Evasion increases at night (harder to see targets) and decreases at noon
 	sys.timeOfDayEvasionSystem = engine.NewTimeOfDayEvasionSystem(game.World, *seed+7730)
 	addGenreSystem(game.World, *genreID, sys.timeOfDayEvasionSystem)
-	
+
 	// TimeOfDaySpellDamageSystem: connects time-of-day lighting with spell damage modifiers
 	// Spell damage varies by time of day; dark spells stronger at night
 	sys.timeOfDaySpellDamageSystem = engine.NewTimeOfDaySpellDamageSystem(game.World, *seed+7750)
 	addGenreSystem(game.World, *genreID, sys.timeOfDaySpellDamageSystem)
-	
+
 	// TimeOfDayAttackSpeedSystem: connects time-of-day lighting with attack speed modifiers
 	// Attack speed varies by time of day; nocturnal creatures faster at night
 	sys.timeOfDayAttackSpeedSystem = engine.NewTimeOfDayAttackSpeedSystem(game.World, *seed+7775)
@@ -2219,41 +2264,16 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Environmental systems (deferred)
 	game.World.AddSystem(sys.weatherSystem)
 	game.World.AddSystem(sys.weatherCombatSystem)
-	game.World.AddSystem(sys.weatherGroundEffectSystem)         // Weather ground impact visual feedback via particles
-	game.World.AddSystem(sys.weatherAudioSystem)                // Weather ambient audio feedback
-	game.World.AddSystem(sys.weatherManaRegenSystem)            // Weather mana regeneration modifiers
-	game.World.AddSystem(sys.weatherCooldownSystem)             // Weather spell cooldown rate modifiers
-	game.World.AddSystem(sys.weatherAttackSpeedSystem)          // Weather melee attack speed modifiers
-	game.World.AddSystem(sys.weatherCompanionBonusSystem)       // Weather companion combat stat bonuses
-	game.World.AddSystem(sys.weatherRangedAccuracySystem)       // Weather ranged attack accuracy modifiers
-	game.World.AddSystem(sys.weatherXPBonusSystem)              // Weather XP gain bonuses
-	game.World.AddSystem(sys.weatherCritChanceSystem)           // Weather critical hit chance modifiers (G44 FIX)
-	game.World.AddSystem(sys.weatherBlockChanceSystem)          // Weather block chance modifiers (G45 FIX)
-
-	// Terrain systems (10 systems - G43 FIX)
-	game.World.AddSystem(sys.terrainMovementSpeedSystem)        // Terrain movement speed modifiers
-	game.World.AddSystem(sys.terrainCombatBonusSystem)          // Terrain combat bonuses (high ground, cover)
-	game.World.AddSystem(sys.terrainStealthSystem)              // Terrain stealth effectiveness
-	game.World.AddSystem(sys.terrainAmbushCritSystem)           // Terrain ambush crit bonuses
-	game.World.AddSystem(sys.terrainStatusEffectSystem)         // Terrain status effect application
-	game.World.AddSystem(sys.terrainManaRegenSystem)            // Terrain mana regeneration modifiers
-	game.World.AddSystem(sys.terrainSpellDamageSystem)          // Terrain spell damage modifiers
-	game.World.AddSystem(sys.terrainEquipmentDurabilitySys)     // Terrain equipment durability modifiers
-	game.World.AddSystem(sys.terrainRangedAccuracySys)          // Terrain ranged accuracy modifiers
-	game.World.AddSystem(sys.terrainCompanionBonusSystem)       // Terrain companion stat bonuses
-
-	// Time of Day systems (11 systems - G42 FIX)
-	game.World.AddSystem(sys.timeOfDayLightingSystem)           // Time-of-day ambient lighting
-	game.World.AddSystem(sys.timeOfDayStealthSystem)            // Time-of-day stealth effectiveness
-	game.World.AddSystem(sys.timeOfDayXPBonusSystem)            // Time-of-day XP bonuses
-	game.World.AddSystem(sys.timeOfDayManaCostSystem)           // Time-of-day mana cost modifiers
-	game.World.AddSystem(sys.timeOfDayCriticalChanceSystem)     // Time-of-day crit chance modifiers
-	game.World.AddSystem(sys.timeOfDayCompanionBonusSystem)     // Time-of-day companion bonuses
-	game.World.AddSystem(sys.timeOfDayManaRegenSystem)          // Time-of-day mana regeneration
-	game.World.AddSystem(sys.timeOfDayBlockChanceSystem)        // Time-of-day block chance modifiers
-	game.World.AddSystem(sys.timeOfDayEvasionSystem)            // Time-of-day evasion modifiers
-	game.World.AddSystem(sys.timeOfDaySpellDamageSystem)        // Time-of-day spell damage modifiers
-	game.World.AddSystem(sys.timeOfDayAttackSpeedSystem)        // Time-of-day attack speed modifiers
+	game.World.AddSystem(sys.weatherGroundEffectSystem)   // Weather ground impact visual feedback via particles
+	game.World.AddSystem(sys.weatherAudioSystem)          // Weather ambient audio feedback
+	game.World.AddSystem(sys.weatherManaRegenSystem)      // Weather mana regeneration modifiers
+	game.World.AddSystem(sys.weatherCooldownSystem)       // Weather spell cooldown rate modifiers
+	game.World.AddSystem(sys.weatherAttackSpeedSystem)    // Weather melee attack speed modifiers
+	game.World.AddSystem(sys.weatherCompanionBonusSystem) // Weather companion combat stat bonuses
+	game.World.AddSystem(sys.weatherRangedAccuracySystem) // Weather ranged attack accuracy modifiers
+	game.World.AddSystem(sys.weatherXPBonusSystem)        // Weather XP gain bonuses
+	game.World.AddSystem(sys.weatherCritChanceSystem)     // Weather critical hit chance modifiers (G44 FIX)
+	game.World.AddSystem(sys.weatherBlockChanceSystem)    // Weather block chance modifiers (G45 FIX)
 
 	game.World.AddSystem(sys.statusEffectLightingSystem)        // Status effect visual feedback via lighting
 	game.World.AddSystem(sys.statusEffectMovementSystem)        // Status effect movement speed modifiers

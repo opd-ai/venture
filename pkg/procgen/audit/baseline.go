@@ -8,7 +8,7 @@ import (
 )
 
 // BaselineVersion is the version these baseline hashes were generated from.
-const BaselineVersion = "1.0.0"
+const BaselineVersion = "1.1.0"
 
 // BaselineSeed is the seed used to generate baseline hashes.
 const BaselineSeed int64 = 99999
@@ -22,7 +22,7 @@ var baselineHashPrefixes = map[string]string{
 	"Companion": "4dda1e3a6cd24740",
 	"Entity":    "f0302eb430a7d0cd",
 	"Furniture": "25ee7a0f0e519996",
-	"Item":      "2b36ce659bf7c7b6",
+	"Item":      "afba81832bf6ffe8",
 	"Legendary": "bc3b12fd01179b64",
 	"Magic":     "67956a60c3646731",
 	"Quest":     "c77dac4cf03d38fb",

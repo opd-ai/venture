@@ -113,6 +113,16 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.specializationLifestealSys.SetGenre(*genreID)
 	logging.ComponentLogger(clientLogger.Logger, "specialization_lifesteal").Debug("Created specialization lifesteal system")
 
+	// Phase 25g: Specialization crit damage system - connects class specialization with crit damage bonuses
+	sys.specializationCritDamageSys = engine.NewSpecializationCritDamageSystem(game.World, *seed+seedOffsetSpecCritDamage)
+	sys.specializationCritDamageSys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "specialization_crit_damage").Debug("Created specialization crit damage system")
+
+	// Phase 25h: Specialization evasion system - connects class specialization with evasion bonuses
+	sys.specializationEvasionSys = engine.NewSpecializationEvasionSystem(game.World, *seed+seedOffsetSpecEvasion)
+	sys.specializationEvasionSys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "specialization_evasion").Debug("Created specialization evasion system")
+
 	// Phase 26: Expression systems (requires audio manager)
 	sys.expressionSystem = engine.NewExpressionSystem(game.World, sys.audioManager)
 	sys.expressionComboSys = engine.NewExpressionComboSystem(game.World)

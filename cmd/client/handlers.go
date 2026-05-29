@@ -2193,6 +2193,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Phase 25f: Specialization lifesteal - connects class specialization with lifesteal bonuses
 	game.World.AddSystem(sys.specializationLifestealSys)
 
+	// Phase 25g: Specialization crit damage - connects class specialization with crit damage bonuses
+	game.World.AddSystem(sys.specializationCritDamageSys)
+
+	// Phase 25h: Specialization evasion - connects class specialization with evasion bonuses
+	game.World.AddSystem(sys.specializationEvasionSys)
+
 	// Phase 26: Expression systems (use wrappers)
 	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})
 	game.World.AddSystem(&expressionComboSystemWrapper{system: sys.expressionComboSys})

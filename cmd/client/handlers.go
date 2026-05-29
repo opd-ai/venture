@@ -1489,7 +1489,7 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherCritChanceSystem = engine.NewWeatherCritChanceSystem(game.World, *seed+6775)
 	sys.weatherCritChanceSystem.SetGenre(*genreID)
 
-	// WeatherBlockChanceSystem - modifies block chance based on weather conditions (G45 FIX)
+	// WeatherBlockChanceSystem - modifies block chance based on weather conditions
 	// Clear weather improves block chance; heavy rain/fog reduce it
 	sys.weatherBlockChanceSystem = engine.NewWeatherBlockChanceSystem(game.World, *seed+6780)
 	sys.weatherBlockChanceSystem.SetGenre(*genreID)
@@ -2272,8 +2272,8 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherCompanionBonusSystem) // Weather companion combat stat bonuses
 	game.World.AddSystem(sys.weatherRangedAccuracySystem) // Weather ranged attack accuracy modifiers
 	game.World.AddSystem(sys.weatherXPBonusSystem)        // Weather XP gain bonuses
-	game.World.AddSystem(sys.weatherCritChanceSystem)     // Weather critical hit chance modifiers (G44 FIX)
-	game.World.AddSystem(sys.weatherBlockChanceSystem)    // Weather block chance modifiers (G45 FIX)
+	game.World.AddSystem(sys.weatherCritChanceSystem)     // Weather critical hit chance modifiers
+	game.World.AddSystem(sys.weatherBlockChanceSystem)    // Weather block chance modifiers
 
 	game.World.AddSystem(sys.statusEffectLightingSystem)        // Status effect visual feedback via lighting
 	game.World.AddSystem(sys.statusEffectMovementSystem)        // Status effect movement speed modifiers

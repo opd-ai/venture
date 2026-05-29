@@ -597,11 +597,8 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17r. EquipmentEnchantmentGlowParticleSystem - ambient glow for rare+ equipment
 	// Connects EquipmentComponent rarity with ParticleSystem for rarity-colored enchantment aura
-	equipEnchantGlowSystem := NewEquipmentEnchantmentGlowParticleSystem(game.World, config.Seed+7420)
-	equipEnchantGlowSystem.SetParticleSystem(result.ParticleSystem)
-	equipEnchantGlowSystem.SetGenre(config.GenreID)
-	result.EquipmentEnchantmentGlowParticleSystem = equipEnchantGlowSystem
-	game.World.AddSystem(equipEnchantGlowSystem)
+	result.EquipmentEnchantmentGlowParticleSystem = regParticleGenre(game.World,
+		NewEquipmentEnchantmentGlowParticleSystem(game.World, config.Seed+7420), result.ParticleSystem, config.GenreID)
 
 	// 17s. StatusEffectVisualOverlaySystem - color tints on sprites from status effects
 	// Connects StatusEffectComponent data with VisualFeedbackComponent tint fields
@@ -656,19 +653,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17ab. ProjectileTrailParticleSystem - genre-aware projectile trail particles
 	// Connects ProjectileComponent with ParticleSystem for visual trails behind projectiles
-	projectileTrailParticleSystem := NewProjectileTrailParticleSystem(game.World, config.Seed+9075)
-	projectileTrailParticleSystem.SetParticleSystem(result.ParticleSystem)
-	projectileTrailParticleSystem.SetGenre(config.GenreID)
-	result.ProjectileTrailParticleSystem = projectileTrailParticleSystem
-	game.World.AddSystem(projectileTrailParticleSystem)
+	result.ProjectileTrailParticleSystem = regParticleGenre(game.World,
+		NewProjectileTrailParticleSystem(game.World, config.Seed+9075), result.ParticleSystem, config.GenreID)
 
 	// 17ac. EntityIdleAmbientParticleSystem - genre-aware idle entity ambient particles
 	// Connects VelocityComponent with ParticleSystem for subtle particles around stationary entities
-	entityIdleAmbientParticleSystem := NewEntityIdleAmbientParticleSystem(game.World, config.Seed+9100)
-	entityIdleAmbientParticleSystem.SetParticleSystem(result.ParticleSystem)
-	entityIdleAmbientParticleSystem.SetGenre(config.GenreID)
-	result.EntityIdleAmbientParticleSystem = entityIdleAmbientParticleSystem
-	game.World.AddSystem(entityIdleAmbientParticleSystem)
+	result.EntityIdleAmbientParticleSystem = regParticleGenre(game.World,
+		NewEntityIdleAmbientParticleSystem(game.World, config.Seed+9100), result.ParticleSystem, config.GenreID)
 
 	// 17ad. WeaponMaterialImpactParticleSystem - material-aware melee impact particles
 	// Connects EquipmentComponent weapon material with ParticleSystem for distinct impact visuals
@@ -685,11 +676,8 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17af. SprintTrailParticleSystem - genre-aware speed trail particles for sprinting entities
 	// Monitors VelocityComponent and spawns trail particles behind fast-moving entities
-	sprintTrailParticleSystem := NewSprintTrailParticleSystem(game.World, config.Seed+9200)
-	sprintTrailParticleSystem.SetParticleSystem(result.ParticleSystem)
-	sprintTrailParticleSystem.SetGenre(config.GenreID)
-	result.SprintTrailParticleSystem = sprintTrailParticleSystem
-	game.World.AddSystem(sprintTrailParticleSystem)
+	result.SprintTrailParticleSystem = regParticleGenre(game.World,
+		NewSprintTrailParticleSystem(game.World, config.Seed+9200), result.ParticleSystem, config.GenreID)
 
 	// 17ag. NearbyLightEntityTintSystem - tints entity sprites based on nearby light sources
 	// Uses light color, intensity, and distance-based falloff with genre-aware ambient base

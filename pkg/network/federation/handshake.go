@@ -262,15 +262,22 @@ type HandshakeManager struct {
 	seenNonces  map[string]time.Time // Track nonces to prevent replay
 	mu          sync.RWMutex
 	nonceExpiry time.Duration // How long to remember nonces (default: 5 minutes)
+	ticker      *time.Ticker // Periodic nonce cleanup
+	stopCh      chan struct{} // Signal to stop the cleanup goroutine
 }
 
 // NewHandshakeManager creates a new handshake manager
 func NewHandshakeManager(identity *ServerIdentity) *HandshakeManager {
-	return &HandshakeManager{
+	hm := &HandshakeManager{
 		identity:    identity,
 		seenNonces:  make(map[string]time.Time),
 		nonceExpiry: 5 * time.Minute,
+		ticker:      time.NewTicker(1 * time.Minute),
+		stopCh:      make(chan struct{}),
 	}
+	// Start the background cleanup goroutine
+	go hm.runPeriodicCleanup()
+	return hm
 }
 
 // ProcessHandshake validates and processes an incoming handshake
@@ -290,9 +297,6 @@ func (hm *HandshakeManager) ProcessHandshake(h *FederationHandshake) error {
 	hm.seenNonces[nonceKey] = time.Now()
 	hm.mu.Unlock()
 
-	// Cleanup old nonces (async to avoid blocking)
-	go hm.cleanupNonces()
-
 	return nil
 }
 
@@ -309,6 +313,28 @@ func (hm *HandshakeManager) cleanupNonces() {
 			delete(hm.seenNonces, nonce)
 		}
 	}
+}
+
+// runPeriodicCleanup runs cleanup on a periodic ticker until Close is called.
+// This single background goroutine replaces the per-handshake goroutine spawn.
+func (hm *HandshakeManager) runPeriodicCleanup() {
+	defer recovery.RecoverPanicWithLogger("federation_handshake", "periodic cleanup", nil)()
+
+	for {
+		select {
+		case <-hm.ticker.C:
+			hm.cleanupNonces()
+		case <-hm.stopCh:
+			return
+		}
+	}
+}
+
+// Close stops the periodic cleanup goroutine and releases resources.
+func (hm *HandshakeManager) Close() error {
+	hm.ticker.Stop()
+	close(hm.stopCh)
+	return nil
 }
 
 // CreateResponse creates a handshake response to a received handshake

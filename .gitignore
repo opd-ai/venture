@@ -169,4 +169,4 @@ build/
 !build/android/res/
 build/android/libs/
 build/android/.gradle/
-build/android/build/
+build/android/build/post.json

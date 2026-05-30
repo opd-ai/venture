@@ -36,6 +36,20 @@ func TestNewFederationProtocol(t *testing.T) {
 	}
 }
 
+func TestFederationProtocolCloseClosesHandshakeManager(t *testing.T) {
+	fp := NewFederationProtocol("test-server", testIdentity())
+
+	if err := fp.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	select {
+	case <-fp.handshake.stopCh:
+	default:
+		t.Fatal("expected handshake manager stop channel to be closed")
+	}
+}
+
 // TestConnect tests peer connection functionality
 func TestConnect(t *testing.T) {
 	tests := []struct {

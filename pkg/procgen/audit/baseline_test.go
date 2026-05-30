@@ -23,7 +23,7 @@ func TestGetBaselinePrefix(t *testing.T) {
 		{
 			name:       "Item exists",
 			generator:  "Item",
-			wantPrefix: "2b36ce659bf7c7b6",
+			wantPrefix: "afba81832bf6ffe8",
 			wantEmpty:  false,
 		},
 		{
@@ -111,7 +111,7 @@ func TestBaselineHashesFileOperations(t *testing.T) {
 	// Test saving baseline hashes
 	t.Run("SaveAndLoad", func(t *testing.T) {
 		hashes := &BaselineHashes{
-			Version: "1.0.0",
+			Version: BaselineVersion,
 			Seed:    99999,
 			Generators: map[string]string{
 				"TestGenerator": "abcdef1234567890",
@@ -158,8 +158,8 @@ func TestBaselineHashesFileOperations(t *testing.T) {
 
 func TestBaselineConstants(t *testing.T) {
 	// Verify baseline constants are set correctly
-	if BaselineVersion != "1.0.0" {
-		t.Errorf("BaselineVersion = %q, want %q", BaselineVersion, "1.0.0")
+	if BaselineVersion != "1.1.0" {
+		t.Errorf("BaselineVersion = %q, want %q", BaselineVersion, "1.1.0")
 	}
 
 	if BaselineSeed != 99999 {

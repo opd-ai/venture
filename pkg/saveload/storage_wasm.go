@@ -471,7 +471,7 @@ func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
 
 	if m.useInMemory {
 		m.memoryStore[name] = save
-		m.memoryStore[name+".sha256"] = &GameSave{Version: m.computeChecksum(data)}
+		m.memoryStore[name+".fnv1a"] = &GameSave{Version: m.computeChecksum(data)}
 		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Saved with backup to memory: %s (%d bytes)", name, len(data)))
 		return nil
 	}
@@ -490,7 +490,7 @@ func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
 
 	// Save checksum
 	checksum := m.computeChecksum(data)
-	m.localStorage.Call("setItem", key+".sha256", checksum)
+	m.localStorage.Call("setItem", key+".fnv1a", checksum)
 
 	// Update metadata
 	m.updateMetadata(name, save)
@@ -631,7 +631,7 @@ func (m *SaveManager) CleanupBackups(name string) error {
 
 	if m.useInMemory {
 		delete(m.memoryStore, name+".bak")
-		delete(m.memoryStore, name+".sha256")
+		delete(m.memoryStore, name+".fnv1a")
 		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Cleaned up backups from memory: %s", name))
 		return nil
 	}
@@ -641,7 +641,7 @@ func (m *SaveManager) CleanupBackups(name string) error {
 	m.localStorage.Call("removeItem", backupKey)
 
 	// Remove checksum
-	checksumKey := localStoragePrefix + name + ".sha256"
+	checksumKey := localStoragePrefix + name + ".fnv1a"
 	m.localStorage.Call("removeItem", checksumKey)
 
 	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Cleaned up backups from localStorage: %s", name))
@@ -677,7 +677,7 @@ func (m *SaveManager) validateChecksum(name string) (bool, bool) {
 	var storedChecksum, currentData string
 
 	if m.useInMemory {
-		checksumSave, ok := m.memoryStore[name+".sha256"]
+		checksumSave, ok := m.memoryStore[name+".fnv1a"]
 		if !ok {
 			return false, false // No checksum
 		}
@@ -693,7 +693,7 @@ func (m *SaveManager) validateChecksum(name string) (bool, bool) {
 		}
 		currentData = string(data)
 	} else {
-		checksumKey := localStoragePrefix + name + ".sha256"
+		checksumKey := localStoragePrefix + name + ".fnv1a"
 		checksumJS := m.localStorage.Call("getItem", checksumKey)
 		if checksumJS.IsNull() {
 			return false, false // No checksum
@@ -739,7 +739,7 @@ func (m *SaveManager) recoverFromBackup(name string) (bool, error) {
 
 		// Update checksum
 		data, _ := json.Marshal(backup)
-		m.memoryStore[name+".sha256"] = &GameSave{Version: m.computeChecksum(data)}
+		m.memoryStore[name+".fnv1a"] = &GameSave{Version: m.computeChecksum(data)}
 
 		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Successfully recovered from backup: %s", name))
 		return true, nil
@@ -771,14 +771,15 @@ func (m *SaveManager) recoverFromBackup(name string) (bool, error) {
 
 	// Update checksum
 	checksum := m.computeChecksum([]byte(backupData))
-	m.localStorage.Call("setItem", saveKey+".sha256", checksum)
+	m.localStorage.Call("setItem", saveKey+".fnv1a", checksum)
 
 	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Successfully recovered from backup: %s", name))
 	return true, nil
 }
 
-// computeChecksum computes a simple checksum for data.
-// Uses a simple hash since crypto/sha256 may have WASM compatibility issues.
+// computeChecksum computes a simple checksum for data using FNV-1a.
+// Uses FNV-1a for simplicity and detection of accidental corruption.
+// Note: This is not cryptographically secure; it is intended for single-player WASM saves only.
 func (m *SaveManager) computeChecksum(data []byte) string {
 	// Use FNV-1a hash for simplicity and WASM compatibility
 	var hash uint64 = 14695981039346656037 // FNV offset basis

@@ -569,6 +569,10 @@ func (f *FederationProtocol) Close() error {
 		f.connectionPool.Close()
 	}
 
+	if f.handshake != nil {
+		f.handshake.Close()
+	}
+
 	// Clear peers
 	f.peers = make(map[string]*PeerServer)
 

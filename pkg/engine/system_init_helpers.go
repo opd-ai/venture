@@ -17,6 +17,14 @@ type genreConfigurer interface {
 	SetGenre(genre string)
 }
 
+// particleGenreConfigurer is the interface for systems that support both
+// SetParticleSystem and SetGenre methods (common for particle effect systems).
+type particleGenreConfigurer interface {
+	System
+	SetParticleSystem(ps *ParticleSystem)
+	SetGenre(genre string)
+}
+
 // regGenre configures genre on s, registers it with world, and returns s.
 // It replaces the repetitive four-line pattern used across InitializeGameSystems:
 //
@@ -29,6 +37,26 @@ type genreConfigurer interface {
 //
 //	result.Xxx = regGenre(world, NewXxx(world, seed), genreID)
 func regGenre[T genreConfigurer](world *World, s T, genreID string) T {
+	s.SetGenre(genreID)
+	world.AddSystem(s)
+	return s
+}
+
+// regParticleGenre configures particle system and genre on s, registers it
+// with world, and returns s. It reduces the common 5-line pattern for
+// particle effect systems:
+//
+//	s := NewXxx(world, seed)
+//	s.SetParticleSystem(ps)
+//	s.SetGenre(genreID)
+//	result.Xxx = s
+//	world.AddSystem(s)
+//
+// to a single expression:
+//
+//	result.Xxx = regParticleGenre(world, NewXxx(world, seed), ps, genreID)
+func regParticleGenre[T particleGenreConfigurer](world *World, s T, ps *ParticleSystem, genreID string) T {
+	s.SetParticleSystem(ps)
 	s.SetGenre(genreID)
 	world.AddSystem(s)
 	return s

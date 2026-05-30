@@ -23,13 +23,13 @@ const (
 	Major = 1
 
 	// Minor is the minor version number (new features).
-	Minor = 0
+	Minor = 1
 
 	// Patch is the patch version number (bug fixes).
 	Patch = 0
 
 	// Version is the semantic version string (MAJOR.MINOR.PATCH).
-	Version = "1.0.0"
+	Version = "1.1.0"
 
 	// Release indicates the release status (Production, Beta, Alpha, Development).
 	Release = "Production"

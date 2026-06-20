@@ -399,3 +399,9 @@ MIT License. See [LICENSE](LICENSE) for the full text.
 - Inspired by roguelikes such as Dungeon Crawl Stone Soup and Cataclysm DDA
 - Gameplay influenced by classic action-RPGs like The Legend of Zelda
 
+
+Donate Monero(The only good cryptocurrency) to support development
+==================================================================
+
+ - `monero:43H3Uqnc9rfEsJjUXZYmam45MbtWmREFSANAWY5hijY4aht8cqYaT2BCNhfBhua5XwNdx9Tb6BEdt4tjUHJDwNW5H7mTiwe`
+

@@ -252,18 +252,18 @@ func (p *Peer) closeTransportHandles() {
 	if c, ok := dc.(webrtcCloseable); ok && c != nil {
 		if err := c.Close(); err != nil {
 			log.WithFields(log.Fields{
-				"peer_id":  p.ID,
-				"handle":   "dataChannel",
-				"error":    err,
+				"peer_id": p.ID,
+				"handle":  "dataChannel",
+				"error":   err,
 			}).Debug("WebRTC data channel close returned error")
 		}
 	}
 	if c, ok := pc.(webrtcCloseable); ok && c != nil {
 		if err := c.Close(); err != nil {
 			log.WithFields(log.Fields{
-				"peer_id":  p.ID,
-				"handle":   "peerConn",
-				"error":    err,
+				"peer_id": p.ID,
+				"handle":  "peerConn",
+				"error":   err,
 			}).Debug("WebRTC peer connection close returned error")
 		}
 	}

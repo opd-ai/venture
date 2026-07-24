@@ -287,7 +287,7 @@ func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64
 		GenreID:   genreID,
 		Seed:      seed,
 		WindX:     (rng.Float64() - 0.5) * 20.0, // Random wind: -10 to +10 px/s
-		WindY:     0.0,                           // No vertical wind
+		WindY:     0.0,                          // No vertical wind
 		Custom:    make(map[string]interface{}),
 	}
 

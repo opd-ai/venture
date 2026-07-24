@@ -150,6 +150,7 @@ maintained paths → interface/contract gaps. There are **no stubs on critical p
 - **Dependencies**: None for the doc fix; a real native implementation would depend on a
   WebRTC/ICE stack on native builds.
 - **Effort**: small (doc reconciliation) / large (real native WebRTC).
+- **Status**: **RESOLVED 2026-07-23**. Updated `doc.go` to clearly separate production-ready coordination logic (NAT traversal fallback algorithm, relay management, signaling protocol, state machine, TimeProvider) from stub implementations (STUN client methods, TURN methods, peer connection, signaling client). Added note that native builds use TCP federation and WASM uses real pion/webrtc. Validation: `go test ./pkg/network/federation/webrtc/...` — PASS.
 
 ---
 
@@ -166,6 +167,7 @@ maintained paths → interface/contract gaps. There are **no stubs on critical p
   Behavior-neutral for selection.
 - **Dependencies**: None.
 - **Effort**: small.
+- **Status**: **ALREADY FIXED** in codebase. Verified at `pkg/engine/merchant_spawn.go:8,344`: `import "math"` is present and `dist = math.Sqrt(minDistSq)` is used. No code change needed. Validation: `go test ./pkg/engine/...` — PASS.
 
 ---
 

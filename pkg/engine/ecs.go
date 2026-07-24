@@ -578,11 +578,11 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		queryCache:         make(map[string][]*Entity),
 		queryCacheDirty:    make(map[string]bool),
 		queryComponents:    make(map[string][]string), // Selective query invalidation index
-		Clock:              NewSimulationClock(0), // Default to deterministic simulation clock
+		Clock:              NewSimulationClock(0),     // Default to deterministic simulation clock
 		logger:             logEntry,
 		performanceMetrics: NewPerformanceMetrics(), // Initialize performance metrics
 		systemNameCache:    make(map[System]string), // Initialize system name cache for reflection avoidance
-		systemBudget:       2 * time.Millisecond,   // Default 2 ms per-system frame budget
+		systemBudget:       2 * time.Millisecond,    // Default 2 ms per-system frame budget
 		budgetWarnCount:    make(map[string]int),
 		builderPool: sync.Pool{
 			New: func() interface{} {

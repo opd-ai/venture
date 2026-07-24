@@ -22,10 +22,12 @@ import (
 // concurrent access from multiple game systems.
 
 // trackerLogger provides structured logging for choice tracker operations.
-var trackerLogger = log.WithField("system", "choice_tracker")
-var createChoiceTrackerFile = func(filename string) (io.WriteCloser, error) {
-	return os.Create(filename)
-}
+var (
+	trackerLogger           = log.WithField("system", "choice_tracker")
+	createChoiceTrackerFile = func(filename string) (io.WriteCloser, error) {
+		return os.Create(filename)
+	}
+)
 
 func setSaveCloseError(retErr *error, closeErr error) {
 	if closeErr != nil && *retErr == nil {
@@ -350,6 +352,7 @@ func (ct *ChoiceTracker) IsContentAvailable(playerID, contentID string) bool {
 	delete(state.ContentLocks, contentID)
 	return true
 }
+
 func (ct *ChoiceTracker) hasChoice(state *PlayerState, choiceID string) bool {
 	for _, choice := range state.ChoiceHistory {
 		if choice.ChoiceID == choiceID {

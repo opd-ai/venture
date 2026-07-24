@@ -275,10 +275,10 @@ type SystemInitResult struct {
 	AvailabilitySystem                          *AvailabilitySystem
 	SkillPointGainParticleSystem                *SkillPointGainParticleSystem
 	// Seasonal-event cluster (G2/G4 — registered; SeasonalEventComponent seeded at runtime)
-	EventCalendarSystem    *EventCalendarSystem
-	EventQuestSystem       *EventQuestSystem
-	EventDecorationSystem  *EventDecorationSystem
-	EventRewardSystem      *EventRewardSystem
+	EventCalendarSystem   *EventCalendarSystem
+	EventQuestSystem      *EventQuestSystem
+	EventDecorationSystem *EventDecorationSystem
+	EventRewardSystem     *EventRewardSystem
 	// Mod systems (G2/G3 — basic registration; full repository wiring done in cmd/client)
 	ModCompatibilitySystem *ModCompatibilitySystem
 	ModBrowserSystem       *ModBrowserSystem

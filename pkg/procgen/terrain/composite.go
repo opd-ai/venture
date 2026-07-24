@@ -220,11 +220,11 @@ func (g *CompositeGenerator) GenerateCached(seed int64, params procgen.Generatio
 func (g *CompositeGenerator) selectGenerators(genreID string, count int, rng *rand.Rand) []string {
 	// Define genre preferences for generator selection
 	genrePrefs := map[string][]string{
-		"fantasy":         {"bsp", "cellular", "forest"},
-		"scifi":           {"city", "maze", "bsp"},
-		"horror":          {"cellular", "maze", "bsp"},
-		"cyberpunk":       {"city", "maze", "bsp"},
-		"postapoc": {"cellular", "city", "forest"},
+		"fantasy":   {"bsp", "cellular", "forest"},
+		"scifi":     {"city", "maze", "bsp"},
+		"horror":    {"cellular", "maze", "bsp"},
+		"cyberpunk": {"city", "maze", "bsp"},
+		"postapoc":  {"cellular", "city", "forest"},
 	}
 
 	// Get preferred generators for this genre

@@ -14,20 +14,20 @@ import (
 // genreThemes is the authoritative table of story themes per genre.
 // Adding a new genre requires only a new entry here; no function bodies need editing.
 var genreThemes = map[string][]string{
-	"fantasy":        {"ancient_curse", "fallen_kingdom", "lost_artifact", "dragon_slayer", "wizard_betrayal"},
-	"scifi":          {"abandoned_colony", "ai_uprising", "alien_contact", "experiment_gone_wrong", "time_loop"},
-	"horror":         {"haunted_mansion", "cult_ritual", "plague_outbreak", "entity_awakening", "descent_madness"},
-	"cyberpunk":      {"corporate_conspiracy", "hacker_revenge", "memory_theft", "underground_resistance", "ai_consciousness"},
-	"postapoc": {"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"},
+	"fantasy":   {"ancient_curse", "fallen_kingdom", "lost_artifact", "dragon_slayer", "wizard_betrayal"},
+	"scifi":     {"abandoned_colony", "ai_uprising", "alien_contact", "experiment_gone_wrong", "time_loop"},
+	"horror":    {"haunted_mansion", "cult_ritual", "plague_outbreak", "entity_awakening", "descent_madness"},
+	"cyberpunk": {"corporate_conspiracy", "hacker_revenge", "memory_theft", "underground_resistance", "ai_consciousness"},
+	"postapoc":  {"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"},
 }
 
 // genreTitleSuffixes is the authoritative table of title suffixes per genre.
 var genreTitleSuffixes = map[string][]string{
-	"fantasy":        {"Lost Kingdom", "Fallen Hero", "Ancient Curse", "Hidden Temple", "Dark Forest"},
-	"scifi":          {"Colony Alpha", "Last Signal", "Derelict Station", "Failed Experiment", "AI Core"},
-	"horror":         {"Haunted Manor", "Cursed Ground", "Dark Ritual", "Final Scream", "Blood Moon"},
-	"cyberpunk":      {"Data Heist", "Corporate Fall", "Neon Shadows", "Memory Dump", "System Breach"},
-	"postapoc": {"Last Stand", "Wasteland", "Dead Zone", "Bunker 13", "Final Days"},
+	"fantasy":   {"Lost Kingdom", "Fallen Hero", "Ancient Curse", "Hidden Temple", "Dark Forest"},
+	"scifi":     {"Colony Alpha", "Last Signal", "Derelict Station", "Failed Experiment", "AI Core"},
+	"horror":    {"Haunted Manor", "Cursed Ground", "Dark Ritual", "Final Scream", "Blood Moon"},
+	"cyberpunk": {"Data Heist", "Corporate Fall", "Neon Shadows", "Memory Dump", "System Breach"},
+	"postapoc":  {"Last Stand", "Wasteland", "Dead Zone", "Bunker 13", "Final Days"},
 }
 
 // defaultThemes is used when no genre-specific themes are found.

@@ -14,13 +14,13 @@ const ChunkSize = 32
 
 // ChunkLoaderSystem handles loading/unloading chunks based on player proximity
 type ChunkLoaderSystem struct {
-	loadRadius   int                    // Chunk radius around player (default: 5)
-	loadedChunks map[string]*Chunk      // Currently loaded chunks
-	worldSeed    int64                  // Seed for generating new chunks
-	persistence  *WorldPersistence      // For loading persisted chunks
-	generator    ChunkGenerator         // For generating new chunks
-	playerPos    map[uint64]ChunkCoords // Track player positions
-	onEvict      func(*Chunk)           // Called when a chunk is evicted from memory
+	loadRadius   int                     // Chunk radius around player (default: 5)
+	loadedChunks map[string]*Chunk       // Currently loaded chunks
+	worldSeed    int64                   // Seed for generating new chunks
+	persistence  *WorldPersistence       // For loading persisted chunks
+	generator    ChunkGenerator          // For generating new chunks
+	playerPos    map[uint64]ChunkCoords  // Track player positions
+	onEvict      func(*Chunk)            // Called when a chunk is evicted from memory
 	compressor   *ChunkCompressionSystem // Shared compressor (avoid re-allocation per load)
 }
 

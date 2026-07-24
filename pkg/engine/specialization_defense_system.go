@@ -89,8 +89,8 @@ func (s *SpecializationDefenseSystem) processEntity(entity *Entity) {
 
 	bonus := s.calculateBonus(progression)
 	changed := s.defenseMod.apply(entity, bonus,
-		func(st *StatsComponent) float64          { return st.Defense },
-		func(st *StatsComponent, v float64)       { st.Defense = v },
+		func(st *StatsComponent) float64 { return st.Defense },
+		func(st *StatsComponent, v float64) { st.Defense = v },
 		multiplicativeBonus,
 	)
 	if changed && s.logger != nil && bonus > 0 {

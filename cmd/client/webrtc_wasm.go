@@ -44,9 +44,9 @@ func wireWebRTCFederation(serverID string) *federation.WebRTCTransport {
 	}
 	transport := federation.NewWebRTCTransport(webrtcConfig)
 	log.WithFields(log.Fields{
-		"server_id":      serverID,
-		"signaling_url":  webrtcConfig.SignalingURL,
-		"stun_servers":   webrtcConfig.STUNServers,
+		"server_id":     serverID,
+		"signaling_url": webrtcConfig.SignalingURL,
+		"stun_servers":  webrtcConfig.STUNServers,
 	}).Info("WebRTC federation transport initialized for WASM build")
 	return transport
 }

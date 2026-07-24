@@ -262,7 +262,7 @@ type HandshakeManager struct {
 	seenNonces  map[string]time.Time // Track nonces to prevent replay
 	mu          sync.RWMutex
 	nonceExpiry time.Duration // How long to remember nonces (default: 5 minutes)
-	ticker      *time.Ticker // Periodic nonce cleanup
+	ticker      *time.Ticker  // Periodic nonce cleanup
 	stopCh      chan struct{} // Signal to stop the cleanup goroutine
 }
 

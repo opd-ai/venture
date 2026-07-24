@@ -42,7 +42,7 @@ type AnimationSyncer interface {
 // creating a circular dependency. Keep in sync with AnimationStatePacket.Encode
 // in pkg/network/animation_sync.go whenever the packet layout changes.
 const animStatePacketBytes = 20
-//
+
 // Animation Timing:
 //   - Default FPS: 12 FPS for close-range entities (0.083s per frame)
 //   - Frame Count: 8 frames per animation state (idle, walk, attack, etc.)

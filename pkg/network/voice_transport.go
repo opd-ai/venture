@@ -86,6 +86,7 @@ func (h voicePacketHeap) Len() int { return len(h) }
 func (h voicePacketHeap) Less(i, j int) bool {
 	return h[i].packet.SequenceNumber < h[j].packet.SequenceNumber
 }
+
 func (h voicePacketHeap) Swap(i, j int) {
 	h[i], h[j] = h[j], h[i]
 	h[i].index = i

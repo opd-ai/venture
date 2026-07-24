@@ -443,6 +443,7 @@ func (cc *EbitenCharacterCreation) handlePortraitPreset(p portraitPresetEntry, c
 	cc.characterData.Portrait = cachedImg
 	cc.characterData.PortraitPath = "preset:" + p.name
 }
+
 // GetDefaults returns the current default values
 func (cc *EbitenCharacterCreation) GetDefaults() CharacterCreationDefaults {
 	return cc.defaults

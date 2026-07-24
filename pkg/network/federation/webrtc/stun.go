@@ -1,10 +1,12 @@
 // Package webrtc STUN client implementation.
 // This file implements STUN (Session Traversal Utilities for NAT) protocol client
-// for public IP discovery and NAT type detection.
+// for public IP discovery and NAT type detection per RFC 5389.
 package webrtc
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"sync"
@@ -129,7 +131,7 @@ func (s *STUNClient) GetPublicAddress(ctx context.Context) (*STUNResponse, error
 	return nil, ErrSTUNServerUnreachable
 }
 
-// querySTUNServer sends a STUN binding request to a specific server.
+// querySTUNServer sends a STUN Binding Request to a specific server per RFC 5389.
 func (s *STUNClient) querySTUNServer(ctx context.Context, server string) (*STUNResponse, error) {
 	start := s.timeProvider.Now()
 
@@ -141,42 +143,57 @@ func (s *STUNClient) querySTUNServer(ctx context.Context, server string) (*STUNR
 	hostPort := server[5:]
 
 	// Create UDP connection
-	dialer := net.Dialer{Timeout: 3 * time.Second}
+	dialer := net.Dialer{}
 	conn, err := dialer.DialContext(ctx, "udp", hostPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to STUN server: %w", err)
 	}
 	defer conn.Close()
 
-	// In a real implementation, this would:
-	// 1. Send STUN Binding Request (RFC 5389)
-	// 2. Parse STUN Binding Response
-	// 3. Extract XOR-MAPPED-ADDRESS attribute
-	//
-	// For testing, we simulate the response
-
-	// Get local address using net.Addr interface
-	localAddr := conn.LocalAddr()
-	_, portStr, err := net.SplitHostPort(localAddr.String())
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse local address: %w", err)
+	// Generate transaction ID (12 bytes per RFC 5389)
+	var transactionID [12]byte
+	if _, err := rand.Read(transactionID[:]); err != nil {
+		return nil, fmt.Errorf("failed to generate transaction ID: %w", err)
 	}
-	localPort := 0
-	fmt.Sscanf(portStr, "%d", &localPort)
 
-	// Simulate public address (in reality, comes from STUN response)
-	publicIP := net.ParseIP("203.0.113.42") // TEST-NET-3 range
-	publicPort := localPort + 10000         // Simulated NAT mapping
+	// Build STUN Binding Request (RFC 5389)
+	// Message Type: 0x0001 (Binding Request)
+	// Message Length: 0 (no attributes)
+	// Magic Cookie: 0x2112A442
+	// Transaction ID: 12 bytes
+	request := make([]byte, 20)
+	binary.BigEndian.PutUint16(request[0:2], 0x0001)     // Binding Request
+	binary.BigEndian.PutUint16(request[2:4], 0)          // Message Length
+	binary.BigEndian.PutUint32(request[4:8], 0x2112A442) // Magic Cookie
+	copy(request[8:20], transactionID[:])
 
-	rtt := s.timeProvider.Now().Sub(start)
+	// Send request
+	if _, err := conn.Write(request); err != nil {
+		return nil, fmt.Errorf("failed to send STUN request: %w", err)
+	}
 
-	return &STUNResponse{
-		PublicIP:   publicIP,
-		PublicPort: publicPort,
-		Server:     server,
-		RTT:        rtt,
-		NATType:    NATTypeUnknown,
-	}, nil
+	// Set read deadline based on context
+	if deadline, ok := ctx.Deadline(); ok {
+		_ = conn.SetReadDeadline(deadline)
+	} else {
+		_ = conn.SetReadDeadline(s.timeProvider.Now().Add(3 * time.Second))
+	}
+
+	// Read response
+	response := make([]byte, 1024)
+	n, err := conn.Read(response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read STUN response: %w", err)
+	}
+	response = response[:n]
+
+	// Parse STUN response
+	resp, err := parseSTUNResponse(response, transactionID, hostPort, start, s.timeProvider)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse STUN response: %w", err)
+	}
+
+	return resp, nil
 }
 
 // DetectNATType performs NAT type detection using STUN.
@@ -237,4 +254,165 @@ type STUNStats struct {
 	SuccessRate        float64
 	CachedPublicIP     net.IP
 	CacheValid         bool
+}
+
+// parseSTUNResponse parses a STUN Binding Response per RFC 5389.
+func parseSTUNResponse(data []byte, expectedTransactionID [12]byte, server string, start time.Time, tp TimeProvider) (*STUNResponse, error) {
+	if len(data) < 20 {
+		return nil, fmt.Errorf("response too short: %d bytes", len(data))
+	}
+
+	// Parse header
+	msgType := binary.BigEndian.Uint16(data[0:2])
+	msgLength := binary.BigEndian.Uint16(data[2:4])
+	magicCookie := binary.BigEndian.Uint32(data[4:8])
+	var transactionID [12]byte
+	copy(transactionID[:], data[8:20])
+
+	// Validate message type: Binding Response (0x0101) or Binding Error Response (0x0111)
+	if msgType != 0x0101 && msgType != 0x0111 {
+		return nil, fmt.Errorf("unexpected message type: 0x%04x", msgType)
+	}
+
+	// Validate magic cookie
+	if magicCookie != 0x2112A442 {
+		return nil, fmt.Errorf("invalid magic cookie: 0x%08x", magicCookie)
+	}
+
+	// Validate transaction ID
+	if transactionID != expectedTransactionID {
+		return nil, fmt.Errorf("transaction ID mismatch")
+	}
+
+	// Validate message length
+	if len(data) < 20+int(msgLength) {
+		return nil, fmt.Errorf("message length exceeds data: %d vs %d", msgLength, len(data)-20)
+	}
+
+	// Check for error response
+	if msgType == 0x0111 {
+		return nil, parseSTUNError(data[20 : 20+msgLength])
+	}
+
+	// Parse attributes to find XOR-MAPPED-ADDRESS (0x0020) or MAPPED-ADDRESS (0x0001)
+	attrs := data[20 : 20+msgLength]
+	var publicIP net.IP
+	var publicPort int
+
+	for len(attrs) >= 4 {
+		attrType := binary.BigEndian.Uint16(attrs[0:2])
+		attrLength := binary.BigEndian.Uint16(attrs[2:4])
+
+		if len(attrs) < 4+int(attrLength) {
+			return nil, fmt.Errorf("attribute length exceeds remaining data")
+		}
+
+		attrValue := attrs[4 : 4+attrLength]
+
+		// XOR-MAPPED-ADDRESS (0x0020) or MAPPED-ADDRESS (0x0001)
+		if attrType == 0x0020 || attrType == 0x0001 {
+			if len(attrValue) >= 8 {
+				family := binary.BigEndian.Uint16(attrValue[0:2])
+				port := binary.BigEndian.Uint16(attrValue[2:4])
+
+				if family == 0x01 { // IPv4
+					if len(attrValue) >= 8 {
+						ip := net.IPv4(attrValue[4], attrValue[5], attrValue[6], attrValue[7])
+						if attrType == 0x0020 {
+							// XOR-MAPPED-ADDRESS: XOR with magic cookie and transaction ID
+							publicIP = xorIPv4(ip, magicCookie, transactionID[:4])
+							publicPort = int(port ^ uint16(magicCookie>>16))
+						} else {
+							// MAPPED-ADDRESS: no XOR
+							publicIP = ip
+							publicPort = int(port)
+						}
+					}
+				} else if family == 0x02 { // IPv6
+					if len(attrValue) >= 20 {
+						ip := net.IP(attrValue[4:20])
+						if attrType == 0x0020 {
+							publicIP = xorIPv6(ip, magicCookie, transactionID[:])
+							publicPort = int(port ^ uint16(magicCookie>>16))
+						} else {
+							publicIP = ip
+							publicPort = int(port)
+						}
+					}
+				}
+				break
+			}
+		}
+
+		// Move to next attribute (padded to 4-byte boundary)
+		padding := int((4 - (attrLength % 4)) % 4)
+		attrs = attrs[4+int(attrLength)+padding:]
+	}
+
+	if publicIP == nil {
+		return nil, fmt.Errorf("XOR-MAPPED-ADDRESS not found in response")
+	}
+
+	rtt := tp.Now().Sub(start)
+
+	return &STUNResponse{
+		PublicIP:   publicIP,
+		PublicPort: publicPort,
+		Server:     server,
+		RTT:        rtt,
+		NATType:    NATTypeUnknown,
+	}, nil
+}
+
+// xorIPv4 applies XOR decoding for XOR-MAPPED-ADDRESS (IPv4) per RFC 5389.
+func xorIPv4(ip net.IP, magicCookie uint32, transactionIDPrefix []byte) net.IP {
+	result := make(net.IP, 4)
+	cookieBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(cookieBytes, magicCookie)
+	for i := 0; i < 4; i++ {
+		result[i] = ip[i] ^ cookieBytes[i] ^ transactionIDPrefix[i]
+	}
+	return result
+}
+
+// xorIPv6 applies XOR decoding for XOR-MAPPED-ADDRESS (IPv6) per RFC 5389.
+func xorIPv6(ip net.IP, magicCookie uint32, transactionID []byte) net.IP {
+	result := make(net.IP, 16)
+	cookieBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(cookieBytes, magicCookie)
+	// First 4 bytes XOR with magic cookie
+	for i := 0; i < 4; i++ {
+		result[i] = ip[i] ^ cookieBytes[i]
+	}
+	// Remaining 12 bytes XOR with transaction ID
+	for i := 4; i < 16; i++ {
+		result[i] = ip[i] ^ transactionID[i-4]
+	}
+	return result
+}
+
+// parseSTUNError parses ERROR-CODE attribute from STUN error response.
+func parseSTUNError(attrs []byte) error {
+	for len(attrs) >= 4 {
+		attrType := binary.BigEndian.Uint16(attrs[0:2])
+		attrLength := binary.BigEndian.Uint16(attrs[2:4])
+
+		if len(attrs) < 4+int(attrLength) {
+			break
+		}
+
+		attrValue := attrs[4 : 4+attrLength]
+
+		// ERROR-CODE attribute (0x0009)
+		if attrType == 0x0009 && len(attrValue) >= 4 {
+			class := attrValue[0]
+			number := attrValue[1]
+			reason := string(attrValue[4:])
+			return fmt.Errorf("STUN error %d%d: %s", class, number, reason)
+		}
+
+		padding := int((4 - (attrLength % 4)) % 4)
+		attrs = attrs[4+int(attrLength)+padding:]
+	}
+	return fmt.Errorf("STUN error response without ERROR-CODE attribute")
 }

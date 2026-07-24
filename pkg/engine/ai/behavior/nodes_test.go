@@ -13,10 +13,10 @@ import (
 // ---------------------------------------------------------------------------
 
 type stubNode struct {
-	status    aitypes.NodeStatus
-	tickCount int
+	status     aitypes.NodeStatus
+	tickCount  int
 	resetCount int
-	name      string
+	name       string
 }
 
 func newStub(name string, status aitypes.NodeStatus) *stubNode {
@@ -27,7 +27,7 @@ func (s *stubNode) Tick(_ aitypes.EntityContext, _ *aitypes.Blackboard, _ float6
 	s.tickCount++
 	return s.status
 }
-func (s *stubNode) Reset() { s.resetCount++ }
+func (s *stubNode) Reset()         { s.resetCount++ }
 func (s *stubNode) String() string { return fmt.Sprintf("stub(%s)", s.name) }
 
 // ---------------------------------------------------------------------------

@@ -163,9 +163,8 @@
 // The following clearly delineates production-ready logic from stub behavior:
 //
 // Production-ready (fully functional without external dependencies):
-//   - NAT traversal coordination (Direct → STUN → TURN fallback logic)
+//   - NAT traversal coordination (Direct → STUN → TURN fallback logic in NATTraversal.EstablishConnection)
 //   - Relay management (health checks, load balancing, selection strategies)
-//   - STUN client (public address discovery, NAT type detection, caching)
 //   - Signaling protocol (SDP/ICE message exchange, peer registry, cleanup)
 //   - Connection state machine (state transitions, statistics, lifecycle)
 //   - TimeProvider abstraction (deterministic testing support)
@@ -174,12 +173,19 @@
 //   - Peer.Connect: Simulates connection with 10ms delay instead of real SDP negotiation
 //   - Peer.Send: Updates statistics but does not transmit via WebRTC data channel
 //   - Peer.processMessages: Drains send channel without actual data channel I/O
-//   - STUNClient.GetPublicAddress: Returns simulated IP/port, not actual STUN binding
+//   - STUNClient.GetPublicAddress: Returns simulated IP/port, not actual STUN binding (querySTUNServer is a stub)
 //   - STUNClient.DetectNATType: Returns simulated NAT type classification
+//   - NATTraversal.tryDirectConnection: Always fails (stub)
+//   - NATTraversal.trySTUNConnection: Relies on STUNClient.GetPublicAddress stub
+//   - NATTraversal.tryTURNConnection: Never creates TURN allocation (stub)
 //   - RelayConnection.Send: Counts bytes but does not relay via TURN allocation
 //   - SignalingClient.Connect: Simulates WebSocket connection establishment
 //
-// To integrate a real WebRTC backend, implement the stub methods using
+// Note: On native builds, WebRTC federation is not used (cmd/client/webrtc_native.go returns nil);
+// federation uses TCP transport. On WASM builds, the real pion/webrtc/v3 library is used and
+// bypasses the STUNClient/NATTraversal stubs entirely. The stub layer is exercised only by tests.
+//
+// To integrate a real native WebRTC backend, implement the stub methods using
 // pion/webrtc/v3 PeerConnection and DataChannel APIs. The existing interfaces
 // and state management remain unchanged.
 //

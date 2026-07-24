@@ -2569,13 +2569,13 @@ type mockClientConnection struct {
 	lastData  []byte
 }
 
-func (m *mockClientConnection) Connect() error               { return nil }
-func (m *mockClientConnection) Disconnect() error             { return nil }
-func (m *mockClientConnection) IsConnected() bool             { return m.connected }
-func (m *mockClientConnection) GetPlayerID() uint64           { return m.playerID }
-func (m *mockClientConnection) SetPlayerID(id uint64)         { m.playerID = id }
-func (m *mockClientConnection) GetLatency() time.Duration     { return 0 }
-func (m *mockClientConnection) ReceiveError() <-chan error     { return make(chan error) }
+func (m *mockClientConnection) Connect() error             { return nil }
+func (m *mockClientConnection) Disconnect() error          { return nil }
+func (m *mockClientConnection) IsConnected() bool          { return m.connected }
+func (m *mockClientConnection) GetPlayerID() uint64        { return m.playerID }
+func (m *mockClientConnection) SetPlayerID(id uint64)      { m.playerID = id }
+func (m *mockClientConnection) GetLatency() time.Duration  { return 0 }
+func (m *mockClientConnection) ReceiveError() <-chan error { return make(chan error) }
 
 func (m *mockClientConnection) SendInput(inputType string, data []byte) error {
 	m.lastInput = inputType

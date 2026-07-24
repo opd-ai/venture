@@ -30,19 +30,19 @@ import (
 // webxrPoseCache holds the latest XRViewerPose values, updated from the
 // browser's XRSession frame callback on the JS event loop.
 type webxrPoseCache struct {
-	mu          sync.RWMutex
-	pitch       float64
-	yaw         float64
-	roll        float64
-	x, y, z     float64
-	ipd         float64
+	mu      sync.RWMutex
+	pitch   float64
+	yaw     float64
+	roll    float64
+	x, y, z float64
+	ipd     float64
 	// Controller state — indexed 0=left, 1=right
-	trigger     [2]float64
-	grip        [2]float64
-	thumbX      [2]float64
-	thumbY      [2]float64
-	thumbPress  [2]bool
-	buttons     [2]map[string]bool
+	trigger    [2]float64
+	grip       [2]float64
+	thumbX     [2]float64
+	thumbY     [2]float64
+	thumbPress [2]bool
+	buttons    [2]map[string]bool
 }
 
 // WebXRHeadsetAdapter implements VRHeadsetAdapter via the browser WebXR Device API.
@@ -447,5 +447,5 @@ func quaternionToEuler(qx, qy, qz, qw float64) (pitch, yaw, roll float64) {
 	sinyCosp := 2 * (qw*qy + qx*qz)
 	cosyCosp := 1 - 2*(qx*qx+qy*qy)
 	yaw = math.Atan2(sinyCosp, cosyCosp)
-	return
+	return pitch, yaw, roll
 }

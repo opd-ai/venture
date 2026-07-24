@@ -1854,7 +1854,6 @@ func TestHandleGuildMessage_NilData(t *testing.T) {
 	}
 }
 
-
 // TestIsMember verifies the MembershipValidator-satisfying method.
 func TestIsMember(t *testing.T) {
 	m := NewManager()

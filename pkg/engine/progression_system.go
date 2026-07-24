@@ -21,11 +21,11 @@ type SkillPointCallback func(entity *Entity, pointsGained int)
 // ProgressionSystem manages character progression, experience gain, and leveling.
 // It handles XP distribution, level-ups, and stat scaling.
 type ProgressionSystem struct {
-	world                *World
-	levelUpCallbacks     []LevelUpCallback
-	skillPointCallbacks  []SkillPointCallback
-	xpCurve              XPCurveFunc
-	logger               *logrus.Entry
+	world               *World
+	levelUpCallbacks    []LevelUpCallback
+	skillPointCallbacks []SkillPointCallback
+	xpCurve             XPCurveFunc
+	logger              *logrus.Entry
 }
 
 // XPCurveFunc defines how much XP is required for each level.

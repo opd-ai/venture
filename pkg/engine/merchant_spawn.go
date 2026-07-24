@@ -5,6 +5,7 @@ package engine
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -340,11 +341,7 @@ func FindClosestMerchant(world *World, x, y, radius float64) (*Entity, float64) 
 	// Return actual distance (not squared)
 	dist := 0.0
 	if minDistSq > 0 {
-		dist = 1.0 // Placeholder - in real impl would use math.Sqrt(minDistSq)
-		// Avoiding math import to keep file simple
-		for i := 0.0; i*i < minDistSq; i += 0.1 {
-			dist = i
-		}
+		dist = math.Sqrt(minDistSq)
 	}
 
 	return closest, dist
